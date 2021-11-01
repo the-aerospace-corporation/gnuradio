@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -28,11 +16,19 @@
 #include <gnuradio/block_detail.h>
 #include <gnuradio/block_registry.h>
 #include <gnuradio/buffer.h>
+#include <gnuradio/logger.h>
 #include <gnuradio/prefs.h>
+#include <boost/format.hpp>
 #include <iostream>
 #include <stdexcept>
 
 namespace gr {
+
+// Moved from flat_flowgraph.cc
+// 32Kbyte buffer size between blocks
+#define GR_FIXED_BUFFER_SIZE (32 * (1L << 10))
+
+static const unsigned int s_fixed_buffer_size = GR_FIXED_BUFFER_SIZE;
 
 block::block(const std::string& name,
              io_signature::sptr input_signature,
@@ -59,11 +55,9 @@ block::block(const std::string& name,
       d_pmt_done(pmt::intern("done")),
       d_system_port(pmt::intern("system"))
 {
-    global_block_registry.register_primitive(alias(), this);
+    global_block_registry.register_primitive(d_symbol_name, this);
     message_port_register_in(d_system_port);
-    set_msg_handler(d_system_port, boost::bind(&block::system_handler, this, _1));
-
-    configure_default_loggers(d_logger, d_debug_logger, symbol_name());
+    set_msg_handler(d_system_port, [this](pmt::pmt_t msg) { this->system_handler(msg); });
 }
 
 block::~block() { global_block_registry.unregister_primitive(symbol_name()); }
@@ -287,7 +281,7 @@ void block::set_max_noutput_items(int m)
 {
     if (m <= 0)
         throw std::runtime_error("block::set_max_noutput_items: value for "
-                                 "max_noutput_items must be greater than 0.\n");
+                                 "max_noutput_items must be greater than 0.");
 
     d_max_noutput_items = m;
     d_max_noutput_items_set = true;
@@ -371,8 +365,9 @@ long block::min_output_buffer(size_t i)
 
 void block::set_min_output_buffer(long min_output_buffer)
 {
-    std::cout << "set_min_output_buffer on block " << unique_id() << " to "
-              << min_output_buffer << std::endl;
+    GR_LOG_INFO(d_logger,
+                boost::format("set_min_output_buffer on block %s to %d") % unique_id() %
+                    min_output_buffer);
     for (int i = 0; i < output_signature()->max_streams(); i++) {
         set_min_output_buffer(i, min_output_buffer);
     }
@@ -386,10 +381,158 @@ void block::set_min_output_buffer(int port, long min_output_buffer)
         d_min_output_buffer[port] = min_output_buffer;
 }
 
+void block::allocate_detail(int ninputs,
+                            int noutputs,
+                            const std::vector<int>& downstream_max_nitems_vec,
+                            const std::vector<uint64_t>& downstream_lcm_nitems_vec,
+                            const std::vector<uint32_t>& downstream_max_out_mult_vec)
+{
+    block_detail_sptr detail = make_block_detail(ninputs, noutputs);
+
+    GR_LOG_DEBUG(d_debug_logger, "Creating block detail for " + identifier());
+
+    for (int i = 0; i < noutputs; i++) {
+        expand_minmax_buffer(i);
+
+        buffer_sptr buffer = allocate_buffer(i,
+                                             downstream_max_nitems_vec[i],
+                                             downstream_lcm_nitems_vec[i],
+                                             downstream_max_out_mult_vec[i]);
+        GR_LOG_DEBUG(d_debug_logger,
+                     "Allocated buffer for output " + identifier() + " " +
+                         std::to_string(i));
+        detail->set_output(i, buffer);
+
+        // Update the block's max_output_buffer based on what was actually allocated.
+        if ((max_output_buffer(i) != buffer->bufsize()) && (max_output_buffer(i) != -1))
+            GR_LOG_WARN(d_logger,
+                        boost::format("Block (%1%) max output buffer set to %2%"
+                                      " instead of requested %3%") %
+                            alias() % buffer->bufsize() % max_output_buffer(i));
+        set_max_output_buffer(i, buffer->bufsize());
+    }
+
+    // Store the block_detail that was created above
+    set_detail(detail);
+}
+
+buffer_sptr
+block::replace_buffer(size_t src_port, size_t dst_port, block_sptr block_owner)
+{
+    block_detail_sptr detail_ = detail();
+    buffer_sptr orig_buffer = detail_->output(src_port);
+
+    buffer_type buftype = block_owner->output_signature()->stream_buffer_type(dst_port);
+
+    // Make a new buffer but this time use the passed in block as the owner
+    buffer_sptr new_buffer =
+        buftype.make_buffer(orig_buffer->bufsize(),
+                            orig_buffer->get_sizeof_item(),
+                            orig_buffer->get_downstream_lcm_nitems(),
+                            orig_buffer->get_max_reader_output_multiple(),
+                            shared_from_base<block>(),
+                            block_owner);
+
+    detail_->set_output(src_port, new_buffer);
+    return new_buffer;
+}
 
 bool block::update_rate() const { return d_update_rate; }
 
 void block::enable_update_rate(bool en) { d_update_rate = en; }
+
+buffer_sptr block::allocate_buffer(size_t port,
+                                   int downstream_max_nitems,
+                                   uint64_t downstream_lcm_nitems,
+                                   uint32_t downstream_max_out_mult)
+{
+    int item_size = output_signature()->sizeof_stream_item(port);
+
+    // *2 because we're now only filling them 1/2 way in order to
+    // increase the available parallelism when using the TPB scheduler.
+    // (We're double buffering, where we used to single buffer)
+    int nitems = s_fixed_buffer_size * 2 / item_size;
+
+    // Make sure there are at least twice the output_multiple no. of items
+    if (nitems < 2 * output_multiple()) // Note: this means output_multiple()
+        nitems = 2 * output_multiple(); // can't be changed by block dynamically
+
+    // Limit buffer size if indicated
+    if (max_output_buffer(port) > 0) {
+        // std::cout << "constraining output items to " << block->max_output_buffer(port)
+        // << "\n";
+        nitems = std::min((long)nitems, (long)max_output_buffer(port));
+        nitems -= nitems % output_multiple();
+        if (nitems < 1)
+            throw std::runtime_error("problems allocating a buffer with the given max "
+                                     "output buffer constraint!");
+    } else if (min_output_buffer(port) > 0) {
+        nitems = std::max((long)nitems, (long)min_output_buffer(port));
+        nitems -= nitems % output_multiple();
+        if (nitems < 1)
+            throw std::runtime_error("problems allocating a buffer with the given min "
+                                     "output buffer constraint!");
+    }
+
+    // If any downstream blocks are decimators and/or have a large output_multiple,
+    // ensure we have a buffer at least twice their decimation factor*output_multiple
+    nitems = std::max(nitems, downstream_max_nitems);
+
+    // We're going to let this fail once and retry. If that fails, throw and exit.
+    buffer_sptr buf;
+
+#ifdef BUFFER_DEBUG
+    GR_LOG_DEBUG(d_logger,
+                 "Block: " + name() + " allocated buffer for output " + identifier());
+#endif
+
+    // Grab the buffer type associated with the output port and use it to
+    // create the specified type of buffer
+    buffer_type buftype = output_signature()->stream_buffer_type(port);
+
+    try {
+#ifdef BUFFER_DEBUG
+        std::ostringstream msg;
+        msg << "downstream_max_nitems: " << downstream_max_nitems
+            << " -- downstream_lcm_nitems: " << downstream_lcm_nitems
+            << " -- output_multiple(): " << output_multiple()
+            << " -- out_mult_set: " << output_multiple_set() << " -- nitems: " << nitems
+            << " -- history: " << history() << " -- relative_rate: " << relative_rate();
+        if (relative_rate() != 1.0) {
+            msg << " (" << relative_rate_i() << " / " << relative_rate_d() << ")";
+        }
+        msg << " -- fixed_rate: " << fixed_rate();
+        if (fixed_rate()) {
+            int num_inputs = fixed_rate_noutput_to_ninput(1) - (history() - 1);
+            msg << " (" << num_inputs << " -> "
+                << fixed_rate_ninput_to_noutput(num_inputs + (history() - 1)) << ")";
+        }
+        GR_LOG_DEBUG(d_logger, msg.str());
+#endif
+        buf = buftype.make_buffer(nitems,
+                                  item_size,
+                                  downstream_lcm_nitems,
+                                  downstream_max_out_mult,
+                                  shared_from_base<block>(),
+                                  shared_from_base<block>());
+
+    } catch (std::bad_alloc&) {
+        buf = buftype.make_buffer(nitems,
+                                  item_size,
+                                  downstream_lcm_nitems,
+                                  downstream_max_out_mult,
+                                  shared_from_base<block>(),
+                                  shared_from_base<block>());
+    }
+
+    // Set the max noutput items size here to make sure it's always
+    // set in the block and available in the start() method.
+    // But don't overwrite if the user has set this externally.
+    if (!is_set_max_noutput_items())
+        set_max_noutput_items(nitems);
+
+    return buf;
+}
 
 float block::pc_noutput_items()
 {
@@ -608,13 +751,13 @@ void block::reset_perf_counters()
 
 void block::system_handler(pmt::pmt_t msg)
 {
-    // std::cout << "system_handler " << msg << "\n";
+    // GR_LOG_INFO(d_logger, boost::format("system handler %s") % msg);
     pmt::pmt_t op = pmt::car(msg);
     if (pmt::eqv(op, d_pmt_done)) {
         d_finished = pmt::to_long(pmt::cdr(msg));
-        global_block_registry.notify_blk(alias());
+        global_block_registry.notify_blk(d_symbol_name);
     } else {
-        std::cout << "WARNING: bad message op on system port!\n";
+        GR_LOG_WARN(d_logger, "bad message op on system port!");
         pmt::print(msg);
     }
 }

@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -29,8 +17,9 @@
 #include <gnuradio/io_signature.h>
 #include <gnuradio/prefs.h>
 #include <qwt_symbol.h>
-#include <string.h>
 #include <volk/volk.h>
+#include <volk/volk_alloc.hh>
+#include <cstring>
 
 namespace gr {
 namespace qtgui {
@@ -38,8 +27,7 @@ namespace qtgui {
 const_sink_c::sptr
 const_sink_c::make(int size, const std::string& name, int nconnections, QWidget* parent)
 {
-    return gnuradio::get_initial_sptr(
-        new const_sink_c_impl(size, name, nconnections, parent));
+    return gnuradio::make_block_sptr<const_sink_c_impl>(size, name, nconnections, parent);
 }
 
 const_sink_c_impl::const_sink_c_impl(int size,
@@ -55,39 +43,14 @@ const_sink_c_impl::const_sink_c_impl(int size,
       d_nconnections(nconnections),
       d_parent(parent)
 {
-    // Required now for Qt; argc must be greater than 0 and argv
-    // must have at least one valid character. Must be valid through
-    // life of the qApplication:
-    // http://harmattan-dev.nokia.com/docs/library/html/qt4/qapplication.html
-    d_argc = 1;
-    d_argv = new char;
-    d_argv[0] = '\0';
-
-    d_main_gui = NULL;
-
-    d_index = 0;
-
     // setup PDU handling input port
     message_port_register_in(pmt::mp("in"));
-    set_msg_handler(pmt::mp("in"),
-                    boost::bind(&const_sink_c_impl::handle_pdus, this, _1));
+    set_msg_handler(pmt::mp("in"), [this](pmt::pmt_t msg) { this->handle_pdus(msg); });
 
-    for (int i = 0; i < d_nconnections; i++) {
-        d_residbufs_real.push_back(
-            (double*)volk_malloc(d_buffer_size * sizeof(double), volk_get_alignment()));
-        d_residbufs_imag.push_back(
-            (double*)volk_malloc(d_buffer_size * sizeof(double), volk_get_alignment()));
-        memset(d_residbufs_real[i], 0, d_buffer_size * sizeof(double));
-        memset(d_residbufs_imag[i], 0, d_buffer_size * sizeof(double));
+    for (int i = 0; i < d_nconnections + 1; i++) {
+        d_residbufs_real.emplace_back(d_buffer_size);
+        d_residbufs_imag.emplace_back(d_buffer_size);
     }
-
-    // Used for PDU message input
-    d_residbufs_real.push_back(
-        (double*)volk_malloc(d_buffer_size * sizeof(double), volk_get_alignment()));
-    d_residbufs_imag.push_back(
-        (double*)volk_malloc(d_buffer_size * sizeof(double), volk_get_alignment()));
-    memset(d_residbufs_real[d_nconnections], 0, d_buffer_size * sizeof(double));
-    memset(d_residbufs_imag[d_nconnections], 0, d_buffer_size * sizeof(double));
 
     // Set alignment properties for VOLK
     const int alignment_multiple = volk_get_alignment() / sizeof(gr_complex);
@@ -104,14 +67,6 @@ const_sink_c_impl::~const_sink_c_impl()
 {
     if (!d_main_gui->isClosed())
         d_main_gui->close();
-
-    // d_main_gui is a qwidget destroyed with its parent
-    for (int i = 0; i < d_nconnections + 1; i++) {
-        volk_free(d_residbufs_real[i]);
-        volk_free(d_residbufs_imag[i]);
-    }
-
-    delete d_argv;
 }
 
 bool const_sink_c_impl::check_topology(int ninputs, int noutputs)
@@ -148,17 +103,6 @@ void const_sink_c_impl::initialize()
 void const_sink_c_impl::exec_() { d_qApplication->exec(); }
 
 QWidget* const_sink_c_impl::qwidget() { return d_main_gui; }
-
-#ifdef ENABLE_PYTHON
-PyObject* const_sink_c_impl::pyqwidget()
-{
-    PyObject* w = PyLong_FromVoidPtr((void*)d_main_gui);
-    PyObject* retarg = Py_BuildValue("N", w);
-    return retarg;
-}
-#else
-void* const_sink_c_impl::pyqwidget() { return NULL; }
-#endif
 
 void const_sink_c_impl::set_y_axis(double min, double max)
 {
@@ -290,15 +234,10 @@ void const_sink_c_impl::set_nsamps(const int newsize)
         // Resize residbuf and replace data
         // +1 to handle PDU message input buffers
         for (int i = 0; i < d_nconnections + 1; i++) {
-            volk_free(d_residbufs_real[i]);
-            volk_free(d_residbufs_imag[i]);
-            d_residbufs_real[i] = (double*)volk_malloc(d_buffer_size * sizeof(double),
-                                                       volk_get_alignment());
-            d_residbufs_imag[i] = (double*)volk_malloc(d_buffer_size * sizeof(double),
-                                                       volk_get_alignment());
-
-            memset(d_residbufs_real[i], 0, d_buffer_size * sizeof(double));
-            memset(d_residbufs_imag[i], 0, d_buffer_size * sizeof(double));
+            d_residbufs_real[i].clear();
+            d_residbufs_imag[i].clear();
+            d_residbufs_real[i].resize(d_buffer_size);
+            d_residbufs_imag[i].resize(d_buffer_size);
         }
 
         d_main_gui->setNPoints(d_size);
@@ -451,10 +390,10 @@ int const_sink_c_impl::work(int noutput_items,
     if ((d_triggered) && (d_index == d_end)) {
         // Copy data to be plotted to start of buffers.
         for (n = 0; n < d_nconnections; n++) {
-            memmove(d_residbufs_real[n],
+            memmove(d_residbufs_real[n].data(),
                     &d_residbufs_real[n][d_start],
                     d_size * sizeof(double));
-            memmove(d_residbufs_imag[n],
+            memmove(d_residbufs_imag[n].data(),
                     &d_residbufs_imag[n][d_start],
                     d_size * sizeof(double));
         }
@@ -514,8 +453,10 @@ void const_sink_c_impl::handle_pdus(pmt::pmt_t msg)
         d_last_time = gr::high_res_timer_now();
 
         // Copy data into the buffers.
-        volk_32fc_deinterleave_64f_x2(
-            d_residbufs_real[d_nconnections], d_residbufs_imag[d_nconnections], in, len);
+        volk_32fc_deinterleave_64f_x2(d_residbufs_real[d_nconnections].data(),
+                                      d_residbufs_imag[d_nconnections].data(),
+                                      in,
+                                      len);
 
         d_qApplication->postEvent(
             d_main_gui, new ConstUpdateEvent(d_residbufs_real, d_residbufs_imag, len));

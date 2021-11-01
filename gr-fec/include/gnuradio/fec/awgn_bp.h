@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 /* -----------------------------------------------------------------
@@ -40,7 +28,6 @@
 #include "gf2mat.h"
 #include <gnuradio/fec/api.h>
 #include <cmath>
-#include <iostream>
 #include <vector>
 
 class FEC_API awgn_bp
@@ -86,7 +73,7 @@ public:
     void update_vars();
 
     //! Returns the current estimate
-    std::vector<char> get_estimate();
+    std::vector<uint8_t> get_estimate();
 
     //! Computes initial estimate based on the vector rx_word
     void compute_init_estimate(std::vector<float> rx_word);
@@ -95,16 +82,16 @@ public:
     void decision();
 
     //! Returns the syndrome for the current estimate
-    std::vector<char> get_syndrome();
+    std::vector<uint8_t> get_syndrome();
 
     //! Returns the syndrome for the input codeword
-    std::vector<char> get_syndrome(const std::vector<char> codeword);
+    std::vector<uint8_t> get_syndrome(const std::vector<uint8_t> codeword);
 
     //! Checks if the current estimate is a codeword
     bool is_codeword();
 
     //! Checks if the input is a codeword
-    bool is_codeword(const std::vector<char> codeword);
+    bool is_codeword(const std::vector<uint8_t> codeword);
 
     //! Sets the variable K
     void set_K(int k);
@@ -125,7 +112,7 @@ public:
      * \param niterations The number of message passing iterations
      *        done to decode this codeword.
      */
-    std::vector<char> decode(std::vector<float> rx_word, int* niterations);
+    std::vector<uint8_t> decode(std::vector<float> rx_word, int* niterations);
 
 private:
     //! The number of check nodes in the tanner-graph
@@ -171,6 +158,6 @@ private:
     std::vector<int> num_mlist;
 
     //! The array for holding estimate computed on BP decoding
-    std::vector<char> estimate;
+    std::vector<uint8_t> estimate;
 };
 #endif // ifndef AWGN_BP_H

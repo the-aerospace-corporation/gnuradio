@@ -1,21 +1,9 @@
-# Copyright 2011-2012,2014,2017 Free Software Foundation, Inc.
+# Copyright 2011-2021 Free Software Foundation, Inc.
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 
 ########################################################################
 if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
@@ -46,48 +34,48 @@ GR_CHECK_BUILD_TYPE(${CMAKE_BUILD_TYPE})
 SET(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE} CACHE STRING "")
 message(STATUS "Build type set to ${CMAKE_BUILD_TYPE}.")
 
+# Set the build date
+string(TIMESTAMP BUILD_DATE "%a, %d %b %Y %H:%M:%SZ" UTC)
+string(TIMESTAMP BUILD_DATE_SHORT "%Y-%m-%d" UTC)
+message(STATUS "Build date set to ${BUILD_DATE}.")
+
+include(GrComponent)
+
 # Set the version information here
 SET(VERSION_MAJOR 3)
-SET(VERSION_API   9)
+SET(VERSION_API   10)
 SET(VERSION_ABI   0)
-SET(VERSION_PATCH 0-git)
+SET(VERSION_PATCH git)
 include(GrVersion) #setup version info
 
 # Minimum dependency versions for central dependencies:
-set(GR_BOOST_MIN_VERSION "1.53")
-set(GR_SWIG_MIN_VERSION "3.0.8")
-set(GR_CMAKE_MIN_VERSION "3.5.1")
-set(GR_MAKO_MIN_VERSION "0.4.2")
-set(GR_PYTHON_MIN_VERSION "2.7.6")
-set(GR_PYTHON3_MIN_VERSION "3.6.5")
-set(GCC_MIN_VERSION "4.8.4")
-set(CLANG_MIN_VERSION "3.4.0")
-set(APPLECLANG_MIN_VERSION "500")
-set(MSVC_MIN_VERSION "1800")
+set(GR_BOOST_MIN_VERSION "1.65")      ## Version in Ubuntu 18.04LTS
+set(GR_CMAKE_MIN_VERSION "3.10.2")    ## Version in Ubuntu 18.04LTS
+set(GR_MAKO_MIN_VERSION "1.0.7")      ## debian buster, 18.04LTS
+set(GR_PYTHON_MIN_VERSION "3.6.5")    ## Version in Ubuntu 18.04LTS
+set(GR_NUMPY_MIN_VERSION "1.13.3")    ## Version in Ubuntu 18.04LTS
+set(GCC_MIN_VERSION "8.3.0")          ## debian buster
+set(CLANG_MIN_VERSION "11.0.0")       ## debian bullseye, Fedora 33
+set(APPLECLANG_MIN_VERSION "1100")    ## same as clang 11.0.0, in Xcode11
+set(MSVC_MIN_VERSION "1914")          ## VS2017 15.7, for full-ish C++17 support
+set(VOLK_MIN_VERSION "2.4.1")         ## first version with CPU features
+set(PYBIND11_MIN_VERSION "2.4")       # pybind11 sets versions like 2.4.dev4, which compares < 2.4.3
+set(GR_THRIFT_MIN_VERSION "0.13")
+
+########################################################################
+# Setup Boost for global use (within this build)
+# Do this before enabling testing support, as it depends
+# on unit_test_framework
+########################################################################
+include(GrBoost)
+GR_REGISTER_COMPONENT("testing-support" ENABLE_TESTING
+         Boost_UNIT_TEST_FRAMEWORK_FOUND )
 
 # Enable generation of compile_commands.json for code completion engines
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Set wiki block docs url prefix used in grc-docs.conf (block name gets appended to end of this string)
 set(GRC_DOCS_URL_PREFIX "https://wiki.gnuradio.org/index.php/")
-
-########################################################################
-# Configure CMake policies
-########################################################################
-# This will suppress developer warnings during the cmake process that can occur
-# if a newer cmake version than the minimum is used.
-if(POLICY CMP0026)
-    cmake_policy(SET CMP0026 NEW)
-endif()
-if(POLICY CMP0043)
-    cmake_policy(SET CMP0043 NEW)
-endif()
-if(POLICY CMP0045)
-    cmake_policy(SET CMP0045 NEW)
-endif()
-if(POLICY CMP0046)
-    cmake_policy(SET CMP0046 NEW)
-endif()
 
 ########################################################################
 # Compiler version setup
@@ -142,28 +130,12 @@ ENDIF()
 # set after CppUnit check below). Use the variable CMAKE_CXX_STANDARD
 # since it will actually be used for this purposes starting in CMake 3.1.
 
-SET(CMAKE_C_EXTENSIONS OFF)
-SET(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_C_EXTENSIONS OFF)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_C_STANDARD 11)
 
-IF(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    SET(CMAKE_CXX_STANDARD 11)
-ELSEIF(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    SET(CMAKE_CXX_STANDARD 11)
-ELSEIF(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    SET(CMAKE_CXX_STANDARD 11)
-ELSE()
-    message(WARNING "C++ standard could not be set because compiler is not GNU, Clang or MSVC.")
-ENDIF()
-
-IF(CMAKE_C_COMPILER_ID STREQUAL "GNU")
-    SET(CMAKE_C_STANDARD 11)
-ELSEIF(CMAKE_C_COMPILER_ID MATCHES "Clang")
-    SET(CMAKE_C_STANDARD 11)
-ELSEIF(CMAKE_C_COMPILER_ID STREQUAL "MSVC")
-    SET(CMAKE_C_STANDARD 11)
-ELSE()
-    message(WARNING "C standard could not be set because compiler is not GNU, Clang or MSVC.")
-ENDIF()
+set(GR_CXX_VERSION_FEATURE cxx_std_${CMAKE_CXX_STANDARD})
 
 ########################################################################
 # Environment setup
@@ -195,6 +167,9 @@ include(CMakeOverloads)
 ########################################################################
 include(GrMiscUtils) #compiler flag check
 
+include(TestBigEndian)
+TEST_BIG_ENDIAN(GR_IS_BIG_ENDIAN)
+
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR
    CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     if(NOT WIN32)
@@ -209,26 +184,9 @@ endif(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR
 
 if(MSVC)
     include_directories(${CMAKE_SOURCE_DIR}/cmake/msvc) #missing headers
-    add_definitions(-D_USE_MATH_DEFINES) #enables math constants on all supported versions of MSVC
-    add_definitions(-D_WIN32_WINNT=0x0502) #Minimum version: "Windows Server 2003 with SP1, Windows XP with SP2"
-    add_definitions(-DNOMINMAX) #disables stupidity and enables std::min and std::max
-    add_definitions( #stop all kinds of compatibility warnings
-        -D_SCL_SECURE_NO_WARNINGS
-        -D_CRT_SECURE_NO_WARNINGS
-        -D_CRT_SECURE_NO_DEPRECATE
-        -D_CRT_NONSTDC_NO_DEPRECATE
-    )
-    add_definitions(-DHAVE_CONFIG_H)
     add_compile_options(/MP) #build with multiple processors
     add_compile_options(/bigobj) #allow for larger object files
 endif(MSVC)
-
-if(WIN32)
-    add_definitions(-D_USE_MATH_DEFINES)
-    if (CMAKE_SIZEOF_VOID_P EQUAL 8)
-        add_definitions(-DMS_WIN64)
-    endif(CMAKE_SIZEOF_VOID_P EQUAL 8)
-endif(WIN32)
 
 # Record Compiler Info for record
 STRING(TOUPPER ${CMAKE_BUILD_TYPE} GRCBTU)
@@ -278,6 +236,7 @@ SET(GR_DATA_DIR        share CACHE PATH "Base location for data")
 SET(GR_PKG_DATA_DIR    ${GR_DATA_DIR}/${CMAKE_PROJECT_NAME} CACHE PATH "Path to install package data")
 SET(GR_DOC_DIR         ${GR_DATA_DIR}/doc CACHE PATH "Path to install documentation")
 SET(GR_PKG_DOC_DIR     ${GR_DOC_DIR}/${CMAKE_PROJECT_NAME}-${DOCVER} CACHE PATH "Path to install package docs")
+SET(GR_MAN_DIR         ${GR_DATA_DIR}/man CACHE PATH "Path to install man pages")
 SET(GR_LIBEXEC_DIR     libexec CACHE PATH "Path to install libexec files")
 SET(GR_PKG_LIBEXEC_DIR ${GR_LIBEXEC_DIR}/${CMAKE_PROJECT_NAME} CACHE PATH "Path to install package libexec files")
 SET(GRC_BLOCKS_DIR     ${GR_PKG_DATA_DIR}/grc/blocks CACHE PATH "Path to install GRC blocks")
@@ -300,7 +259,6 @@ OPTION(ENABLE_PERFORMANCE_COUNTERS "Enable block performance counters" ON)
 if(ENABLE_PERFORMANCE_COUNTERS)
   message(STATUS "ADDING PERF COUNTERS")
   SET(GR_PERFORMANCE_COUNTERS True)
-  add_definitions(-DGR_PERFORMANCE_COUNTERS)
 else(ENABLE_PERFORMANCE_COUNTERS)
   SET(GR_PERFORMANCE_COUNTERS False)
   message(STATUS "NO PERF COUNTERS")
@@ -309,12 +267,20 @@ endif(ENABLE_PERFORMANCE_COUNTERS)
 ########################################################################
 # Variables replaced when configuring the package config files
 ########################################################################
-file(TO_NATIVE_PATH "${CMAKE_INSTALL_PREFIX}"           prefix)
-file(TO_NATIVE_PATH "\${prefix}"                        exec_prefix)
-file(TO_NATIVE_PATH "\${exec_prefix}/${GR_LIBRARY_DIR}" libdir)
-file(TO_NATIVE_PATH "\${prefix}/${GR_INCLUDE_DIR}"      includedir)
-file(TO_NATIVE_PATH "${SYSCONFDIR}"                     SYSCONFDIR)
-file(TO_NATIVE_PATH "${GR_PREFSDIR}"                    GR_PREFSDIR)
+file(TO_CMAKE_PATH "${CMAKE_INSTALL_PREFIX}"           prefix)
+file(TO_CMAKE_PATH "\${prefix}"                        exec_prefix)
+file(TO_CMAKE_PATH "\${exec_prefix}/${GR_LIBRARY_DIR}" libdir)
+file(TO_CMAKE_PATH "\${prefix}/${GR_INCLUDE_DIR}"      includedir)
+file(TO_CMAKE_PATH "${SYSCONFDIR}"                     SYSCONFDIR)
+file(TO_CMAKE_PATH "${GR_PREFSDIR}"                    GR_PREFSDIR)
+
+if(WIN32)
+    file(RELATIVE_PATH prefix_relative_to_lib "${prefix}/${GR_RUNTIME_DIR}" "${prefix}")
+else(WIN32)
+    file(RELATIVE_PATH prefix_relative_to_lib "${prefix}/${GR_LIBRARY_DIR}" "${prefix}")
+endif(WIN32)
+file(RELATIVE_PATH SYSCONFDIR_relative_to_prefix "${prefix}" "${SYSCONFDIR}")
+file(RELATIVE_PATH GR_PREFSDIR_relative_to_prefix "${prefix}" "${GR_PREFSDIR}")
 
 ########################################################################
 # On Apple only, set install name and use rpath correctly, if not already set
@@ -349,35 +315,32 @@ add_custom_target(uninstall
 )
 
 ########################################################################
-# Setup Boost for global use (within this build)
-########################################################################
-include(GrBoost)
-
-########################################################################
 # Enable python component
 ########################################################################
 include(GrPython)
-GR_PYTHON_CHECK_MODULE("six - python 2 and 3 compatibility library" six "True" SIX_FOUND)
-find_package(SWIG)
+GR_PYTHON_CHECK_MODULE(
+    "numpy"
+    numpy
+    "LooseVersion(numpy.__version__) >= LooseVersion('${GR_NUMPY_MIN_VERSION}')"
+    NUMPY_FOUND)
+# Needed for automatic regeneration of some bindings
+GR_PYTHON_CHECK_MODULE_RAW(
+    "pygccxml"
+    "import pygccxml"
+    PYGCCXML_FOUND
+    )
 
-if(SWIG_FOUND)
-    SET(SWIG_VERSION_CHECK FALSE)
-    if("${SWIG_VERSION}" VERSION_EQUAL ${GR_SWIG_MIN_VERSION} OR
-       "${SWIG_VERSION}" VERSION_GREATER ${GR_SWIG_MIN_VERSION})
-        SET(SWIG_VERSION_CHECK TRUE)
-    endif()
-endif(SWIG_FOUND)
+
+find_package(pybind11 REQUIRED)
+IF(${pybind11_VERSION} VERSION_LESS ${PYBIND11_MIN_VERSION})
+    message(FATAL_ERROR "pybind11 version ${pybind11_VERSION} < ${PYBIND11_MIN_VERSION}")
+ENDIF()
 
 include(GrComponent)
 GR_REGISTER_COMPONENT("python-support" ENABLE_PYTHON
     PYTHONLIBS_FOUND
-    SWIG_FOUND
-    SWIG_VERSION_CHECK
-    SIX_FOUND
-)
-
-GR_REGISTER_COMPONENT("testing-support" ENABLE_TESTING
-    Boost_FOUND
+    pybind11_FOUND
+    NUMPY_FOUND
 )
 
 if(${CMAKE_BUILD_TYPE} STREQUAL "Coverage")
@@ -385,77 +348,68 @@ if(${CMAKE_BUILD_TYPE} STREQUAL "Coverage")
   setup_target_for_coverage(coverage "ctest || exit 0" coverage)
 endif()
 
+########################################################################
+# Enable/disable examples
+########################################################################
+OPTION(ENABLE_EXAMPLES "Enable examples" ON)
 
 ########################################################################
-# Setup volk as a subproject
+# Detect and configure VOLK
 ########################################################################
 message(STATUS "")
 message(STATUS "Configuring VOLK support...")
-
-OPTION(ENABLE_INTERNAL_VOLK "Enable internal VOLK only" ON)
-UNSET(Volk_FOUND)
-if(NOT ENABLE_INTERNAL_VOLK)
-    find_package(Volk)
-    set(GR_VOLK_LIB "Volk::volk")
-    if(NOT Volk_FOUND)
-        message(STATUS "  External VOLK not found; checking internal.")
-    endif()
-endif()
-if(NOT Volk_FOUND)
-    find_file(INTREE_VOLK_FOUND
-        volk/volk_common.h
-        PATHS ${CMAKE_CURRENT_SOURCE_DIR}/volk/include
-        NO_DEFAULT_PATH
-        NO_CMAKE_FIND_ROOT_PATH
-    )
-
-    if(NOT INTREE_VOLK_FOUND)
-        message(STATUS "  VOLK submodule is not checked out.")
-        message(STATUS "  To check out the VOLK submodule, use:")
-        message(STATUS "    git pull --recurse-submodules=on")
-        message(STATUS "    git submodule update --init")
-        if(ENABLE_INTERNAL_VOLK)
-            message(STATUS "  External VOLK disabled.")
-        endif()
-        message(STATUS "  Override with -DENABLE_INTERNAL_VOLK=ON/OFF")
-        message(STATUS "")
-        message(FATAL_ERROR "VOLK required but not found.")
-    endif()
-
-    add_subdirectory(volk)
-    # if the above command returns, then VOLK is enabled
-
-    include(GrComponent)
-    GR_REGISTER_COMPONENT("volk" ENABLE_VOLK)
-
-    SET(VOLK_INCLUDE_DIRS
-        ${CMAKE_CURRENT_SOURCE_DIR}/volk/include
-        ${CMAKE_CURRENT_BINARY_DIR}/volk/include
-    )
-
-    set(GR_VOLK_LIB "volk")
-
-    SET(VOLK_INSTALL_LIBRARY_DIR ${CMAKE_INSTALL_PREFIX}/lib)
-    SET(VOLK_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_PREFIX}/include)
+find_package(Volk REQUIRED)
+message(STATUS "  Found VOLK:")
+message(STATUS "  * Version: ${Volk_VERSION}")
+message(STATUS "  * Libraries: ${VOLK_LIBRARIES}")
+message(STATUS "  * Includes: ${VOLK_INCLUDE_DIRS}")
+if("${Volk_VERSION}" STREQUAL "")
+  message(WARNING "Empty VOLK version string. Assuming compatibility. Good luck!")
 else()
-    message(STATUS "  An external VOLK has been found and will be used for build.")
-    SET(ENABLE_VOLK TRUE)
+  if("${Volk_VERSION}" VERSION_LESS ${VOLK_MIN_VERSION})
+    message(FATAL_ERROR "VOLK version ${Volk_VERSION} < ${VOLK_MIN_VERSION}")
+  endif()
+endif()
 
-    get_filename_component(VOLK_INSTALL_LIBRARY_DIR "${VOLK_LIBRARIES}" DIRECTORY)
-    SET(VOLK_INSTALL_INCLUDE_DIR ${VOLK_INCLUDE_DIRS})
-endif(NOT Volk_FOUND)
-
-message(STATUS "  Override with -DENABLE_INTERNAL_VOLK=ON/OFF")
-
-# Handle logging
+########################################################################
+# Configure Log4CPP
+########################################################################
 find_package(LOG4CPP REQUIRED)
+
+########################################################################
+# Setup Native Capabilities Flag
+########################################################################
+option(ENABLE_NATIVE "Enable native build optimizations" OFF)
+IF(UNIX)
+    IF (ENABLE_NATIVE)
+        MESSAGE(STATUS "Found GNU Radio native optimization flag.  Setting native CPU optimization flags.")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -ftree-vectorize")
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=native -ftree-vectorize")
+    ELSE (ENABLE_NATIVE)
+        MESSAGE(STATUS "Not using additional GNU Radio native architecture optimizations.")
+    ENDIF (ENABLE_NATIVE)
+ENDIF(UNIX)
+
+########################################################################
+# Disable complex math NaN/INFO range checking for performance
+########################################################################
+check_cxx_compiler_flag(-fcx-limited-range HAVE_CX_LIMITED_RANGE)
+if(HAVE_CX_LIMITED_RANGE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcx-limited-range")
+endif(HAVE_CX_LIMITED_RANGE)
 
 ########################################################################
 # Distribute the README file
 ########################################################################
 install(
-    FILES README.md README.hacking CHANGELOG.md
+    FILES README.md CONTRIBUTING.md CHANGELOG.md
     DESTINATION ${GR_PKG_DOC_DIR}
+)
+
+install(
+    FILES .clang-format
+    RENAME clang-format.conf
+    DESTINATION ${GR_PKG_DATA_DIR}
 )
 
 ########################################################################
@@ -464,7 +418,6 @@ install(
 list(APPEND GR_TEST_PYTHON_DIRS
     ${CMAKE_BINARY_DIR}/gnuradio-runtime/python
     ${CMAKE_SOURCE_DIR}/gnuradio-runtime/python
-    ${CMAKE_BINARY_DIR}/gnuradio-runtime/swig
 )
 
 
@@ -478,7 +431,12 @@ list(APPEND GR_TEST_PYTHON_DIRS
 # gnuradio-runtime/include/gnuradio/block.h needs a define to tell it which
 # multiprecision arithmetic library header to include
 find_package(MPLIB)
-add_definitions(${MPLIB_DEFINITIONS})
+
+########################################################################
+# Post-Install tasks are tasks that are usually not executed during
+# install, but for source builds, that's actually more convenient.
+########################################################################
+GR_REGISTER_COMPONENT("post-install" ENABLE_POSTINSTALL)
 
 ########################################################################
 # Add subdirectories (in order of deps)
@@ -495,6 +453,8 @@ add_subdirectory(gr-digital)
 add_subdirectory(gr-dtv)
 add_subdirectory(gr-audio)
 add_subdirectory(gr-channels)
+add_subdirectory(gr-pdu)
+add_subdirectory(gr-iio)
 add_subdirectory(gr-qtgui)
 add_subdirectory(gr-trellis)
 add_subdirectory(gr-uhd)
@@ -503,18 +463,19 @@ add_subdirectory(gr-video-sdl)
 add_subdirectory(gr-vocoder)
 add_subdirectory(gr-wavelet)
 add_subdirectory(gr-zeromq)
+add_subdirectory(gr-network)
+add_subdirectory(gr-soapy)
 
 # Defining GR_CTRLPORT for gnuradio/config.h
 if(ENABLE_GR_CTRLPORT)
   SET(GR_CTRLPORT True)
-  add_definitions(-DGR_CTRLPORT)
 
   if(CTRLPORT_BACKENDS GREATER 0)
     SET(GR_RPCSERVER_ENABLED True)
 
-    if(THRIFT_FOUND)
+    if(ENABLE_CTRLPORT_THRIFT)
       SET(GR_RPCSERVER_THRIFT True)
-    endif(THRIFT_FOUND)
+    endif(ENABLE_CTRLPORT_THRIFT)
   endif(CTRLPORT_BACKENDS GREATER 0)
 endif(ENABLE_GR_CTRLPORT)
 
@@ -548,6 +509,7 @@ install(
   DESTINATION ${CMAKE_MODULES_DIR}/gnuradio
 )
 
+file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/grc/grc.conf "enabled_components = ${_gr_enabled_components}")
 
 ########################################################################
 # Print summary
@@ -562,7 +524,7 @@ CONFIGURE_FILE(
   ${CMAKE_CURRENT_BINARY_DIR}/gnuradio-runtime/include/gnuradio/config.h
 )
 
-#Re-generate the constants file, now that we actually know which components will be enabled.
+# Re-generate the constants file, now that we actually know which components will be enabled.
 configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/gnuradio-runtime/lib/constants.cc.in
     ${CMAKE_CURRENT_BINARY_DIR}/gnuradio-runtime/lib/constants.cc

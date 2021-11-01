@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -25,10 +13,9 @@
 #endif
 
 #include "local_sighandler.h"
-#include <stdio.h>
-#include <string.h>
-#include <stdexcept>
 #include <boost/format.hpp>
+#include <cstring>
+#include <stdexcept>
 
 namespace gr {
 
@@ -43,8 +30,10 @@ local_sighandler::local_sighandler(int signum, void (*new_handler)(int))
     sigemptyset(&new_action.sa_mask);
     new_action.sa_flags = 0;
 
+    gr::configure_default_loggers(d_logger, d_debug_logger, "local_sighandler");
     if (sigaction(d_signum, &new_action, &d_old_action) < 0) {
-        perror("sigaction (install new)");
+        GR_LOG_ERROR(d_logger,
+                     boost::format("sigaction (install new): %s") % strerror(errno))
         throw std::runtime_error("sigaction");
     }
 #endif
@@ -54,7 +43,8 @@ local_sighandler::~local_sighandler() noexcept(false)
 {
 #ifdef HAVE_SIGACTION
     if (sigaction(d_signum, &d_old_action, 0) < 0) {
-        perror("sigaction (restore old)");
+        GR_LOG_ERROR(d_logger,
+                     boost::format("sigaction (restore old): %s") % strerror(errno))
         throw std::runtime_error("sigaction");
     }
 #endif

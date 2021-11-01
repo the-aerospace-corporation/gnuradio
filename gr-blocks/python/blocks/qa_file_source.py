@@ -4,20 +4,8 @@
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 #
 
 import os
@@ -25,6 +13,7 @@ import tempfile
 import array
 import pmt
 from gnuradio import gr, gr_unittest, blocks
+
 
 class test_file_source(gr_unittest.TestCase):
 
@@ -43,10 +32,10 @@ class test_file_source(gr_unittest.TestCase):
         del cls._datafilename
         del cls._datafile
 
-    def setUp (self):
+    def setUp(self):
         self.tb = gr.top_block()
 
-    def tearDown (self):
+    def tearDown(self):
         self.tb = None
 
     def test_file_source(self):
@@ -61,7 +50,7 @@ class test_file_source(gr_unittest.TestCase):
 
     def test_file_source_no_such_file(self):
         """
-        Try to open a non-existant file and verify exception is thrown.
+        Try to open a non-existent file and verify exception is thrown.
         """
         try:
             _ = blocks.file_source(gr.sizeof_float, "___no_such_file___")
@@ -72,7 +61,10 @@ class test_file_source(gr_unittest.TestCase):
     def test_file_source_with_offset(self):
         expected_result = self._vector[100:]
 
-        src = blocks.file_source(gr.sizeof_float, self._datafilename, offset=100)
+        src = blocks.file_source(
+            gr.sizeof_float,
+            self._datafilename,
+            offset=100)
         snk = blocks.vector_sink_f()
 
         self.tb.connect(src, snk)
@@ -83,9 +75,13 @@ class test_file_source(gr_unittest.TestCase):
         self.assertEqual(len(snk.tags()), 0)
 
     def test_source_with_offset_and_len(self):
-        expected_result = self._vector[100:100+600]
+        expected_result = self._vector[100:100 + 600]
 
-        src = blocks.file_source(gr.sizeof_float, self._datafilename, offset=100, len=600)
+        src = blocks.file_source(
+            gr.sizeof_float,
+            self._datafilename,
+            offset=100,
+            len=600)
         snk = blocks.vector_sink_f()
         self.tb.connect(src, snk)
         self.tb.run()
@@ -98,7 +94,7 @@ class test_file_source(gr_unittest.TestCase):
 
         src = blocks.file_source(gr.sizeof_float, self._datafilename)
         self.assertTrue(src.seek(0, os.SEEK_SET))
-        self.assertTrue(src.seek(len(self._vector)-1, os.SEEK_SET))
+        self.assertTrue(src.seek(len(self._vector) - 1, os.SEEK_SET))
         # Seek past end of file - this will also log a warning
         self.assertFalse(src.seek(len(self._vector), os.SEEK_SET))
         # Negative seek - this will also log a warning
@@ -113,7 +109,6 @@ class test_file_source(gr_unittest.TestCase):
         self.assertTrue(src.seek(1, os.SEEK_CUR))
         # Seek past end of file - this will also log a warning
         self.assertFalse(src.seek(len(self._vector), os.SEEK_CUR))
-
 
     def test_begin_tag(self):
         expected_result = self._vector
@@ -149,5 +144,6 @@ class test_file_source(gr_unittest.TestCase):
         self.assertEqual(str(tags[1].value), "1")
         self.assertEqual(tags[1].offset, 1000)
 
+
 if __name__ == '__main__':
-    gr_unittest.run(test_file_source, "test_file_source.xml")
+    gr_unittest.run(test_file_source)

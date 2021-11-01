@@ -1,6 +1,6 @@
 id: blocks_unpacked_to_packed_xx
 label: Unpacked to Packed
-flags: [ python ]
+flags: [ python, cpp ]
 
 parameters:
 -   id: type
@@ -16,7 +16,7 @@ parameters:
     default: '2'
 -   id: endianness
     label: Endianness
-    dtype: int
+    dtype: raw
     options: [gr.GR_MSB_FIRST, gr.GR_LSB_FIRST]
     option_labels: [MSB, LSB]
 -   id: num_ports
@@ -46,5 +46,7 @@ cpp_templates:
     includes: ['#include <gnuradio/blocks/unpacked_to_packed.h>']
     declarations: 'blocks::unpacked_to_packed_${type.fcn}::sptr ${id};'
     make: 'this->${id} = blocks::unpacked_to_packed_${type.fcn}::make(${bits_per_chunk}, ${endianness});'
+    translations:
+        gr\.: ''
 
 file_format: 1

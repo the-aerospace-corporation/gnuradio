@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef INCLUDED_DIGITAL_PROTOCOL_FORMATTER_BB_IMPL_H
@@ -36,12 +24,12 @@ private:
 public:
     protocol_formatter_bb_impl(const header_format_base::sptr& format,
                                const std::string& len_tag_key);
-    ~protocol_formatter_bb_impl();
+    ~protocol_formatter_bb_impl() override;
 
-    void set_header_format(header_format_base::sptr& format);
+    void set_header_format(header_format_base::sptr& format) override;
 
     void remove_length_tags(const std::vector<std::vector<tag_t>>& tags){};
-    int calculate_output_stream_length(const gr_vector_int& ninput_items)
+    int calculate_output_stream_length(const gr_vector_int& ninput_items) override
     {
         return d_format->header_nbytes();
     };
@@ -49,7 +37,7 @@ public:
     int work(int noutput_items,
              gr_vector_int& ninput_items,
              gr_vector_const_void_star& input_items,
-             gr_vector_void_star& output_items);
+             gr_vector_void_star& output_items) override;
 };
 
 } // namespace digital

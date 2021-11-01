@@ -1,19 +1,8 @@
 # Copyright 2009-2016 Free Software Foundation, Inc.
 # This file is part of GNU Radio
 #
-# GNU Radio Companion is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
+# SPDX-License-Identifier: GPL-2.0-or-later
 #
-# GNU Radio Companion is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
 import argparse, logging, sys
 
@@ -51,7 +40,15 @@ def main():
     # Enable logging
     # Note: All other modules need to use the 'grc.<module>' convention
     log = logging.getLogger('grc')
-    log.setLevel(logging.INFO)
+    # NOTE: This sets the log level to what was requested for the logger on the
+    # command line, but this may not be the correct approach if multiple handlers
+    # are intended to be used. The logger level shown here indicates all the log
+    # messages that are captured and the handler levels indicate messages each
+    # handler will output. A better approach may be resetting this to logging.DEBUG
+    # to catch everything and making sure the handlers have the correct levels set.
+    # This would be useful for a future GUI logging window that can filter messages
+    # independently of the console output. In this case, this should be DEBUG.
+    log.setLevel(LOG_LEVELS[args.log])
 
     # Console formatting
     console = logging.StreamHandler()

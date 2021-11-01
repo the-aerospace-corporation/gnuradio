@@ -221,8 +221,8 @@ blocks:
     label8: ''
     label9: ''
     legend: 'True'
-    maxoutbuf: ''
-    minoutbuf: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
     name: Original Spectrum
     nconnections: '1'
     showports: 'True'
@@ -243,7 +243,7 @@ blocks:
     width7: '1'
     width8: '1'
     width9: '1'
-    wintype: firdes.WIN_BLACKMAN_hARRIS
+    wintype: window.WIN_BLACKMAN_hARRIS
     ymax: '10'
     ymin: '-140'
   states:
@@ -298,8 +298,8 @@ blocks:
     label8: ''
     label9: ''
     legend: 'True'
-    maxoutbuf: ''
-    minoutbuf: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
     name: Encoded Spectrum
     nconnections: '1'
     showports: 'True'
@@ -320,7 +320,7 @@ blocks:
     width7: '1'
     width8: '1'
     width9: '1'
-    wintype: firdes.WIN_BLACKMAN_hARRIS
+    wintype: window.WIN_BLACKMAN_hARRIS
     ymax: '10'
     ymin: '-140'
   states:
@@ -375,8 +375,8 @@ blocks:
     label8: ''
     label9: ''
     legend: 'True'
-    maxoutbuf: ''
-    minoutbuf: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
     name: Decoded Spectrum
     nconnections: '1'
     showports: 'True'
@@ -397,7 +397,7 @@ blocks:
     width7: '1'
     width8: '1'
     width9: '1'
-    wintype: firdes.WIN_BLACKMAN_hARRIS
+    wintype: window.WIN_BLACKMAN_hARRIS
     ymax: '10'
     ymin: '-140'
   states:

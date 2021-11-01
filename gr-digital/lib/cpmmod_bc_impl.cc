@@ -2,20 +2,8 @@
 /*
  * Copyright 2010,2012,2018 Free Software Foundation, Inc.
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -32,14 +20,14 @@ namespace digital {
 cpmmod_bc::sptr cpmmod_bc::make(
     analog::cpm::cpm_type type, float h, int samples_per_sym, int L, double beta)
 {
-    return gnuradio::get_initial_sptr(new cpmmod_bc_impl(
-        "cpmmod_bc", (analog::cpm::cpm_type)type, h, samples_per_sym, L, beta));
+    return gnuradio::make_block_sptr<cpmmod_bc_impl>(
+        "cpmmod_bc", (analog::cpm::cpm_type)type, h, samples_per_sym, L, beta);
 }
 
 cpmmod_bc::sptr cpmmod_bc::make_gmskmod_bc(int samples_per_sym, int L, double beta)
 {
-    return gnuradio::get_initial_sptr(new cpmmod_bc_impl(
-        "gmskmod_bc", analog::cpm::GAUSSIAN, 0.5, samples_per_sym, L, beta));
+    return gnuradio::make_block_sptr<cpmmod_bc_impl>(
+        "gmskmod_bc", analog::cpm::GAUSSIAN, 0.5, samples_per_sym, L, beta);
 }
 
 cpmmod_bc_impl::cpmmod_bc_impl(const std::string& name,

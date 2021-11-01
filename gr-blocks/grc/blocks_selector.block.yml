@@ -34,7 +34,7 @@ parameters:
     dtype: int
     default: 0
 -   id: vlen
-    label: Vec Length
+    label: Vector Length
     dtype: int
     default: '1'
     hide: ${ 'part' if vlen == 1 else 'none' }
@@ -53,6 +53,14 @@ inputs:
     multiplicity: ${ num_inputs }
 -   domain: message
     id: en
+    optional: true
+    hide: ${ showports }
+-   domain: message
+    id: iindex
+    optional: true
+    hide: ${ showports }
+-   domain: message
+    id: oindex
     optional: true
     hide: ${ showports }
 
@@ -86,7 +94,6 @@ cpp_templates:
     - set_input_index(${input_index})
     - set_output_index(${output_index})
     translations:
-        gr.sizeof_: 'sizeof('
         'True': 'true'
         'False': 'false'
 

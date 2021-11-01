@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -29,6 +17,7 @@
 #include <volk/volk.h>
 
 #include <cstdio>
+#include <iostream>
 
 namespace gr {
 namespace fec {
@@ -39,7 +28,7 @@ const float polar_decoder_common::D_LLR_FACTOR = -2.19722458f;
 polar_decoder_common::polar_decoder_common(int block_size,
                                            int num_info_bits,
                                            std::vector<int> frozen_bit_positions,
-                                           std::vector<char> frozen_bit_values)
+                                           std::vector<uint8_t> frozen_bit_values)
     : polar_common(block_size, num_info_bits, frozen_bit_positions, frozen_bit_values),
       d_frozen_bit_counter(0)
 {
@@ -178,6 +167,7 @@ void polar_decoder_common::extract_info_bits(unsigned char* output,
 void polar_decoder_common::print_pretty_llr_vector(const float* llr_vec) const
 {
     for (int row = 0; row < block_size(); row++) {
+        // FIXME this is an interesting mixture of iostream and stdio
         std::cout << row << "->" << int(bit_reverse(row, block_power())) << ":\t";
         for (int stage = 0; stage < block_power() + 1; stage++) {
             printf("%+4.2f, ", llr_vec[(stage * block_size()) + row]);

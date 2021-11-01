@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -26,16 +14,16 @@
 
 #include <gnuradio/attributes.h>
 #include <gnuradio/digital/header_buffer.h>
-#include <stdio.h>
-#include <volk/volk.h>
+#include <volk/volk_alloc.hh>
 #include <boost/test/unit_test.hpp>
+#include <cstdio>
 
 BOOST_AUTO_TEST_CASE(test_add8)
 {
     size_t len = sizeof(uint8_t);
-    uint8_t* buf = (uint8_t*)volk_malloc(len, volk_get_alignment());
+    volk::vector<uint8_t> buf(len);
 
-    gr::digital::header_buffer header(buf);
+    gr::digital::header_buffer header(buf.data());
     header.add_field8(0xAF);
 
     BOOST_REQUIRE_EQUAL(len, header.length());
@@ -43,18 +31,16 @@ BOOST_AUTO_TEST_CASE(test_add8)
 
     header.clear();
     BOOST_REQUIRE_EQUAL((size_t)0, header.length());
-
-    volk_free(buf);
 }
 
 BOOST_AUTO_TEST_CASE(test_add16)
 {
     size_t len = sizeof(uint16_t);
-    uint8_t* buf = (uint8_t*)volk_malloc(len, volk_get_alignment());
+    volk::vector<uint8_t> buf(len);
 
     uint16_t data = 0xAF5C;
 
-    gr::digital::header_buffer header(buf);
+    gr::digital::header_buffer header(buf.data());
     header.add_field16(data);
 
     // Test standard add of a uint16
@@ -84,18 +70,16 @@ BOOST_AUTO_TEST_CASE(test_add16)
     BOOST_REQUIRE_EQUAL((size_t)1, header.length());
     BOOST_REQUIRE_EQUAL((uint8_t)0x5C, header.header()[0]);
     header.clear();
-
-    volk_free(buf);
 }
 
 BOOST_AUTO_TEST_CASE(test_add32)
 {
     size_t len = sizeof(uint32_t);
-    uint8_t* buf = (uint8_t*)volk_malloc(len, volk_get_alignment());
+    volk::vector<uint8_t> buf(len);
 
     uint32_t data = 0xAF5C7654;
 
-    gr::digital::header_buffer header(buf);
+    gr::digital::header_buffer header(buf.data());
     header.add_field32(data);
 
     // Test standard add of a uint32
@@ -131,18 +115,16 @@ BOOST_AUTO_TEST_CASE(test_add32)
     BOOST_REQUIRE_EQUAL((uint8_t)0x76, header.header()[1]);
     BOOST_REQUIRE_EQUAL((uint8_t)0x5C, header.header()[2]);
     header.clear();
-
-    volk_free(buf);
 }
 
 BOOST_AUTO_TEST_CASE(test_add64)
 {
     size_t len = sizeof(uint64_t);
-    uint8_t* buf = (uint8_t*)volk_malloc(len, volk_get_alignment());
+    volk::vector<uint8_t> buf(len);
 
     uint64_t data = 0xAF5C765432104567;
 
-    gr::digital::header_buffer header(buf);
+    gr::digital::header_buffer header(buf.data());
     header.add_field64(data);
 
     // Test standard add of a uint64
@@ -193,16 +175,14 @@ BOOST_AUTO_TEST_CASE(test_add64)
     BOOST_REQUIRE_EQUAL((uint8_t)0x32, header.header()[3]);
     BOOST_REQUIRE_EQUAL((uint8_t)0x54, header.header()[4]);
     header.clear();
-
-    volk_free(buf);
 }
 
 BOOST_AUTO_TEST_CASE(test_add_many)
 {
     size_t len = (32 + 64 + 8 + 16 + 32) / 8;
-    uint8_t* buf = (uint8_t*)volk_malloc(len, volk_get_alignment());
+    volk::vector<uint8_t> buf(len);
 
-    gr::digital::header_buffer header(buf);
+    gr::digital::header_buffer header(buf.data());
     header.add_field32(0x01234567);
     header.add_field64(0x89ABCDEFFEDCBA98);
     header.add_field8(0x76);

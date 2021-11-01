@@ -3,26 +3,13 @@
 # 
 # This file is part of GNU Radio
 # 
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
-# 
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-# 
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
-# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
 
 """
 Miscellaneous utilities for managing mods and demods, as well as other items
 useful in dealing with generalized handling of different modulations and demods.
 """
-from __future__ import unicode_literals
 
 import inspect
 
@@ -82,9 +69,9 @@ def extract_kwargs_from_options(function, excluded_args, options):
     """
     
     # Try this in C++ ;)
-    args, varargs, varkw, defaults = inspect.getargspec(function)
+    spec = inspect.getfullargspec(function)
     d = {}
-    for kw in [a for a in args if a not in excluded_args]:
+    for kw in [a for a in spec.args if a not in excluded_args]:
         if hasattr(options, kw):
             if getattr(options, kw) is not None:
                 d[kw] = getattr(options, kw)

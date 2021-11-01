@@ -2,22 +2,10 @@
 Copyright 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
 This file is part of GNU Radio
 
-GNU Radio Companion is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
+SPDX-License-Identifier: GPL-2.0-or-later
 
-GNU Radio Companion is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 """
 
-from __future__ import absolute_import
 
 from gi.repository import Gtk, Gdk
 
@@ -87,9 +75,9 @@ class DrawingArea(Gtk.DrawingArea):
 
         self.connect('leave-notify-event', _handle_notify_event, False)
         self.connect('enter-notify-event', _handle_notify_event, True)
-        # todo: fix
-#        self.set_flags(Gtk.CAN_FOCUS)  # self.set_can_focus(True)
-#        self.connect('focus-out-event', self._handle_focus_lost_event)
+
+        self.set_can_focus(True)
+        self.connect('focus-out-event', self._handle_focus_lost_event)
 
 
     ##########################################################################
@@ -102,28 +90,39 @@ class DrawingArea(Gtk.DrawingArea):
         coords = x / self.zoom_factor, y / self.zoom_factor
         self._flow_graph.add_new_block(selection_data.get_text(), coords)
 
+    def zoom_in(self):
+        change = 1.2
+        zoom_factor = min(self.zoom_factor * change, 5.0)
+        self._set_zoom_factor(zoom_factor)
+
+    def zoom_out(self):
+        change = 1/1.2 
+        zoom_factor = max(self.zoom_factor * change, 0.1)
+        self._set_zoom_factor(zoom_factor)
+
+    def reset_zoom(self):
+        self._set_zoom_factor(1.0)
+
+    def _set_zoom_factor(self, zoom_factor):
+        if zoom_factor != self.zoom_factor:
+            self.zoom_factor = zoom_factor
+            self._update_after_zoom = True
+            self.queue_draw()
+
     def _handle_mouse_scroll(self, widget, event):
         if event.get_state() & Gdk.ModifierType.CONTROL_MASK:
-            change = 1.2 if event.direction == Gdk.ScrollDirection.UP else 1/1.2
-            zoom_factor = min(max(self.zoom_factor * change, 0.1), 5.0)
-
-            if zoom_factor != self.zoom_factor:
-                self.zoom_factor = zoom_factor
-                self._update_after_zoom = True
-                self.queue_draw()
+            if event.direction == Gdk.ScrollDirection.UP:
+                self.zoom_in()
+            else:
+                self.zoom_out()
             return True
-
         return False
 
     def _handle_mouse_button_press(self, widget, event):
         """
         Forward button click information to the flow graph.
         """
-        # The following line causes the canvas to reset position to 0,0
-        #  when changing focus from the console or block search back to 
-        #  the canvas
-        #  Removing this line leaves the canvas alone when focus changes
-        # self.grab_focus()
+        self.grab_focus()
 
         self.ctrl_mask = event.get_state() & Gdk.ModifierType.CONTROL_MASK
         self.mod1_mask = event.get_state() & Gdk.ModifierType.MOD1_MASK
@@ -170,7 +169,11 @@ class DrawingArea(Gtk.DrawingArea):
 
     def _update_size(self):
         w, h = self._flow_graph.get_extents()[2:]
-        self.set_size_request(w * self.zoom_factor + 100, h * self.zoom_factor + 100)
+        scale_factor = self.get_scale_factor()
+        self.set_size_request(
+            w * scale_factor * self.zoom_factor + 100,
+            h * scale_factor * self.zoom_factor + 100,
+        )
 
     def _auto_scroll(self, event):
         x, y = event.x, event.y
@@ -224,7 +227,8 @@ class DrawingArea(Gtk.DrawingArea):
 
     def _handle_focus_lost_event(self, widget, event):
         # don't clear selection while context menu is active
-        if not self._flow_graph.context_menu.get_take_focus():
+        if not self._flow_graph.get_context_menu()._menu.get_visible():
             self._flow_graph.unselect()
             self._flow_graph.update_selected()
-            self._flow_graph.queue_draw()
+            self.queue_draw()
+            Actions.ELEMENT_SELECT()

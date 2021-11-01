@@ -4,27 +4,15 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #include <gnuradio/messages/msg_passing.h>
 #include <pmt/api.h> //reason: suppress warnings
 #include <boost/format.hpp>
 #include <boost/test/unit_test.hpp>
-#include <cstdio>
+#include <any>
 #include <cstring>
 #include <sstream>
 
@@ -395,7 +383,27 @@ BOOST_AUTO_TEST_CASE(test_dict)
     // std::cout << "pmt::dict_keys:   " << pmt::dict_keys(dict) << std::endl;
     // std::cout << "pmt::dict_values: " << pmt::dict_values(dict) << std::endl;
     BOOST_CHECK(pmt::equal(keys, pmt::dict_keys(dict)));
-    BOOST_CHECK(pmt::equal(vals, pmt::dict_values(dict)));
+
+    dict = pmt::dict_delete(dict, k1);
+    BOOST_CHECK(pmt::eqv(pmt::dict_ref(dict, k0, not_found), v0));
+    BOOST_CHECK(pmt::is_dict(dict));
+    dict = pmt::dict_add(dict, k3, v3);
+    dict = pmt::reverse(dict);
+    BOOST_CHECK(pmt::eqv(pmt::dict_ref(dict, k0, not_found), v0));
+    BOOST_CHECK(pmt::is_dict(dict));
+}
+
+BOOST_AUTO_TEST_CASE(test_pdu)
+{
+    pmt::pmt_t dict = pmt::dict_add(pmt::make_dict(), pmt::mp("k0"), pmt::mp("v0"));
+    pmt::pmt_t vec = pmt::make_u8vector(1, 0);
+    BOOST_CHECK(!pmt::is_pdu(pmt::PMT_T));
+    BOOST_CHECK(!pmt::is_pdu(vec));
+    BOOST_CHECK(!pmt::is_pdu(dict));
+    BOOST_CHECK(!pmt::is_pdu(pmt::cons(dict, pmt::PMT_NIL)));
+    BOOST_CHECK(!pmt::is_pdu(pmt::cons(pmt::PMT_F, vec)));
+    BOOST_CHECK(pmt::is_pdu(pmt::cons(pmt::make_dict(), vec)));
+    BOOST_CHECK(pmt::is_pdu(pmt::cons(dict, vec)));
 }
 
 BOOST_AUTO_TEST_CASE(test_io)
@@ -448,9 +456,9 @@ std::ostream& operator<<(std::ostream& os, const foo obj)
 
 BOOST_AUTO_TEST_CASE(test_any)
 {
-    boost::any a0;
-    boost::any a1;
-    boost::any a2;
+    std::any a0;
+    std::any a1;
+    std::any a2;
 
     a0 = std::string("Hello!");
     a1 = 42;
@@ -461,11 +469,11 @@ BOOST_AUTO_TEST_CASE(test_any)
     pmt::pmt_t p2 = pmt::make_any(a2);
 
     BOOST_CHECK_EQUAL(std::string("Hello!"),
-                      boost::any_cast<std::string>(pmt::any_ref(p0)));
+                      std::any_cast<std::string>(pmt::any_ref(p0)));
 
-    BOOST_CHECK_EQUAL(42, boost::any_cast<int>(pmt::any_ref(p1)));
+    BOOST_CHECK_EQUAL(42, std::any_cast<int>(pmt::any_ref(p1)));
 
-    BOOST_CHECK_EQUAL(foo(3.250, 21), boost::any_cast<foo>(pmt::any_ref(p2)));
+    BOOST_CHECK_EQUAL(foo(3.250, 21), std::any_cast<foo>(pmt::any_ref(p2)));
 }
 
 // ------------------------------------------------------------------------
@@ -474,8 +482,8 @@ class qa_pmt_msg_accepter_nop : public gr::messages::msg_accepter
 {
 public:
     qa_pmt_msg_accepter_nop() {}
-    ~qa_pmt_msg_accepter_nop();
-    void post(pmt::pmt_t, pmt::pmt_t) {}
+    ~qa_pmt_msg_accepter_nop() override;
+    void post(pmt::pmt_t, pmt::pmt_t) override {}
 };
 
 qa_pmt_msg_accepter_nop::~qa_pmt_msg_accepter_nop() {}
@@ -484,7 +492,7 @@ BOOST_AUTO_TEST_CASE(test_msg_accepter)
 {
     pmt::pmt_t sym = pmt::mp("my-symbol");
 
-    boost::any a0;
+    std::any a0;
     a0 = std::string("Hello!");
     pmt::pmt_t p0 = pmt::make_any(a0);
 

@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -25,11 +13,12 @@
 #endif
 
 #include <gnuradio/blocks/file_sink_base.h>
+#include <gnuradio/logger.h>
 #include <gnuradio/thread/thread.h>
 #include <fcntl.h>
-#include <stdio.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <boost/format.hpp>
 #include <cstdio>
 #include <stdexcept>
 
@@ -58,6 +47,7 @@ file_sink_base::file_sink_base(const char* filename, bool is_binary, bool append
 {
     if (!open(filename))
         throw std::runtime_error("can't open file");
+    gr::configure_default_loggers(d_logger, d_debug_logger, "file_sink_base");
 }
 
 file_sink_base::~file_sink_base()
@@ -76,13 +66,14 @@ bool file_sink_base::open(const char* filename)
     // we use the open system call to get access to the O_LARGEFILE flag.
     int fd;
     int flags;
+
     if (d_append) {
         flags = O_WRONLY | O_CREAT | O_APPEND | OUR_O_LARGEFILE | OUR_O_BINARY;
     } else {
         flags = O_WRONLY | O_CREAT | O_TRUNC | OUR_O_LARGEFILE | OUR_O_BINARY;
     }
     if ((fd = ::open(filename, flags, 0664)) < 0) {
-        perror(filename);
+        GR_LOG_ERROR(d_logger, boost::format("%s: %s") % filename % strerror(errno));
         return false;
     }
     if (d_new_fp) { // if we've already got a new one open, close it
@@ -91,7 +82,7 @@ bool file_sink_base::open(const char* filename)
     }
 
     if ((d_new_fp = fdopen(fd, d_is_binary ? "wb" : "w")) == NULL) {
-        perror(filename);
+        GR_LOG_ERROR(d_logger, boost::format("%s: %s") % filename % strerror(errno));
         ::close(fd); // don't leak file descriptor if fdopen fails.
     }
 

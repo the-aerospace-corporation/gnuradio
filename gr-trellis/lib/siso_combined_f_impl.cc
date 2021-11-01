@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -26,8 +14,6 @@
 
 #include "siso_combined_f_impl.h"
 #include <gnuradio/io_signature.h>
-#include <assert.h>
-#include <iostream>
 #include <stdexcept>
 
 namespace gr {
@@ -44,8 +30,8 @@ siso_combined_f::sptr siso_combined_f::make(const fsm& FSM,
                                             const std::vector<float>& TABLE,
                                             digital::trellis_metric_type_t TYPE)
 {
-    return gnuradio::get_initial_sptr(new siso_combined_f_impl(
-        FSM, K, S0, SK, POSTI, POSTO, SISO_TYPE, D, TABLE, TYPE));
+    return gnuradio::make_block_sptr<siso_combined_f_impl>(
+        FSM, K, S0, SK, POSTI, POSTO, SISO_TYPE, D, TABLE, TYPE);
 }
 
 void siso_combined_f_impl::recalculate()

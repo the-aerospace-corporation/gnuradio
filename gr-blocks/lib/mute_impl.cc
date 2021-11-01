@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 
@@ -27,8 +15,8 @@
 
 #include "mute_impl.h"
 #include <gnuradio/io_signature.h>
-#include <string.h>
 #include <algorithm>
+#include <cstring>
 
 namespace gr {
 namespace blocks {
@@ -36,7 +24,7 @@ namespace blocks {
 template <class T>
 typename mute_blk<T>::sptr mute_blk<T>::make(bool mute)
 {
-    return gnuradio::get_initial_sptr(new mute_impl<T>(mute));
+    return gnuradio::make_block_sptr<mute_impl<T>>(mute);
 }
 
 template <class T>
@@ -48,7 +36,7 @@ mute_impl<T>::mute_impl(bool mute)
 {
     this->message_port_register_in(pmt::intern("set_mute"));
     this->set_msg_handler(pmt::intern("set_mute"),
-                          boost::bind(&mute_impl<T>::set_mute_pmt, this, _1));
+                          [this](pmt::pmt_t msg) { this->set_mute_pmt(msg); });
 }
 
 template <class T>

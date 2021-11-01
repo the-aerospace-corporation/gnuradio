@@ -3,28 +3,16 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef INCLUDED_DIGITAL_HEADER_BUFFER_H
 #define INCLUDED_DIGITAL_HEADER_BUFFER_H
 
 #include <gnuradio/digital/api.h>
-#include <stdint.h>
-#include <stdlib.h>
+#include <cstdint>
+#include <cstdlib>
 #include <vector>
 
 namespace gr {
@@ -83,8 +71,7 @@ namespace digital {
  * As simple example of using this class in transmit mode:
  *
  * \verbatim
- uint8_t* buffer = (uint8_t*)volk_malloc(header_nbytes(),
-                                         volk_get_alignment());
+ volk::vector<uint8_t> buffer(header_nbytes());
 
  header_buffer hdr(buffer);
  hdr.add_field64(sync_word, sync_word_len);
@@ -93,8 +80,6 @@ namespace digital {
  hdr.add_field8(header_options);
 
  // Do something with the header
-
- volk_free(buffer);
  \endverbatim
  *
  * In this example, the header contains four fields:

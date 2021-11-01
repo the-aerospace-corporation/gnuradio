@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef INCLUDED_GR_RUNTIME_HIER_BLOCK2_DETAIL_H
@@ -25,8 +13,9 @@
 
 #include <gnuradio/api.h>
 #include <gnuradio/hier_block2.h>
+#include <gnuradio/logger.h>
 #include <flat_flowgraph.h>
-#include <boost/utility.hpp>
+#include <boost/core/noncopyable.hpp>
 
 namespace gr {
 
@@ -76,6 +65,9 @@ private:
         d_inputs;                // Multiple internal endpoints per external input
     endpoint_vector_t d_outputs; // Single internal endpoint per external output
     basic_block_vector_t d_blocks;
+
+    gr::logger_ptr d_logger;
+    gr::logger_ptr d_debug_logger;
 
     void refresh_io_signature();
     void connect_input(int my_port, int port, basic_block_sptr block);

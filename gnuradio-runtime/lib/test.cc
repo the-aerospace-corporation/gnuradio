@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -26,8 +14,7 @@
 
 #include "test.h"
 #include <gnuradio/io_signature.h>
-#include <string.h>
-#include <iostream>
+#include <cstring>
 #include <stdexcept>
 
 namespace gr {
@@ -46,19 +33,19 @@ test_sptr make_test(const std::string& name,
                     consume_type_t cons_type,
                     produce_type_t prod_type)
 {
-    return gnuradio::get_initial_sptr(new test(name,
-                                               min_inputs,
-                                               max_inputs,
-                                               sizeof_input_item,
-                                               min_outputs,
-                                               max_outputs,
-                                               sizeof_output_item,
-                                               history,
-                                               output_multiple,
-                                               relative_rate,
-                                               fixed_rate,
-                                               cons_type,
-                                               prod_type));
+    return gnuradio::make_block_sptr<test>(name,
+                                           min_inputs,
+                                           max_inputs,
+                                           sizeof_input_item,
+                                           min_outputs,
+                                           max_outputs,
+                                           sizeof_output_item,
+                                           history,
+                                           output_multiple,
+                                           relative_rate,
+                                           fixed_rate,
+                                           cons_type,
+                                           prod_type);
 }
 
 test::test(const std::string& name,
@@ -104,13 +91,12 @@ int test::general_work(int noutput_items,
     for (unsigned i = 0; i < ninputs; i++) {
         char* in = (char*)input_items[i];
         if (ninput_items[i] < (int)(noutput_items + history())) {
-            std::cerr << "ERROR: ninput_items[" << i << "] < noutput_items+history()"
-                      << std::endl;
-            std::cerr << "ninput_items[" << i << "] = " << ninput_items[i] << std::endl;
-            std::cerr << "noutput_items+history() = " << noutput_items + history()
-                      << std::endl;
-            std::cerr << "noutput_items = " << noutput_items << std::endl;
-            std::cerr << "history() = " << history() << std::endl;
+            std::ostringstream msg;
+            msg << "ninput_items[" << i << "] < noutput_items+history()"
+                << "ninput_items[" << i << "] = " << ninput_items[i]
+                << "noutput_items+history() = " << (noutput_items + history())
+                << "noutput_items = " << noutput_items << "history() = " << history();
+            GR_LOG_ERROR(d_logger, msg.str());
             throw std::runtime_error("test");
         } else {
             for (int j = 0; j < ninput_items[i]; j++) {

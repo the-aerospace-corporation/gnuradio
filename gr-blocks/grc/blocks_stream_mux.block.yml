@@ -14,14 +14,14 @@ parameters:
 -   id: lengths
     label: Lengths
     dtype: int_vector
-    default: 1, 1
+    default: (1, 1)
 -   id: num_inputs
     label: Num Inputs
     dtype: int
     default: '2'
     hide: part
 -   id: vlen
-    label: Vec Length
+    label: Vector Length
     dtype: int
     default: '1'
     hide: ${ 'part' if vlen == 1 else 'none' }
@@ -50,7 +50,5 @@ cpp_templates:
     includes: ['#include <gnuradio/blocks/stream_mux.h>']
     declarations: 'blocks::stream_mux::sptr ${id};'
     make: 'this->${id} = blocks::stream_mux::make(${type.size}*${vlen}, ${lengths});'
-    translations:
-        gr.sizeof_: 'sizeof('
 
 file_format: 1

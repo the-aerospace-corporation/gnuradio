@@ -4,27 +4,20 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
+#warning "ALSA CONFIG H"
 #include "config.h"
 #endif
 
+#include <gnuradio/logger.h>
+
 #include "alsa_impl.h"
+
+#include <boost/format.hpp>
 #include <algorithm>
 
 static snd_pcm_access_t access_types[] = { SND_PCM_ACCESS_MMAP_INTERLEAVED,
@@ -150,33 +143,31 @@ bool gri_alsa_pick_acceptable_format(snd_pcm_t* pcm,
                                      bool verbose)
 {
     int err;
+    gr::logger_ptr logger, debug_logger;
+    gr::configure_default_loggers(
+        logger, debug_logger, "gri_alsa_pick_acceptable_format");
 
     // pick a format that we like...
     for (unsigned i = 0; i < nacceptable_formats; i++) {
         if (snd_pcm_hw_params_test_format(pcm, hwparams, acceptable_formats[i]) == 0) {
             err = snd_pcm_hw_params_set_format(pcm, hwparams, acceptable_formats[i]);
             if (err < 0) {
-                fprintf(stderr,
-                        "%s[%s]: failed to set format: %s\n",
-                        error_msg_tag,
-                        snd_pcm_name(pcm),
-                        snd_strerror(err));
+                GR_LOG_ERROR(logger,
+                             boost::format("%s[%s]: failed to set format: %s") %
+                                 error_msg_tag % snd_pcm_name(pcm) % snd_strerror(err));
                 return false;
             }
-            if (verbose)
-                fprintf(stdout,
-                        "%s[%s]: using %s\n",
-                        error_msg_tag,
-                        snd_pcm_name(pcm),
-                        snd_pcm_format_name(acceptable_formats[i]));
+            GR_LOG_INFO(debug_logger,
+                        boost::format("%s[%s]: using %s") % error_msg_tag %
+                            snd_pcm_name(pcm) %
+                            snd_pcm_format_name(acceptable_formats[i]));
             *selected_format = acceptable_formats[i];
             return true;
         }
     }
 
-    fprintf(stderr,
-            "%s[%s]: failed to find acceptable format",
-            error_msg_tag,
-            snd_pcm_name(pcm));
+    GR_LOG_ERROR(logger,
+                 boost::format("%s[%s]: failed to find acceptable format") %
+                     error_msg_tag % snd_pcm_name(pcm));
     return false;
 }

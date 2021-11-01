@@ -2,33 +2,17 @@
 #
 # Copyright 2015 Free Software Foundation, Inc.
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
-#
-
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import unicode_literals
 
 
 import numpy as np
-from .helper_functions import *
+from .helper_functions import bit_reverse_vector, is_power_of_two
 
-'''
+"""
 PolarCommon holds value checks and common initializer code for both Encoder and Decoder.
-'''
+"""
 
 
 class PolarCommon(object):
@@ -38,15 +22,25 @@ class PolarCommon(object):
         if frozenbits is None:
             frozenbits = np.zeros(n - k, dtype=np.int)
         if not len(frozenbits) == n - k:
-            raise ValueError("len(frozenbits)={0} is not equal to n-k={1}!".format(len(frozenbits), n - k))
+            raise ValueError(
+                "len(frozenbits)={0} is not equal to n-k={1}!".format(
+                    len(frozenbits), n - k
+                )
+            )
         if not frozenbits.dtype == np.int:
             frozenbits = frozenbits.astype(dtype=int)
         if not len(frozen_bit_position) == (n - k):
-            raise ValueError("len(frozen_bit_position)={0} is not equal to n-k={1}!".format(len(frozen_bit_position), n - k))
+            raise ValueError(
+                "len(frozen_bit_position)={0} is not equal to n-k={1}!".format(
+                    len(frozen_bit_position), n - k
+                )
+            )
         if not frozen_bit_position.dtype == np.int:
             frozen_bit_position = frozen_bit_position.astype(dtype=int)
 
-        self.bit_reverse_positions = self._vector_bit_reversed(np.arange(n, dtype=int), int(np.log2(n)))
+        self.bit_reverse_positions = self._vector_bit_reversed(
+            np.arange(n, dtype=int), int(np.log2(n))
+        )
         self.N = n
         self.power = int(np.log2(self.N))
         self.K = k
@@ -80,7 +74,8 @@ class PolarCommon(object):
         return vec
 
     def _encode_natural_order(self, vec):
-        # use this function. It reflects the encoding process implemented in VOLK.
+        # use this function. It reflects the encoding process implemented in
+        # VOLK.
         vec = vec[self.bit_reverse_positions]
         return self._encode_efficient(vec)
 

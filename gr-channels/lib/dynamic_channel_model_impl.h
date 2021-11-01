@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef INCLUDED_CHANNELS_CHANNEL_MODEL_IMPL_H
@@ -63,32 +51,32 @@ public:
                                double noise_amp,
                                double noise_seed);
 
-    ~dynamic_channel_model_impl();
+    ~dynamic_channel_model_impl() override;
 
-    void setup_rpc();
+    void setup_rpc() override;
 
-    double samp_rate() const { return d_sro_model->samp_rate(); }
-    double sro_dev_std() const { return d_sro_model->std_dev(); }
-    double sro_dev_max() const { return d_sro_model->max_dev(); }
-    double cfo_dev_std() const { return d_cfo_model->std_dev(); }
-    double cfo_dev_max() const { return d_cfo_model->max_dev(); }
-    double noise_amp() const { return d_noise->amplitude(); }
-    double doppler_freq() const { return d_fader->fDTs() * samp_rate(); }
-    double K() const { return d_fader->K(); }
+    double samp_rate() const override { return d_sro_model->samp_rate(); }
+    double sro_dev_std() const override { return d_sro_model->std_dev(); }
+    double sro_dev_max() const override { return d_sro_model->max_dev(); }
+    double cfo_dev_std() const override { return d_cfo_model->std_dev(); }
+    double cfo_dev_max() const override { return d_cfo_model->max_dev(); }
+    double noise_amp() const override { return d_noise->amplitude(); }
+    double doppler_freq() const override { return d_fader->fDTs() * samp_rate(); }
+    double K() const override { return d_fader->K(); }
 
-    void set_samp_rate(double sr)
+    void set_samp_rate(double sr) override
     {
         d_fader->set_fDTs(doppler_freq() / samp_rate());
         d_sro_model->set_samp_rate(sr);
         d_cfo_model->set_samp_rate(sr);
     }
-    void set_sro_dev_std(double dev) { d_sro_model->set_max_dev(dev); }
-    void set_sro_dev_max(double dev) { d_sro_model->set_max_dev(dev); }
-    void set_cfo_dev_std(double dev) { d_cfo_model->set_std_dev(dev); }
-    void set_cfo_dev_max(double dev) { d_cfo_model->set_max_dev(dev); }
-    void set_noise_amp(double amp) { d_noise->set_amplitude(amp); }
-    void set_doppler_freq(double f) { d_fader->set_fDTs(f / samp_rate()); }
-    void set_K(double K) { d_fader->set_K(K); }
+    void set_sro_dev_std(double dev) override { d_sro_model->set_max_dev(dev); }
+    void set_sro_dev_max(double dev) override { d_sro_model->set_max_dev(dev); }
+    void set_cfo_dev_std(double dev) override { d_cfo_model->set_std_dev(dev); }
+    void set_cfo_dev_max(double dev) override { d_cfo_model->set_max_dev(dev); }
+    void set_noise_amp(double amp) override { d_noise->set_amplitude(amp); }
+    void set_doppler_freq(double f) override { d_fader->set_fDTs(f / samp_rate()); }
+    void set_K(double K) override { d_fader->set_K(K); }
 };
 
 } /* namespace channels */

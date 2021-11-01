@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -37,19 +25,19 @@
 
 BOOST_AUTO_TEST_CASE(t1)
 {
-    static const unsigned int N = 100;
+    static const int N = 100;
     float c_atan2;
     float gr_atan2f;
 
     for (float i = -N / 2; i < N / 2; i++) {
-        for (float j = -N / 2; i < N / 2; i++) {
+        for (float j = -N / 2; j < N / 2; j++) {
             float x = i / 10.0;
             float y = j / 10.0;
             c_atan2 = atan2(y, x);
 
             gr_atan2f = gr::fast_atan2f(y, x);
 
-            BOOST_CHECK_CLOSE(c_atan2, gr_atan2f, 0.0);
+            BOOST_CHECK_CLOSE(c_atan2, gr_atan2f, 0.001);
         }
     }
 }

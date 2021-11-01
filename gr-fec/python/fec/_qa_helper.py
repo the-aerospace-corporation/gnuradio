@@ -4,25 +4,10 @@
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 #
 
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import unicode_literals
 
 
 import numpy
@@ -61,8 +46,8 @@ class _qa_helper(gr.top_block):
         self.threading = threading
 
         self.ext_encoder = extended_encoder(enc, threading=self.threading, puncpat=self.puncpat)
-        self.ext_decoder= extended_decoder(dec, threading=self.threading, ann=None,
-                                           puncpat=self.puncpat, integration_period=10000)
+        self.ext_decoder = extended_decoder(dec, threading=self.threading, ann=None,
+                                            puncpat=self.puncpat, integration_period=10000)
 
         self.src = blocks.vector_source_b(data_size*[0, 1, 2, 3, 5, 7, 9, 13, 15, 25, 31, 45, 63, 95, 127], False)
         self.unpack = blocks.unpack_k_bits_bb(8)

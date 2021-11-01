@@ -12,7 +12,7 @@ Author: ${flow_graph.get_option('author')}
 % if flow_graph.get_option('description'):
 Description: ${flow_graph.get_option('description')}
 % endif
-GNU Radio version: ${version}
+GNU Radio version: ${config.version}
 ********************/
 
 /********************
@@ -28,10 +28,10 @@ ${inc}
 #include <QWidget>
 #include <QGridLayout>
 #include <QSettings>
+#include <QApplication>
 % endif
 
 % if parameters:
-#include <iostream>
 #include <boost/program_options.hpp>
 % endif
 
@@ -44,7 +44,7 @@ param_str = ", ".join((param.vtype + " " + param.name) for param in parameters)
 
 % if generate_options.startswith('hb'):
 class ${class_name};
-typedef boost::shared_ptr<${class_name}> ${class_name}_sptr;
+typedef std::shared_ptr<${class_name}> ${class_name}_sptr;
 ${class_name}_sptr make_${class_name}();
 % endif
 
@@ -77,7 +77,7 @@ ${indent(declarations)}
 % if parameters:
 // Parameters:
 % for param in parameters:
-    ${param.get_cpp_var_make()}
+    ${param.vtype} ${param.cpp_templates.render('var_make')}
 % endfor
 % endif
 

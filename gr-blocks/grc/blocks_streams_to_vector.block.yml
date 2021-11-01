@@ -17,7 +17,7 @@ parameters:
     default: '2'
     hide: part
 -   id: vlen
-    label: Vec Length
+    label: Vector Length
     dtype: int
     default: '1'
     hide: ${ 'part' if vlen == 1 else 'none' }
@@ -45,7 +45,5 @@ cpp_templates:
     includes: ['#include <gnuradio/blocks/streams_to_vector.h>']
     declarations: 'blocks::streams_to_vector::sptr ${id};'
     make: 'this->${id} = blocks::streams_to_vector::make(${type.size}*${vlen}, ${num_streams});'
-    translations:
-        gr.sizeof_: 'sizeof('
 
 file_format: 1

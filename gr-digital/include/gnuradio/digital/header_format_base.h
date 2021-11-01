@@ -3,20 +3,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef INCLUDED_DIGITAL_HEADER_FORMAT_BASE_H
@@ -26,7 +14,6 @@
 #include <gnuradio/digital/header_buffer.h>
 #include <gnuradio/logger.h>
 #include <pmt/pmt.h>
-#include <boost/enable_shared_from_this.hpp>
 
 namespace gr {
 namespace digital {
@@ -121,10 +108,10 @@ namespace digital {
  * \sa header_format_counter
  */
 class DIGITAL_API header_format_base
-    : public boost::enable_shared_from_this<gr::digital::header_format_base>
+    : public std::enable_shared_from_this<gr::digital::header_format_base>
 {
 public:
-    typedef boost::shared_ptr<header_format_base> sptr;
+    typedef std::shared_ptr<header_format_base> sptr;
 
     header_format_base();
     virtual ~header_format_base();

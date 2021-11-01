@@ -52,11 +52,11 @@ cpp_templates:
             ${mark_delay},
             ${threshold},
             ${threshold_method});
-    link: ['gnuradio-digital']
+    link: ['gnuradio::gnuradio-digital']
     callbacks:
     - set_mark_delay(${mark_delay})
     - set_threshold(${threshold})
     translations:
-        digital.: 'digital::'
+        digital\.: 'digital::'
 
 file_format: 1

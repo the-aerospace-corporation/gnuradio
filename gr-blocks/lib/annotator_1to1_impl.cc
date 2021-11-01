@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -26,16 +14,15 @@
 
 #include "annotator_1to1_impl.h"
 #include <gnuradio/io_signature.h>
-#include <string.h>
-#include <iomanip>
-#include <iostream>
+#include <cstring>
+#include <sstream>
 
 namespace gr {
 namespace blocks {
 
 annotator_1to1::sptr annotator_1to1::make(int when, size_t sizeof_stream_item)
 {
-    return gnuradio::get_initial_sptr(new annotator_1to1_impl(when, sizeof_stream_item));
+    return gnuradio::make_block_sptr<annotator_1to1_impl>(when, sizeof_stream_item);
 }
 
 annotator_1to1_impl::annotator_1to1_impl(int when, size_t sizeof_stream_item)
@@ -69,11 +56,7 @@ int annotator_1to1_impl::work(int noutput_items,
 
         std::vector<tag_t> all_tags;
         get_tags_in_range(all_tags, i, abs_N, abs_N + noutput_items);
-
-        std::vector<tag_t>::iterator itr;
-        for (itr = all_tags.begin(); itr != all_tags.end(); itr++) {
-            d_stored_tags.push_back(*itr);
-        }
+        d_stored_tags.insert(d_stored_tags.end(), all_tags.begin(), all_tags.end());
     }
 
     // Storing the current noutput_items as the value to the "noutput_items" key

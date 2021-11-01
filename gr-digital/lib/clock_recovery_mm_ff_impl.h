@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef INCLUDED_DIGITAL_CLOCK_RECOVERY_MM_FF_IMPL_H
@@ -37,24 +25,24 @@ public:
                               float mu,
                               float gain_mu,
                               float omega_relative_limi);
-    ~clock_recovery_mm_ff_impl();
+    ~clock_recovery_mm_ff_impl() override;
 
-    void forecast(int noutput_items, gr_vector_int& ninput_items_required);
+    void forecast(int noutput_items, gr_vector_int& ninput_items_required) override;
     int general_work(int noutput_items,
                      gr_vector_int& ninput_items,
                      gr_vector_const_void_star& input_items,
-                     gr_vector_void_star& output_items);
+                     gr_vector_void_star& output_items) override;
 
-    float mu() const { return d_mu; }
-    float omega() const { return d_omega; }
-    float gain_mu() const { return d_gain_mu; }
-    float gain_omega() const { return d_gain_omega; }
+    float mu() const override { return d_mu; }
+    float omega() const override { return d_omega; }
+    float gain_mu() const override { return d_gain_mu; }
+    float gain_omega() const override { return d_gain_omega; }
 
-    void set_verbose(bool verbose) { d_verbose = verbose; }
-    void set_gain_mu(float gain_mu) { d_gain_mu = gain_mu; }
-    void set_gain_omega(float gain_omega) { d_gain_omega = gain_omega; }
-    void set_mu(float mu) { d_mu = mu; }
-    void set_omega(float omega);
+    void set_verbose(bool verbose) override { d_verbose = verbose; }
+    void set_gain_mu(float gain_mu) override { d_gain_mu = gain_mu; }
+    void set_gain_omega(float gain_omega) override { d_gain_omega = gain_omega; }
+    void set_mu(float mu) override { d_mu = mu; }
+    void set_omega(float omega) override;
 
 private:
     float d_mu;                   // fractional sample position [0.0, 1.0]
@@ -66,9 +54,11 @@ private:
     float d_omega_lim;            // actual omega clipping limit
 
     float d_last_sample;
-    filter::mmse_fir_interpolator_ff* d_interp;
+    filter::mmse_fir_interpolator_ff d_interp;
 
     bool d_verbose;
+
+    float slice(float x) { return x < 0 ? -1.0F : 1.0F; }
 };
 
 } /* namespace digital */

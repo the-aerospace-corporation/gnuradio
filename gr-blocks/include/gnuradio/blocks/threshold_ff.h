@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef INCLUDED_GR_THRESHOLD_FF_H
@@ -35,14 +23,14 @@ namespace blocks {
  *
  * \details
  * Test the incoming signal against a threshold. If the signal
- * excedes the \p hi value, it will output a 1 until the signal
+ * exceeds the \p hi value, it will output a 1 until the signal
  * falls below the \p lo value.
  */
 class BLOCKS_API threshold_ff : virtual public sync_block
 {
 public:
     // gr::blocks::threshold_ff::sptr
-    typedef boost::shared_ptr<threshold_ff> sptr;
+    typedef std::shared_ptr<threshold_ff> sptr;
 
     /* \brief Create a threadshold block.
      * \param lo Threshold input signal needs to drop below to

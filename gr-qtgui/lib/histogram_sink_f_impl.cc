@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -32,7 +20,7 @@
 #include <qwt_symbol.h>
 #include <volk/volk.h>
 
-#include <string.h>
+#include <cstring>
 
 namespace gr {
 namespace qtgui {
@@ -45,8 +33,8 @@ histogram_sink_f::sptr histogram_sink_f::make(int size,
                                               int nconnections,
                                               QWidget* parent)
 {
-    return gnuradio::get_initial_sptr(
-        new histogram_sink_f_impl(size, bins, xmin, xmax, name, nconnections, parent));
+    return gnuradio::make_block_sptr<histogram_sink_f_impl>(
+        size, bins, xmin, xmax, name, nconnections, parent);
 }
 
 histogram_sink_f_impl::histogram_sink_f_impl(int size,
@@ -67,28 +55,13 @@ histogram_sink_f_impl::histogram_sink_f_impl(int size,
       d_nconnections(nconnections),
       d_parent(parent)
 {
-    // Required now for Qt; argc must be greater than 0 and argv
-    // must have at least one valid character. Must be valid through
-    // life of the qApplication:
-    // http://harmattan-dev.nokia.com/docs/library/html/qt4/qapplication.html
-    d_argc = 1;
-    d_argv = new char;
-    d_argv[0] = '\0';
-
-    d_main_gui = NULL;
-
-    d_index = 0;
-
     // setup PDU handling input port
     message_port_register_in(pmt::mp("in"));
-    set_msg_handler(pmt::mp("in"),
-                    boost::bind(&histogram_sink_f_impl::handle_pdus, this, _1));
+    set_msg_handler(pmt::mp("in"), [this](pmt::pmt_t msg) { this->handle_pdus(msg); });
 
     // +1 for the PDU buffer
     for (int i = 0; i < d_nconnections + 1; i++) {
-        d_residbufs.push_back(
-            (double*)volk_malloc(d_size * sizeof(double), volk_get_alignment()));
-        memset(d_residbufs[i], 0, d_size * sizeof(double));
+        d_residbufs.emplace_back(d_size);
     }
 
     // Set alignment properties for VOLK
@@ -102,13 +75,6 @@ histogram_sink_f_impl::~histogram_sink_f_impl()
 {
     if (!d_main_gui->isClosed())
         d_main_gui->close();
-
-    // d_main_gui is a qwidget destroyed with its parent
-    for (int i = 0; i < d_nconnections + 1; i++) {
-        volk_free(d_residbufs[i]);
-    }
-
-    delete d_argv;
 }
 
 bool histogram_sink_f_impl::check_topology(int ninputs, int noutputs)
@@ -147,17 +113,6 @@ void histogram_sink_f_impl::initialize()
 void histogram_sink_f_impl::exec_() { d_qApplication->exec(); }
 
 QWidget* histogram_sink_f_impl::qwidget() { return d_main_gui; }
-
-#ifdef ENABLE_PYTHON
-PyObject* histogram_sink_f_impl::pyqwidget()
-{
-    PyObject* w = PyLong_FromVoidPtr((void*)d_main_gui);
-    PyObject* retarg = Py_BuildValue("N", w);
-    return retarg;
-}
-#else
-void* histogram_sink_f_impl::pyqwidget() { return NULL; }
-#endif
 
 void histogram_sink_f_impl::set_y_axis(double min, double max)
 {
@@ -257,11 +212,8 @@ void histogram_sink_f_impl::set_nsamps(const int newsize)
     if (newsize != d_size) {
         // Resize residbuf and replace data
         for (int i = 0; i < d_nconnections + 1; i++) {
-            volk_free(d_residbufs[i]);
-            d_residbufs[i] =
-                (double*)volk_malloc(newsize * sizeof(double), volk_get_alignment());
-
-            memset(d_residbufs[i], 0, newsize * sizeof(double));
+            d_residbufs[i].clear();
+            d_residbufs[i].resize(newsize);
         }
 
         // Set new size and reset buffer index
@@ -405,7 +357,7 @@ void histogram_sink_f_impl::handle_pdus(pmt::pmt_t msg)
         int idx = 0;
         for (int n = 0; n < nplots; n++) {
             int size = std::min(d_size, (int)(len - idx));
-            volk_32f_convert_64f_u(d_residbufs[d_nconnections], &in[idx], size);
+            volk_32f_convert_64f_u(d_residbufs[d_nconnections].data(), &in[idx], size);
 
             d_qApplication->postEvent(d_main_gui,
                                       new HistogramUpdateEvent(d_residbufs, size));

@@ -2,25 +2,14 @@
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 
 ########################################################################
 # Setup library
 ########################################################################
 add_library(gnuradio-dtv
+  atsc/atsc_plinfo.cc
   atsc/atsc_deinterleaver_impl.cc
   atsc/atsc_depad_impl.cc
   atsc/atsc_derandomizer_impl.cc
@@ -85,8 +74,12 @@ target_link_libraries(gnuradio-dtv PUBLIC
     gnuradio-analog
     gnuradio-filter
     gnuradio-fec
-    ${GR_VOLK_LIB}
+    Volk::volk
     )
+
+if(ENABLE_COMMON_PCH)
+  target_link_libraries(gnuradio-dtv PRIVATE common-precompiled-headers)
+endif()
 
 target_include_directories(gnuradio-dtv
   PUBLIC

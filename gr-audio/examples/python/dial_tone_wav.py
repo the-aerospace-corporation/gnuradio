@@ -4,25 +4,12 @@
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 #
 
 # GNU Radio example program to record a dial tone to a WAV file
 
-from __future__ import unicode_literals
 from gnuradio import gr
 from gnuradio import blocks
 from gnuradio.eng_arg import eng_float
@@ -55,7 +42,8 @@ class my_top_block(gr.top_block):
         src1 = analog.sig_source_f(sample_rate, analog.GR_SIN_WAVE, 440, ampl)
         head0 = blocks.head(gr.sizeof_float, int(args.samples))
         head1 = blocks.head(gr.sizeof_float, int(args.samples))
-        dst = blocks.wavfile_sink(args.file_name[0], 2, int(args.sample_rate), 16)
+        dst = blocks.wavfile_sink(args.file_name[0], 2, int(args.sample_rate),
+                                  blocks.FORMAT_WAV, blocks.FORMAT_PCM_16)
 
         self.connect(src0, head0, (dst, 0))
         self.connect(src1, head1, (dst, 1))

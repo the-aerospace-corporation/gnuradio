@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -33,7 +21,7 @@ namespace filter {
 pfb_interpolator_ccf::sptr pfb_interpolator_ccf::make(unsigned int interp,
                                                       const std::vector<float>& taps)
 {
-    return gnuradio::get_initial_sptr(new pfb_interpolator_ccf_impl(interp, taps));
+    return gnuradio::make_block_sptr<pfb_interpolator_ccf_impl>(interp, taps);
 }
 
 
@@ -49,8 +37,6 @@ pfb_interpolator_ccf_impl::pfb_interpolator_ccf_impl(unsigned int interp,
 {
     set_history(d_taps_per_filter);
 }
-
-pfb_interpolator_ccf_impl::~pfb_interpolator_ccf_impl() {}
 
 void pfb_interpolator_ccf_impl::set_taps(const std::vector<float>& taps)
 {
@@ -84,7 +70,7 @@ int pfb_interpolator_ccf_impl::work(int noutput_items,
 
     while (i < noutput_items) {
         for (unsigned int j = 0; j < d_rate; j++) {
-            out[i] = d_fir_filters[j]->filter(&in[count]);
+            out[i] = d_fir_filters[j].filter(&in[count]);
             i++;
         }
         count++;

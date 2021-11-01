@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #include "ber_sink_b_impl.h"
@@ -26,6 +14,7 @@
 #include <gnuradio/io_signature.h>
 #include <gnuradio/math.h>
 #include <volk/volk.h>
+#include <boost/format.hpp>
 #include <cmath>
 
 #ifdef HAVE_CONFIG_H
@@ -42,8 +31,8 @@ ber_sink_b::sptr ber_sink_b::make(std::vector<float> esnos,
                                   std::vector<std::string> curvenames,
                                   QWidget* parent)
 {
-    return gnuradio::get_initial_sptr(new ber_sink_b_impl(
-        esnos, curves, ber_min_errors, ber_limit, curvenames, parent));
+    return gnuradio::make_block_sptr<ber_sink_b_impl>(
+        esnos, curves, ber_min_errors, ber_limit, curvenames, parent);
 }
 
 ber_sink_b_impl::ber_sink_b_impl(std::vector<float> esnos,
@@ -73,10 +62,8 @@ ber_sink_b_impl::ber_sink_b_impl(std::vector<float> esnos,
     d_total_errors.reserve(curves * esnos.size());
 
     for (int j = 0; j < curves; j++) {
-        d_esno_buffers.push_back(
-            (double*)volk_malloc(esnos.size() * sizeof(double), volk_get_alignment()));
-        d_ber_buffers.push_back(
-            (double*)volk_malloc(esnos.size() * sizeof(double), volk_get_alignment()));
+        d_esno_buffers.emplace_back(esnos.size());
+        d_ber_buffers.emplace_back(esnos.size());
 
         for (int i = 0; i < d_nconnections; i++) {
             d_esno_buffers[j][i] = esnos[i];
@@ -87,10 +74,8 @@ ber_sink_b_impl::ber_sink_b_impl(std::vector<float> esnos,
     }
 
     // Now add the known curves
-    d_esno_buffers.push_back(
-        (double*)volk_malloc(esnos.size() * sizeof(double), volk_get_alignment()));
-    d_ber_buffers.push_back(
-        (double*)volk_malloc(esnos.size() * sizeof(double), volk_get_alignment()));
+    d_esno_buffers.emplace_back(esnos.size());
+    d_ber_buffers.emplace_back(esnos.size());
     for (size_t i = 0; i < esnos.size(); i++) {
         double e = pow(10.0, esnos[i] / 10.0);
         d_esno_buffers[curves][i] = esnos[i];
@@ -126,11 +111,6 @@ ber_sink_b_impl::~ber_sink_b_impl()
     if (!d_main_gui->isClosed()) {
         d_main_gui->close();
     }
-
-    for (unsigned int i = 0; i < d_esno_buffers.size(); i++) {
-        volk_free(d_esno_buffers[i]);
-        volk_free(d_ber_buffers[i]);
-    }
 }
 
 bool ber_sink_b_impl::check_topology(int ninputs, int noutputs)
@@ -160,17 +140,6 @@ void ber_sink_b_impl::initialize()
 void ber_sink_b_impl::exec_() { d_qApplication->exec(); }
 
 QWidget* ber_sink_b_impl::qwidget() { return d_main_gui; }
-
-#ifdef ENABLE_PYTHON
-PyObject* ber_sink_b_impl::pyqwidget()
-{
-    PyObject* w = PyLong_FromVoidPtr((void*)d_main_gui);
-    PyObject* retarg = Py_BuildValue("N", w);
-    return retarg;
-}
-#else
-void* ber_sink_b_impl::pyqwidget() { return NULL; }
-#endif
 
 void ber_sink_b_impl::set_y_axis(double min, double max)
 {

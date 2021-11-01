@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef INCLUDED_GR_TAGS_H
@@ -45,15 +33,15 @@ struct GR_RUNTIME_API tag_t {
     //! ignore this.
     std::vector<long> marked_deleted;
 
-    /*!
-     * Comparison function to test which tag, \p x or \p y, came
-     * first in time
-     */
-    static inline bool offset_compare(const tag_t& x, const tag_t& y)
+    //! Comparison function to test which tag, \p x or \p y, came first in time
+    friend inline bool operator<(const tag_t& x, const tag_t& y)
     {
         return x.offset < y.offset;
     }
+    //! Comparison function to test which tag, \p x or \p y, came first in time
+    static inline bool offset_compare(const tag_t& x, const tag_t& y) { return x < y; }
 
+    //! equality comparison. Compares all details, except marked_delete
     inline bool operator==(const tag_t& t) const
     {
         return (t.key == key) && (t.value == value) && (t.srcid == srcid) &&
@@ -68,6 +56,7 @@ struct GR_RUNTIME_API tag_t {
     {
     }
 
+    //! Copy constructor; constructs identical tag, but doesn't copy marked_delete
     tag_t(const tag_t& rhs)
         : offset(rhs.offset), key(rhs.key), value(rhs.value), srcid(rhs.srcid)
     {

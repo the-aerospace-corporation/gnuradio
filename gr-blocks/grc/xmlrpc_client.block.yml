@@ -20,12 +20,12 @@ parameters:
     dtype: raw
 
 templates:
-    imports: import xmlrpclib
-    make: xmlrpclib.Server('http://${addr}:${port}')
+    imports: from xmlrpc.client import ServerProxy
+    make: ServerProxy('http://'+${addr}+':${port}')
     callbacks:
-    - ${callback}(${variable})
+    - ${no_quotes(callback)}(${variable})
 
 documentation: |-
-    This block will create an XMLRPC client. The client will execute the callback on the server when the variable is changed. The callback should be a the name of a function registered on the server. The variable should be an expression containing a the name of a variable in flow graph.
+    This block will create an XMLRPC client. The client will execute the callback on the server when the variable is changed. The callback should be the name of a function registered on the server. The variable should be an expression containing the name of a variable in the flowgraph.
 
 file_format: 1

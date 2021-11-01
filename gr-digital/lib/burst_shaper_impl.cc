@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -40,8 +28,8 @@ typename burst_shaper<T>::sptr burst_shaper<T>::make(const std::vector<T>& taps,
                                                      bool insert_phasing,
                                                      const std::string& length_tag_name)
 {
-    return gnuradio::get_initial_sptr(new burst_shaper_impl<T>(
-        taps, pre_padding, post_padding, insert_phasing, length_tag_name));
+    return gnuradio::make_block_sptr<burst_shaper_impl<T>>(
+        taps, pre_padding, post_padding, insert_phasing, length_tag_name);
 }
 
 template <class T>
@@ -126,7 +114,8 @@ int burst_shaper_impl<T>::general_work(int noutput_items,
 
     std::vector<tag_t> length_tags;
     this->get_tags_in_window(length_tags, 0, 0, ninput_items[0], d_length_tag_key);
-    std::sort(length_tags.rbegin(), length_tags.rend(), tag_t::offset_compare);
+    auto tags_start = length_tags.begin();
+    const auto tags_end = length_tags.end();
 
     while (nwritten < noutput_items) {
         // Only check the nread condition if we are actually reading
@@ -145,11 +134,11 @@ int burst_shaper_impl<T>::general_work(int noutput_items,
         nspace = noutput_items - nwritten;
         switch (d_state) {
         case (STATE_WAIT):
-            if (!length_tags.empty()) {
-                d_length_tag_offset = length_tags.back().offset;
+            if (tags_start != tags_end) {
+                d_length_tag_offset = tags_start->offset;
                 curr_tag_index = (int)(d_length_tag_offset - this->nitems_read(0));
-                d_ncopy = pmt::to_long(length_tags.back().value);
-                length_tags.pop_back();
+                d_ncopy = pmt::to_long(tags_start->value);
+                tags_start++;
                 nskip = curr_tag_index - nread;
                 add_length_tag(nwritten);
                 propagate_tags(curr_tag_index, nwritten, 1, false);
@@ -324,16 +313,15 @@ void burst_shaper_impl<T>::propagate_tags(int in_offset,
     tag_t temp_tag;
 
     std::vector<tag_t> tags;
-    std::vector<tag_t>::iterator it;
 
     this->get_tags_in_range(tags, 0, abs_start, abs_end);
 
-    for (it = tags.begin(); it != tags.end(); it++) {
-        if (!pmt::equal(it->key, d_length_tag_key)) {
-            if (skip && (it->offset == d_length_tag_offset))
+    for (const auto& tag : tags) {
+        if (!pmt::equal(tag.key, d_length_tag_key)) {
+            if (skip && (tag.offset == d_length_tag_offset))
                 continue;
-            temp_tag = *it;
-            temp_tag.offset = abs_offset + it->offset - abs_start;
+            temp_tag = tag;
+            temp_tag.offset = abs_offset + tag.offset - abs_start;
             this->add_item_tag(0, temp_tag);
         }
     }

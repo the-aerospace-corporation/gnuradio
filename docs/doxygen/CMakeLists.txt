@@ -2,20 +2,8 @@
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 
 ########################################################################
 # Create the doxygen configuration file
@@ -29,6 +17,13 @@ set(HAVE_DOT ${DOXYGEN_DOT_FOUND})
 set(enable_html_docs YES)
 set(enable_latex_docs NO)
 set(enable_xml_docs YES)
+
+if(MATHJAX2_FOUND)
+  set(enable_mathjax YES)
+else()
+  message(WARNING "MathJax 2 not found, HTML equations might not be properly rendered.")
+  set(enable_mathjax NO)
+endif()
 
 configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in
@@ -53,5 +48,21 @@ add_custom_command(
 )
 
 add_custom_target(doxygen_target ALL DEPENDS ${BUILT_DIRS})
+
+if(ENABLE_DOXYGEN)
+    add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/gnuradio_docstrings.json
+    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/docs/doxygen/update_pydoc.py "scrape"
+    "--xml_path" ${CMAKE_BINARY_DIR}/docs/doxygen/xml
+    "--json_path" ${CMAKE_CURRENT_BINARY_DIR}/gnuradio_docstrings.json
+    COMMENT "Scraping generated documentation for docstrings ..."
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/update_pydoc.py doxygen_target)
+
+    add_custom_target(
+        gnuradio_docstrings ALL
+        DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/gnuradio_docstrings.json
+        )
+endif(ENABLE_DOXYGEN)
+
 
 install(DIRECTORY ${BUILT_DIRS} DESTINATION ${GR_PKG_DOC_DIR})

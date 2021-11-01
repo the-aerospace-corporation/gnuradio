@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef CONSTELLATION_DISPLAY_PLOT_C
@@ -28,7 +16,6 @@
 #include <qwt_legend.h>
 #include <qwt_scale_draw.h>
 #include <QColor>
-#include <iostream>
 
 class ConstellationDisplayZoomer : public QwtPlotZoomer
 {
@@ -43,13 +30,13 @@ public:
         setTrackerMode(QwtPicker::AlwaysOn);
     }
 
-    virtual ~ConstellationDisplayZoomer() {}
+    ~ConstellationDisplayZoomer() override {}
 
     virtual void updateTrackerText() { updateDisplay(); }
 
 protected:
     using QwtPlotZoomer::trackerText;
-    virtual QwtText trackerText(const QPoint& p) const
+    QwtText trackerText(const QPoint& p) const override
     {
         QwtDoublePoint dp = QwtPlotZoomer::invTransform(p);
         QwtText t(QString("(%1, %2)").arg(dp.x(), 0, 'f', 4).arg(dp.y(), 0, 'f', 4));
@@ -100,10 +87,8 @@ ConstellationDisplayPlot::ConstellationDisplayPlot(int nplots, QWidget* parent)
     // Setup dataPoints and plot vectors
     // Automatically deleted when parent is deleted
     for (unsigned int i = 0; i < d_nplots; ++i) {
-        d_real_data.push_back(new double[d_numPoints]);
-        d_imag_data.push_back(new double[d_numPoints]);
-        memset(d_real_data[i], 0x0, d_numPoints * sizeof(double));
-        memset(d_imag_data[i], 0x0, d_numPoints * sizeof(double));
+        d_real_data.emplace_back(d_numPoints);
+        d_imag_data.emplace_back(d_numPoints);
 
         d_plot_curve.push_back(new QwtPlotCurve(QString("Data %1").arg(i)));
         d_plot_curve[i]->attach(this);
@@ -113,10 +98,12 @@ ConstellationDisplayPlot::ConstellationDisplayPlot(int nplots, QWidget* parent)
             QwtSymbol::NoSymbol, QBrush(colors[i]), QPen(colors[i]), QSize(7, 7));
 
 #if QWT_VERSION < 0x060000
-        d_plot_curve[i]->setRawData(d_real_data[i], d_imag_data[i], d_numPoints);
+        d_plot_curve[i]->setRawData(
+            d_real_data[i].data(), d_imag_data[i].data(), d_numPoints);
         d_plot_curve[i]->setSymbol(*symbol);
 #else
-        d_plot_curve[i]->setRawSamples(d_real_data[i], d_imag_data[i], d_numPoints);
+        d_plot_curve[i]->setRawSamples(
+            d_real_data[i].data(), d_imag_data[i].data(), d_numPoints);
         d_plot_curve[i]->setSymbol(symbol);
 #endif
 
@@ -127,11 +114,6 @@ ConstellationDisplayPlot::ConstellationDisplayPlot(int nplots, QWidget* parent)
 
 ConstellationDisplayPlot::~ConstellationDisplayPlot()
 {
-    for (unsigned int i = 0; i < d_nplots; ++i) {
-        delete[] d_real_data[i];
-        delete[] d_imag_data[i];
-    }
-
     // d_plot_curves deleted when parent deleted
     // d_zoomer and d_panner deleted when parent deleted
 }
@@ -174,24 +156,26 @@ void ConstellationDisplayPlot::plotNewData(const std::vector<double*> realDataPo
                 d_numPoints = numDataPoints;
 
                 for (unsigned int i = 0; i < d_nplots; ++i) {
-                    delete[] d_real_data[i];
-                    delete[] d_imag_data[i];
-                    d_real_data[i] = new double[d_numPoints];
-                    d_imag_data[i] = new double[d_numPoints];
+                    d_real_data[i].resize(d_numPoints);
+                    d_imag_data[i].resize(d_numPoints);
 
 #if QWT_VERSION < 0x060000
                     d_plot_curve[i]->setRawData(
-                        d_real_data[i], d_imag_data[i], d_numPoints);
+                        d_real_data[i].data(), d_imag_data[i].data(), d_numPoints);
 #else
                     d_plot_curve[i]->setRawSamples(
-                        d_real_data[i], d_imag_data[i], d_numPoints);
+                        d_real_data[i].data(), d_imag_data[i].data(), d_numPoints);
 #endif
                 }
             }
 
             for (unsigned int i = 0; i < d_nplots; ++i) {
-                memcpy(d_real_data[i], realDataPoints[i], numDataPoints * sizeof(double));
-                memcpy(d_imag_data[i], imagDataPoints[i], numDataPoints * sizeof(double));
+                memcpy(d_real_data[i].data(),
+                       realDataPoints[i],
+                       numDataPoints * sizeof(double));
+                memcpy(d_imag_data[i].data(),
+                       imagDataPoints[i],
+                       numDataPoints * sizeof(double));
             }
 
             if (d_autoscale_state) {

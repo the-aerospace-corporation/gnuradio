@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -29,8 +17,8 @@
 #include <gnuradio/io_signature.h>
 #include <gnuradio/prefs.h>
 #include <gnuradio/qtgui/utils.h>
-
-#include <boost/lexical_cast.hpp>
+#include <boost/format.hpp>
+#include <sstream>
 
 namespace gr {
 namespace qtgui {
@@ -43,8 +31,8 @@ edit_box_msg::sptr edit_box_msg::make(data_type_t type,
                                       const std::string& key,
                                       QWidget* parent)
 {
-    return gnuradio::get_initial_sptr(
-        new edit_box_msg_impl(type, value, label, is_pair, is_static, key, parent));
+    return gnuradio::make_block_sptr<edit_box_msg_impl>(
+        type, value, label, is_pair, is_static, key, parent);
 }
 
 edit_box_msg_impl::edit_box_msg_impl(data_type_t type,
@@ -58,14 +46,6 @@ edit_box_msg_impl::edit_box_msg_impl(data_type_t type,
       QObject(parent),
       d_port(pmt::mp("msg"))
 {
-    // Required now for Qt; argc must be greater than 0 and argv
-    // must have at least one valid character. Must be valid through
-    // life of the qApplication:
-    // http://harmattan-dev.nokia.com/docs/library/html/qt4/qapplication.html
-    d_argc = 1;
-    d_argv = new char;
-    d_argv[0] = '\0';
-
     if (qApp != NULL) {
         d_qApplication = qApp;
     } else {
@@ -101,7 +81,11 @@ edit_box_msg_impl::edit_box_msg_impl(data_type_t type,
             d_key->setEnabled(false);
 
             QFontMetrics fm = d_key->fontMetrics();
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 11, 0))
+            int width = 15 + fm.horizontalAdvance(key_text);
+#else
             int width = 15 + fm.width(key_text);
+#endif
 
             d_key->setFixedWidth(width);
 
@@ -158,12 +142,11 @@ edit_box_msg_impl::edit_box_msg_impl(data_type_t type,
     message_port_register_out(d_port);
     message_port_register_in(pmt::mp("val"));
 
-    set_msg_handler(pmt::mp("val"), boost::bind(&edit_box_msg_impl::set_value, this, _1));
+    set_msg_handler(pmt::mp("val"), [this](pmt::pmt_t msg) { this->set_value(msg); });
 }
 
 edit_box_msg_impl::~edit_box_msg_impl()
 {
-    delete d_argv;
     delete d_group;
     delete d_hlayout;
     delete d_vlayout;
@@ -187,17 +170,6 @@ bool edit_box_msg_impl::start()
 void edit_box_msg_impl::exec_() { d_qApplication->exec(); }
 
 QWidget* edit_box_msg_impl::qwidget() { return (QWidget*)d_group; }
-
-#ifdef ENABLE_PYTHON
-PyObject* edit_box_msg_impl::pyqwidget()
-{
-    PyObject* w = PyLong_FromVoidPtr((void*)d_group);
-    PyObject* retarg = Py_BuildValue("N", w);
-    return retarg;
-}
-#else
-void* edit_box_msg_impl::pyqwidget() { return NULL; }
-#endif
 
 void edit_box_msg_impl::set_type(int type) { set_type(static_cast<data_type_t>(type)); }
 
@@ -383,7 +355,7 @@ void edit_box_msg_impl::set_value(pmt::pmt_t val)
 
 void edit_box_msg_impl::edit_finished()
 {
-    QString text = d_val->text();
+    const QString text = d_val->text();
     bool conv_ok = true;
     int xi;
     float xf;
@@ -467,16 +439,17 @@ void edit_box_msg_impl::edit_finished()
         }
         d_msg = pmt::init_f64vector(xv.size(), xv);
     } break;
-    case COMPLEX:
-        try {
-            xc = boost::lexical_cast<gr_complex>(text.toStdString());
-        } catch (boost::bad_lexical_cast const& e) {
+    case COMPLEX: {
+        std::stringstream ss(text.toStdString());
+        ss >> xc;
+        if (static_cast<size_t>(ss.tellg()) != ss.str().size()) {
             GR_LOG_WARN(d_logger,
-                        boost::format("Conversion to complex failed (%1%)") % e.what());
+                        boost::format("Conversion of %s to complex failed") %
+                            text.toStdString());
             return;
         }
         d_msg = pmt::from_complex(xc.real(), xc.imag());
-        break;
+    } break;
     case COMPLEX_VEC: {
         std::vector<gr_complex> xv;
         QStringList text_list = text.split(",");

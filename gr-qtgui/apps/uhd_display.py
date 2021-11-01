@@ -4,27 +4,12 @@
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 #
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
 from gnuradio import gr
-from gnuradio import filter
+from gnuradio import filter, fft
 from gnuradio import blocks
 from gnuradio import uhd
 from gnuradio import eng_notation
@@ -34,10 +19,10 @@ import sys
 
 try:
     from gnuradio import qtgui
-    from PyQt4 import QtGui, QtCore
+    from PyQt5 import QtGui, QtCore
     import sip
 except ImportError:
-    print("Error: Program requires PyQt4 and gr-qtgui.")
+    print("Error: Program requires PyQt5 and gr-qtgui.")
     sys.exit(1)
 
 try:
@@ -197,7 +182,7 @@ class my_top_block(gr.top_block):
         self._fftsize = options.fft_size
 
         self.snk = qtgui.sink_c(options.fft_size,
-                                filter.firdes.WIN_BLACKMAN_hARRIS,
+                                fft.window.WIN_BLACKMAN_hARRIS,
                                 self._freq, self._bandwidth,
                                 "UHD Display",
                                 True, True, True, False)
@@ -221,8 +206,8 @@ class my_top_block(gr.top_block):
 
         # Get the reference pointer to the SpectrumDisplayForm QWidget
         # Wrap the pointer as a PyQt SIP object
-        #     This can now be manipulated as a PyQt4.QtGui.QWidget
-        self.pysink = sip.wrapinstance(self.snk.pyqwidget(), QtGui.QWidget)
+        #     This can now be manipulated as a PyQt5.QtGui.QWidget
+        self.pysink = sip.wrapinstance(self.snk.qwidget(), QtGui.QWidget)
 
         self.main_win = main_window(self.pysink, self)
 

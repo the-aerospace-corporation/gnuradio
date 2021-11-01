@@ -3,33 +3,17 @@
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 #
 
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
 
 import math
 
 from gnuradio import gr
-from gnuradio import filter
+from gnuradio import filter, fft
 
-from . import analog_swig as analog
+from . import analog_python as analog
 from .fm_emph import fm_deemph
 
 
@@ -82,7 +66,7 @@ class nbfm_rx(gr.hier_block2):
                                             quad_rate,      # sampling rate
                                             2.7e3,          # Audio LPF cutoff
                                             0.5e3,          # Transition band
-                                            filter.firdes.WIN_HAMMING)  # filter type
+                                            fft.window.WIN_HAMMING)  # filter type
 
         print("len(audio_taps) =", len(audio_taps))
 

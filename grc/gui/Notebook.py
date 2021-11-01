@@ -2,22 +2,10 @@
 Copyright 2008, 2009, 2011 Free Software Foundation, Inc.
 This file is part of GNU Radio
 
-GNU Radio Companion is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
+SPDX-License-Identifier: GPL-2.0-or-later
 
-GNU Radio Companion is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 """
 
-from __future__ import absolute_import
 import os
 import logging
 
@@ -126,12 +114,15 @@ class Page(Gtk.HBox):
         self.drawing_area = DrawingArea(flow_graph)
         flow_graph.drawing_area = self.drawing_area
 
+        self.viewport = Gtk.Viewport()
+        self.viewport.add(self.drawing_area)
+
         self.scrolled_window = Gtk.ScrolledWindow()
         self.scrolled_window.set_size_request(MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT)
         self.scrolled_window.set_policy(Gtk.PolicyType.ALWAYS, Gtk.PolicyType.ALWAYS)
         self.scrolled_window.connect('key-press-event', self._handle_scroll_window_key_press)
 
-        self.scrolled_window.add(self.drawing_area)
+        self.scrolled_window.add(self.viewport)
         self.pack_start(self.scrolled_window, True, True, 0)
         self.show_all()
 
@@ -172,6 +163,15 @@ class Page(Gtk.HBox):
             markup: the new markup text
         """
         self.label.set_markup(markup)
+
+    def set_tooltip(self, text):
+        """
+        Set the tooltip text in this label.
+
+        Args:
+            text: the new tooltip text
+        """
+        self.label.set_tooltip_text(text)
 
     def get_read_only(self):
         """

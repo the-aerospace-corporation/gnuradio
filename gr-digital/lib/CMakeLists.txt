@@ -2,20 +2,8 @@
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 
 ########################################################################
 # Setup library
@@ -29,9 +17,9 @@ add_library(gnuradio-digital
     clock_recovery_mm_cc_impl.cc
     clock_recovery_mm_ff_impl.cc
     clock_tracking_loop.cc
-    cma_equalizer_cc_impl.cc
     constellation.cc
     constellation_decoder_cb_impl.cc
+    constellation_encoder_bc_impl.cc
     constellation_receiver_cb_impl.cc
     constellation_soft_decoder_cf_impl.cc
     corr_est_cc_impl.cc
@@ -42,9 +30,10 @@ add_library(gnuradio-digital
     correlate_access_code_ff_ts_impl.cc
     costas_loop_cc_impl.cc
     cpmmod_bc_impl.cc
-    crc32.cc
+    crc16_async_bb_impl.cc
     crc32_bb_impl.cc
     crc32_async_bb_impl.cc
+    decision_feedback_equalizer_impl.cc
     descrambler_bb_impl.cc
     diff_decoder_bb_impl.cc
     diff_encoder_bb_impl.cc
@@ -58,9 +47,9 @@ add_library(gnuradio-digital
     hdlc_framer_pb_impl.cc
     header_buffer.cc
     header_payload_demux_impl.cc
-    kurtotic_equalizer_cc_impl.cc
-    lms_dd_equalizer_cc_impl.cc
+    linear_equalizer_impl.cc
     map_bb_impl.cc
+    meas_evm_cc_impl.cc
     modulate_vector.cc
     mpsk_snr_est.cc
     mpsk_snr_est_cc_impl.cc
@@ -93,8 +82,6 @@ add_library(gnuradio-digital
     probe_density_b_impl.cc
     probe_mpsk_snr_est_c_impl.cc
     scrambler_bb_impl.cc
-    simple_correlator_impl.cc
-    simple_framer_impl.cc
     interpolating_resampler.cc
     symbol_sync_cc_impl.cc
     symbol_sync_ff_impl.cc
@@ -107,9 +94,12 @@ target_link_libraries(gnuradio-digital PUBLIC
     gnuradio-blocks
     gnuradio-analog
     Boost::boost
-    ${GR_VOLK_LIB}
+    Volk::volk
 )
 
+if(ENABLE_COMMON_PCH)
+  target_link_libraries(gnuradio-digital PRIVATE common-precompiled-headers)
+endif()
 
 target_include_directories(gnuradio-digital
   PUBLIC $<INSTALL_INTERFACE:include>
@@ -152,3 +142,4 @@ if(ENABLE_TESTING)
     )
   endforeach(qa_file)
 endif(ENABLE_TESTING)
+

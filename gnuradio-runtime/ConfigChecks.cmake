@@ -2,20 +2,8 @@
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 
 ########################################################################
 INCLUDE(GrMiscUtils)
@@ -25,27 +13,12 @@ IF(MSVC) #add this directory for our provided headers
 LIST(APPEND CMAKE_REQUIRED_INCLUDES ${CMAKE_SOURCE_DIR}/msvc)
 ENDIF(MSVC)
 
-GR_CHECK_HDR_N_DEF(sys/time.h HAVE_SYS_TIME_H)
 GR_CHECK_HDR_N_DEF(sys/types.h HAVE_SYS_TYPES_H)
-GR_CHECK_HDR_N_DEF(sys/socket.h HAVE_SYS_SOCKET_H)
-GR_CHECK_HDR_N_DEF(io.h HAVE_IO_H)
 GR_CHECK_HDR_N_DEF(sys/mman.h HAVE_SYS_MMAN_H)
 GR_CHECK_HDR_N_DEF(sys/ipc.h HAVE_SYS_IPC_H)
 GR_CHECK_HDR_N_DEF(sys/shm.h HAVE_SYS_SHM_H)
 GR_CHECK_HDR_N_DEF(signal.h HAVE_SIGNAL_H)
-GR_CHECK_HDR_N_DEF(netinet/in.h HAVE_NETINET_IN_H)
-GR_CHECK_HDR_N_DEF(arpa/inet.h HAVE_ARPA_INET_H)
-GR_CHECK_HDR_N_DEF(unistd.h HAVE_UNISTD_H)
-GR_CHECK_HDR_N_DEF(malloc.h HAVE_MALLOC_H)
 
-
-########################################################################
-CHECK_CXX_SOURCE_COMPILES("
-    #include <stdio.h>
-    int main(){snprintf(0, 0, 0); return 0;}
-    " HAVE_SNPRINTF
-)
-GR_ADD_COND_DEF(HAVE_SNPRINTF)
 
 ########################################################################
 CHECK_CXX_SOURCE_COMPILES("
@@ -69,37 +42,6 @@ CHECK_CXX_SOURCE_COMPILES("
     " HAVE_GETPAGESIZE
 )
 GR_ADD_COND_DEF(HAVE_GETPAGESIZE)
-
-
-########################################################################
-CHECK_CXX_SOURCE_COMPILES("
-    #include <Winbase.h>
-    int main(){Sleep(0); return 0;}
-    " HAVE_SSLEEP
-)
-GR_ADD_COND_DEF(HAVE_SSLEEP)
-
-########################################################################
-CHECK_CXX_SOURCE_COMPILES("
-    #include <stdlib.h>
-    int main(){posix_memalign(0, 0, 0); return 0;}
-    " HAVE_POSIX_MEMALIGN
-)
-GR_ADD_COND_DEF(HAVE_POSIX_MEMALIGN)
-
-CHECK_CXX_SOURCE_COMPILES("
-    #include <malloc.h>
-    int main(){valloc(0); return 0;}
-    " HAVE_VALLOC
-)
-GR_ADD_COND_DEF(HAVE_VALLOC)
-
-if(APPLE)
-    # Apple's malloc has been 16 byte aligned since at least 10.4
-    ADD_DEFINITIONS(-DALIGNED_MALLOC=16)
-else()
-    ADD_DEFINITIONS(-DALIGNED_MALLOC=0)
-endif()
 
 ########################################################################
 SET(CMAKE_REQUIRED_LIBRARIES -lpthread)

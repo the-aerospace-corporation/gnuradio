@@ -14,10 +14,10 @@ parameters:
 
 templates:
     imports: |-
-        import SimpleXMLRPCServer
+        from xmlrpc.server import SimpleXMLRPCServer
         import threading
     make: |-
-        SimpleXMLRPCServer.SimpleXMLRPCServer((${addr}, ${port}), allow_none=True)
+        SimpleXMLRPCServer((${addr}, ${port}), allow_none=True)
         self.${id}.register_instance(self)
         self.${id}_thread = threading.Thread(target=self.${id}.serve_forever)
         self.${id}_thread.daemon = True
@@ -28,8 +28,8 @@ documentation: |-
 
     Example client in python:
 
-    import xmlrpclib
-    s = xmlrpclib.Server('http://localhost:8080')
+    from xmlrpc.client import ServerProxy
+    ServerProxy('http://localhost:8080')
     s.set_freq(5000)
 
 file_format: 1

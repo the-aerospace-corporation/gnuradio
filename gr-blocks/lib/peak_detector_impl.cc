@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -26,11 +14,34 @@
 
 #include "peak_detector_impl.h"
 #include <gnuradio/io_signature.h>
-#include <string.h>
+#include <type_traits>
+#include <cstring>
 #include <limits>
 
 namespace gr {
 namespace blocks {
+
+namespace {
+
+// lowest_value() returns -infinity if the type has a concept of
+// infinity. Otherwise it returns the lowest possible value.
+//
+// Positive infinity is guaranteed by std::numeric_limits<T>::has_infinity, but
+// since we want negative infinity let's use IEEE754.
+template <typename T,
+          typename std::enable_if<std::numeric_limits<T>::is_iec559, int>::type = 0>
+constexpr T lowest_value() noexcept
+{
+    return -std::numeric_limits<T>::infinity();
+}
+
+template <typename T,
+          typename std::enable_if<!std::numeric_limits<T>::is_iec559, int>::type = 0>
+constexpr T lowest_value() noexcept
+{
+    return std::numeric_limits<T>::lowest();
+}
+} // namespace
 
 template <class T>
 typename peak_detector<T>::sptr peak_detector<T>::make(float threshold_factor_rise,
@@ -38,8 +49,8 @@ typename peak_detector<T>::sptr peak_detector<T>::make(float threshold_factor_ri
                                                        int look_ahead,
                                                        float alpha)
 {
-    return gnuradio::get_initial_sptr(new peak_detector_impl<T>(
-        threshold_factor_rise, threshold_factor_fall, look_ahead, alpha));
+    return gnuradio::make_block_sptr<peak_detector_impl<T>>(
+        threshold_factor_rise, threshold_factor_fall, look_ahead, alpha);
 }
 
 template <class T>
@@ -73,7 +84,7 @@ int peak_detector_impl<T>::work(int noutput_items,
 
     memset(optr, 0, noutput_items * sizeof(char));
 
-    T peak_val = std::numeric_limits<T>::min();
+    T peak_val = lowest_value<T>();
     int peak_ind = 0;
     unsigned char state = 0;
     int i = 0;
@@ -101,7 +112,7 @@ int peak_detector_impl<T>::work(int noutput_items,
             } else {
                 optr[peak_ind] = 1;
                 state = 0;
-                peak_val = -(T)INFINITY;
+                peak_val = lowest_value<T>();
                 // printf("Leaving  State 1: Peak: %f  Peak Ind: %d   i: %d noutput_items:
                 // %d\n", peak_val, peak_ind, i, noutput_items);
             }

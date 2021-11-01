@@ -4,40 +4,28 @@
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 #
 
 
 from gnuradio import gr, gr_unittest, vocoder, blocks, filter
 from gnuradio.vocoder import cvsd
 
+
 class test_cvsd_vocoder (gr_unittest.TestCase):
 
-    def setUp (self):
+    def setUp(self):
         self.tb = gr.top_block()
 
-    def tearDown (self):
+    def tearDown(self):
         self.tb = None
 
-    def test001_module_load (self):
+    def test001_module_load(self):
         raw_enc = vocoder.cvsd_encode_sb()
         raw_dec = vocoder.cvsd_decode_bs()
         hb_enc = cvsd.cvsd_encode_fb()
         hb_dec = cvsd.cvsd_decode_bf()
-
 
     """ Disable for now
     def test01(self):
@@ -121,5 +109,6 @@ class test_cvsd_vocoder (gr_unittest.TestCase):
         self.assertFloatTuplesAlmostEqual (expected_data, sink.data(), 5)
     """
 
+
 if __name__ == '__main__':
-    gr_unittest.run(test_cvsd_vocoder, "test_cvsd_vocoder.xml")
+    gr_unittest.run(test_cvsd_vocoder)

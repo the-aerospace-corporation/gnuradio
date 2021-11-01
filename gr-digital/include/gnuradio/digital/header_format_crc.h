@@ -3,20 +3,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef INCLUDED_DIGITAL_HEADER_FORMAT_CRC_H
@@ -58,9 +46,10 @@ namespace digital {
 class DIGITAL_API header_format_crc : public header_format_base
 {
 public:
+    typedef std::shared_ptr<header_format_crc> sptr;
     header_format_crc(const std::string& len_key_name = "packet_len",
                       const std::string& num_key_name = "packet_num");
-    virtual ~header_format_crc();
+    ~header_format_crc() override;
 
     void set_header_num(unsigned header_num) { d_header_number = header_num; };
 
@@ -75,20 +64,20 @@ public:
      *  - Bits 12-23: The header number (counts up everytime this function is called)
      *  - Bit 24-31: 8-Bit CRC
      */
-    virtual bool format(int nbytes_in,
-                        const unsigned char* input,
-                        pmt::pmt_t& output,
-                        pmt::pmt_t& info);
+    bool format(int nbytes_in,
+                const unsigned char* input,
+                pmt::pmt_t& output,
+                pmt::pmt_t& info) override;
 
-    virtual bool parse(int nbits_in,
-                       const unsigned char* input,
-                       std::vector<pmt::pmt_t>& info,
-                       int& nbits_processed);
+    bool parse(int nbits_in,
+               const unsigned char* input,
+               std::vector<pmt::pmt_t>& info,
+               int& nbits_processed) override;
 
     /*!
      * Returns the length of the formatted header in bits.
      */
-    virtual size_t header_nbits() const;
+    size_t header_nbits() const override;
 
     /*!
      * Factory to create an async packet header formatter; returns
@@ -104,12 +93,12 @@ protected:
     boost::crc_optimal<8, 0x07, 0xFF, 0x00, false, false> d_crc_impl;
 
     //! Verify that the header is valid
-    virtual bool header_ok();
+    bool header_ok() override;
 
     /*! Get info from the header; return payload length and package
      *  rest of data in d_info dictionary.
      */
-    virtual int header_payload();
+    int header_payload() override;
 };
 
 } // namespace digital

@@ -2,20 +2,8 @@
 /*
  * Copyright 2015,2016,2018,2019 Free Software Foundation, Inc.
  *
- * This is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -31,7 +19,7 @@ namespace dtv {
 dvb_bch_bb::sptr
 dvb_bch_bb::make(dvb_standard_t standard, dvb_framesize_t framesize, dvb_code_rate_t rate)
 {
-    return gnuradio::get_initial_sptr(new dvb_bch_bb_impl(standard, framesize, rate));
+    return gnuradio::make_block_sptr<dvb_bch_bb_impl>(standard, framesize, rate);
 }
 
 /*
@@ -603,6 +591,8 @@ int dvb_bch_bb_impl::general_work(int noutput_items,
 
     if (frame_size != FECFRAME_MEDIUM) {
         for (int i = 0; i < noutput_items; i += nbch) {
+            memcpy(out, in, sizeof(unsigned char) * kbch);
+            out += kbch;
             for (int j = 0; j < (int)kbch / 8; j++) {
                 b = 0;
 
@@ -610,7 +600,6 @@ int dvb_bch_bb_impl::general_work(int noutput_items,
                 // http://www.sunshine2k.de/articles/coding/crc/understanding_crc.html
                 for (int e = 0; e < 8; e++) {
                     temp = *in++;
-                    *out++ = temp;
                     consumed++;
 
                     b |= temp << (7 - e);
@@ -637,6 +626,8 @@ int dvb_bch_bb_impl::general_work(int noutput_items,
         }
     } else {
         for (int i = 0; i < noutput_items; i += nbch) {
+            memcpy(out, in, sizeof(unsigned char) * kbch);
+            out += kbch;
             for (int j = 0; j < (int)kbch / 4; j++) {
                 b = 0;
 
@@ -644,7 +635,6 @@ int dvb_bch_bb_impl::general_work(int noutput_items,
                 // http://www.sunshine2k.de/articles/coding/crc/understanding_crc.html
                 for (int e = 0; e < 4; e++) {
                     temp = *in++;
-                    *out++ = temp;
                     consumed++;
 
                     b |= temp << (3 - e);

@@ -4,28 +4,14 @@
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 #
 
-from __future__ import print_function
-from __future__ import unicode_literals
 
 from gnuradio import gr
 from gnuradio import blocks
-from gnuradio import filter
+from gnuradio import filter, fft
 from gnuradio.ctrlport.GNURadio import ControlPort
 import sys, time, struct
 
@@ -89,7 +75,7 @@ class GrDataPlotParent(gr.top_block, Qt.QWidget):
             else:
                 self.connect(self.src[n], (self.snk,n))
 
-        self.py_window = sip.wrapinstance(self.snk.pyqwidget(), Qt.QWidget)
+        self.py_window = sip.wrapinstance(self.snk.qwidget(), Qt.QWidget)
 
         self.layout.addWidget(self.py_window)
 
@@ -294,7 +280,7 @@ class GrDataPlotterPsdC(GrDataPlotParent):
         self._iscomplex = True
 
         self._npts = 2048
-        self._wintype = filter.firdes.WIN_BLACKMAN_hARRIS
+        self._wintype = fft.window.WIN_BLACKMAN_hARRIS
         self._fc = 0
 
         self._setup(1)
@@ -327,7 +313,7 @@ class GrDataPlotterPsdF(GrDataPlotParent):
         self._iscomplex = False
 
         self._npts = 2048
-        self._wintype = filter.firdes.WIN_BLACKMAN_hARRIS
+        self._wintype = fft.window.WIN_BLACKMAN_hARRIS
         self._fc = 0
 
         self._setup(1)

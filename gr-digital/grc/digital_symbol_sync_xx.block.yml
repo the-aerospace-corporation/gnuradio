@@ -19,10 +19,10 @@ parameters:
     options: [digital.TED_MUELLER_AND_MULLER, digital.TED_MOD_MUELLER_AND_MULLER,
         digital.TED_ZERO_CROSSING, digital.TED_GARDNER, digital.TED_EARLY_LATE, digital.TED_DANDREA_AND_MENGALI_GEN_MSK,
         digital.TED_MENGALI_AND_DANDREA_GMSK, digital.TED_SIGNAL_TIMES_SLOPE_ML, digital.TED_SIGNUM_TIMES_SLOPE_ML]
-    option_labels: ["Mueller and M\xFCller", "Modified Mueller and M\xFCller", Zero
+    option_labels: ["Mueller and Mueller", "Modified Mueller and Mueller", Zero
             Crossing, Gardner, Early-Late, D'Andrea and Mengali Gen MSK, Mengali and
-            D'Andrea GMSK, 'y[n]y''[n] Maximum Likelyhood', 'sgn(y[n])y''[n] Maximum
-            Likelyhood']
+            D'Andrea GMSK, 'y[n]y''[n] Maximum likelihood', 'sgn(y[n])y''[n] Maximum
+            likelihood']
     option_attributes:
         hide_constellation: [part, part, part, all, all, all, all, all, all]
 -   id: constellation
@@ -61,8 +61,8 @@ parameters:
     option_labels: ['MMSE, 8 tap FIR', 'Polyphase Filterbank, MMSE', 'Polyphase Filterbank,
             MF']
     option_attributes:
-        hide_nfilters: [all, '', '']
-        hide_pfb_mf_taps: [all, all, '']
+        hide_nfilters: [all, none, none]
+        hide_pfb_mf_taps: [all, all, none]
 -   id: nfilters
     label: Filterbank Arms
     dtype: int
@@ -133,12 +133,12 @@ cpp_templates:
             ${resamp_type}, 
             ${nfilters},
             pfb_mf_taps);
-    link: ['gnuradio-digital']
+    link: ['gnuradio::gnuradio-digital']
     callbacks:
     - set_loop_bandwidth(${loop_bw})
     - set_damping_factor(${damping})
     - set_ted_gain(${ted_gain})
     translations:
-        digital.: 'digital::'
+        digital\.: 'digital::'
 
 file_format: 1

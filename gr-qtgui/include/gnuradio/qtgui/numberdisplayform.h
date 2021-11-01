@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef NUMBER_DISPLAY_FORM_H
@@ -41,7 +29,7 @@ public:
     NumberDisplayForm(int nplots = 1,
                       gr::qtgui::graph_t type = gr::qtgui::NUM_GRAPH_HORIZ,
                       QWidget* parent = 0);
-    ~NumberDisplayForm();
+    ~NumberDisplayForm() override;
 
     gr::qtgui::graph_t graphType() const;
     QColor colorMin(unsigned int which) const;
@@ -56,8 +44,8 @@ public:
     float factor(unsigned int which) const;
 
 public slots:
-    void mousePressEvent(QMouseEvent* e);
-    void customEvent(QEvent* e);
+    void mousePressEvent(QMouseEvent* e) override;
+    void customEvent(QEvent* e) override;
     void setStop(bool on);
     void setStop();
     void setGraphType(const gr::qtgui::graph_t type);

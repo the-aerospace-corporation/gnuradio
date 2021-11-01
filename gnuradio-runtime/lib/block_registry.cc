@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #include <gnuradio/basic_block.h>
@@ -25,7 +13,7 @@
 #include <gnuradio/block_detail.h>
 #include <gnuradio/block_registry.h>
 #include <gnuradio/tpb_detail.h>
-#include <stdio.h>
+#include <any>
 
 gr::block_registry global_block_registry;
 
@@ -109,7 +97,7 @@ basic_block_sptr block_registry::block_lookup(pmt::pmt_t symbol)
     if (pmt::eq(ref, pmt::PMT_NIL)) {
         throw std::runtime_error("block lookup failed! block not found!");
     }
-    basic_block* blk = boost::any_cast<basic_block*>(pmt::any_ref(ref));
+    basic_block* blk = std::any_cast<basic_block*>(pmt::any_ref(ref));
     return blk->shared_from_this();
 }
 
@@ -132,10 +120,14 @@ void block_registry::notify_blk(std::string blk)
     gr::thread::scoped_lock guard(d_mutex);
 
     if (primitive_map.find(blk) == primitive_map.end()) {
-        return;
+        throw std::runtime_error("block notify failed: block not found!");
     }
-    if (primitive_map[blk]->detail().get())
+    if (primitive_map[blk]->detail().get()) {
         primitive_map[blk]->detail()->d_tpb.notify_msg();
+    } else {
+        // not having block detail is not necessarily a problem; this will happen when
+        // publishing a message to a block that exists but has not yet been started
+    }
 }
 
 } /* namespace gr */

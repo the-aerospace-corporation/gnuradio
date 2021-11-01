@@ -1,6 +1,7 @@
 options:
   parameters:
     author: ''
+    catch_exceptions: 'True'
     category: Custom
     cmake_opt: ''
     comment: ''
@@ -22,9 +23,11 @@ options:
     sizing_mode: fixed
     thread_safe_setters: ''
     title: ''
-    window_size: 1280, 1024
   states:
-    coordinate: [368, 19]
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [448, 20.0]
     rotation: 0
     state: enabled
 
@@ -35,7 +38,10 @@ blocks:
     comment: ''
     value: 429e6
   states:
-    coordinate: [808, 20]
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [888, 20.0]
     rotation: 0
     state: enabled
 - name: pilot_freq
@@ -44,7 +50,10 @@ blocks:
     comment: ''
     value: (6000000.0 - (symbol_rate / 2)) / 2
   states:
-    coordinate: [680, 20]
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [760, 20.0]
     rotation: 0
     state: enabled
 - name: symbol_rate
@@ -53,7 +62,10 @@ blocks:
     comment: ''
     value: 4500000.0 / 286 * 684
   states:
-    coordinate: [552, 19]
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [632, 20.0]
     rotation: 0
     state: enabled
 - name: tx_gain
@@ -63,7 +75,7 @@ blocks:
     gui_hint: ''
     label: ''
     min_len: '200'
-    orient: Qt.Horizontal
+    orient: QtCore.Qt.Horizontal
     rangeType: float
     start: '0'
     step: '1'
@@ -71,43 +83,10 @@ blocks:
     value: '50'
     widget: counter_slider
   states:
-    coordinate: [808, 88]
-    rotation: 0
-    state: enabled
-- name: vga1_gain
-  id: variable_qtgui_range
-  parameters:
-    comment: ''
-    gui_hint: ''
-    label: ''
-    min_len: '200'
-    orient: Qt.Horizontal
-    rangeType: int
-    start: '-35'
-    step: '1'
-    stop: '-4'
-    value: '-8'
-    widget: counter_slider
-  states:
-    coordinate: [552, 88]
-    rotation: 0
-    state: enabled
-- name: vga2_gain
-  id: variable_qtgui_range
-  parameters:
-    comment: ''
-    gui_hint: ''
-    label: ''
-    min_len: '200'
-    orient: Qt.Horizontal
-    rangeType: int
-    start: '0'
-    step: '1'
-    stop: '25'
-    value: '10'
-    widget: counter_slider
-  states:
-    coordinate: [680, 88]
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [632, 92.0]
     rotation: 0
     state: enabled
 - name: blocks_file_source_0
@@ -126,6 +105,9 @@ blocks:
     type: byte
     vlen: '1'
   states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
     coordinate: [64, 19]
     rotation: 0
     state: enabled
@@ -142,6 +124,9 @@ blocks:
     offset: '4'
     type: byte
   states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
     coordinate: [88, 468.0]
     rotation: 0
     state: enabled
@@ -154,8 +139,12 @@ blocks:
     maxoutbuf: '0'
     minoutbuf: '0'
     phase_inc: ((-3000000.0 + pilot_freq) / symbol_rate) * (math.pi * 2)
+    tag_inc_update: 'False'
   states:
-    coordinate: [336, 332]
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [336, 304.0]
     rotation: 0
     state: enabled
 - name: blocks_vector_to_stream_1
@@ -170,6 +159,9 @@ blocks:
     type: byte
     vlen: '1'
   states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
     coordinate: [88, 424.0]
     rotation: 180
     state: enabled
@@ -182,6 +174,9 @@ blocks:
     maxoutbuf: '0'
     minoutbuf: '0'
   states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
     coordinate: [88, 376.0]
     rotation: 0
     state: enabled
@@ -194,6 +189,9 @@ blocks:
     maxoutbuf: '0'
     minoutbuf: '0'
   states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
     coordinate: [88, 280.0]
     rotation: 0
     state: enabled
@@ -206,6 +204,9 @@ blocks:
     maxoutbuf: '0'
     minoutbuf: '0'
   states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
     coordinate: [88, 136.0]
     rotation: 180
     state: enabled
@@ -218,6 +219,9 @@ blocks:
     maxoutbuf: '0'
     minoutbuf: '0'
   states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
     coordinate: [88, 184.0]
     rotation: 0
     state: enabled
@@ -230,6 +234,9 @@ blocks:
     maxoutbuf: '0'
     minoutbuf: '0'
   states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
     coordinate: [88, 232.0]
     rotation: 180
     state: enabled
@@ -242,6 +249,9 @@ blocks:
     maxoutbuf: '0'
     minoutbuf: '0'
   states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
     coordinate: [88, 328.0]
     rotation: 180
     state: enabled
@@ -260,6 +270,9 @@ blocks:
     rate2: C1_5_MEDIUM
     rate3: C1_4
   states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
     coordinate: [328, 476.0]
     rotation: 0
     state: enabled
@@ -277,7 +290,10 @@ blocks:
     taps: firdes.root_raised_cosine(0.11, symbol_rate, symbol_rate/2, 0.1152, 200)
     type: ccc
   states:
-    coordinate: [576, 316]
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [576, 300.0]
     rotation: 0
     state: enabled
 - name: import_0
@@ -287,9 +303,27 @@ blocks:
     comment: ''
     imports: import math
   states:
-    coordinate: [368, 91]
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [448, 92.0]
     rotation: 0
     state: enabled
+- name: note_0
+  id: note
+  parameters:
+    alias: ''
+    comment: 'This file is available at
+
+      http://www.w6rz.net/advatsc.ts'
+    note: ''
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [264, 20.0]
+    rotation: 0
+    state: true
 - name: qtgui_freq_sink_x_0
   id: qtgui_freq_sink_x
   parameters:
@@ -342,6 +376,7 @@ blocks:
     minoutbuf: '0'
     name: '""'
     nconnections: '1'
+    norm_window: 'False'
     showports: 'True'
     tr_chan: '0'
     tr_level: '0.0'
@@ -360,13 +395,53 @@ blocks:
     width7: '1'
     width8: '1'
     width9: '1'
-    wintype: firdes.WIN_BLACKMAN_hARRIS
+    wintype: window.WIN_BLACKMAN_hARRIS
     ymax: '10'
     ymin: '-140'
   states:
-    coordinate: [944, 452.0]
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [944, 392.0]
     rotation: 0
     state: enabled
+- name: soapy_custom_sink_0
+  id: soapy_custom_sink
+  parameters:
+    affinity: ''
+    alias: ''
+    antenna0: TX
+    antenna1: ''
+    bandwidth0: '6000000'
+    bandwidth1: '0'
+    center_freq0: center_freq
+    center_freq1: '0'
+    comment: ''
+    dc_offset0: '0'
+    dc_offset1: '0'
+    dev_args: ''
+    driver: ''
+    freq_correction0: '0'
+    freq_correction1: '0'
+    gain0: tx_gain
+    gain1: '0'
+    iq_balance0: '0'
+    iq_balance1: '0'
+    nchan: '1'
+    samp_rate: symbol_rate
+    settings0: ''
+    settings1: ''
+    stream_args: ''
+    tune_args0: ''
+    tune_args1: ''
+    type: fc32
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [944, 180.0]
+    rotation: 0
+    state: true
 - name: uhd_usrp_sink_0
   id: uhd_usrp_sink
   parameters:
@@ -478,7 +553,7 @@ blocks:
     clock_source6: ''
     clock_source7: ''
     comment: ''
-    dev_addr: '"send_frame_size=65536,num_send_frames=128,master_clock_rate=" + str(symbol_rate*4)'
+    dev_addr: '"send_frame_size=8192,num_send_frames=128,master_clock_rate=" + str(symbol_rate*4)'
     dev_args: '""'
     gain0: tx_gain
     gain1: '0'
@@ -512,6 +587,38 @@ blocks:
     gain7: '0'
     gain8: '0'
     gain9: '0'
+    gain_type0: default
+    gain_type1: default
+    gain_type10: default
+    gain_type11: default
+    gain_type12: default
+    gain_type13: default
+    gain_type14: default
+    gain_type15: default
+    gain_type16: default
+    gain_type17: default
+    gain_type18: default
+    gain_type19: default
+    gain_type2: default
+    gain_type20: default
+    gain_type21: default
+    gain_type22: default
+    gain_type23: default
+    gain_type24: default
+    gain_type25: default
+    gain_type26: default
+    gain_type27: default
+    gain_type28: default
+    gain_type29: default
+    gain_type3: default
+    gain_type30: default
+    gain_type31: default
+    gain_type4: default
+    gain_type5: default
+    gain_type6: default
+    gain_type7: default
+    gain_type8: default
+    gain_type9: default
     len_tag_name: ''
     lo_export0: 'False'
     lo_export1: 'False'
@@ -577,41 +684,9 @@ blocks:
     lo_source7: internal
     lo_source8: internal
     lo_source9: internal
-    maxoutbuf: ''
-    minoutbuf: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
     nchan: '1'
-    norm_gain0: 'False'
-    norm_gain1: 'False'
-    norm_gain10: 'False'
-    norm_gain11: 'False'
-    norm_gain12: 'False'
-    norm_gain13: 'False'
-    norm_gain14: 'False'
-    norm_gain15: 'False'
-    norm_gain16: 'False'
-    norm_gain17: 'False'
-    norm_gain18: 'False'
-    norm_gain19: 'False'
-    norm_gain2: 'False'
-    norm_gain20: 'False'
-    norm_gain21: 'False'
-    norm_gain22: 'False'
-    norm_gain23: 'False'
-    norm_gain24: 'False'
-    norm_gain25: 'False'
-    norm_gain26: 'False'
-    norm_gain27: 'False'
-    norm_gain28: 'False'
-    norm_gain29: 'False'
-    norm_gain3: 'False'
-    norm_gain30: 'False'
-    norm_gain31: 'False'
-    norm_gain4: 'False'
-    norm_gain5: 'False'
-    norm_gain6: 'False'
-    norm_gain7: 'False'
-    norm_gain8: 'False'
-    norm_gain9: 'False'
     num_mboards: '1'
     otw: ''
     samp_rate: symbol_rate
@@ -624,6 +699,7 @@ blocks:
     sd_spec6: ''
     sd_spec7: ''
     show_lo_controls: 'False'
+    start_time: '-1.0'
     stream_args: ''
     stream_chans: '[]'
     sync: none
@@ -637,31 +713,36 @@ blocks:
     time_source7: ''
     type: fc32
   states:
-    coordinate: [944, 276.0]
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [944, 268.0]
     rotation: 0
-    state: enabled
+    state: disabled
 - name: virtual_sink_1
   id: virtual_sink
   parameters:
-    affinity: ''
     alias: ''
     comment: ''
     stream_id: mod-rot
   states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
     coordinate: [592, 484.0]
     rotation: 0
     state: true
 - name: virtual_source_1
   id: virtual_source
   parameters:
-    affinity: ''
     alias: ''
     comment: ''
-    maxoutbuf: ''
-    minoutbuf: ''
     stream_id: mod-rot
   states:
-    coordinate: [336, 276.0]
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [336, 252.0]
     rotation: 180
     state: true
 
@@ -678,6 +759,7 @@ connections:
 - [dtv_atsc_trellis_encoder_0, '0', dtv_atsc_field_sync_mux_0, '0']
 - [dtv_dvbs2_modulator_bc_0, '0', virtual_sink_1, '0']
 - [fft_filter_xxx_0, '0', qtgui_freq_sink_x_0, '0']
+- [fft_filter_xxx_0, '0', soapy_custom_sink_0, '0']
 - [fft_filter_xxx_0, '0', uhd_usrp_sink_0, '0']
 - [virtual_source_1, '0', blocks_rotator_cc_0, '0']
 

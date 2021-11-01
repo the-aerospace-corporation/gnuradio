@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 
@@ -53,10 +41,10 @@ namespace kernel {
 class FILTER_API filterbank
 {
 protected:
+    std::vector<std::vector<float>> d_taps;
     unsigned int d_nfilts;
     unsigned int d_ntaps;
-    std::vector<kernel::fir_filter_ccf*> d_fir_filters;
-    std::vector<std::vector<float>> d_taps;
+    std::vector<kernel::fir_filter_ccf> d_fir_filters;
     std::vector<bool> d_active;
     unsigned int d_taps_per_filter;
 
@@ -68,8 +56,8 @@ public:
      *             Populates the filters.
      */
     filterbank(const std::vector<std::vector<float>>& taps);
-
-    ~filterbank();
+    filterbank(filterbank&&) = default;
+    virtual ~filterbank() = default;
 
     /*!
      * Update the filterbank's filter taps.

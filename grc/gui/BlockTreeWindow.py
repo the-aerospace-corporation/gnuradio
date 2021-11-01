@@ -2,23 +2,9 @@
 Copyright 2007, 2008, 2009, 2016 Free Software Foundation, Inc.
 This file is part of GNU Radio
 
-GNU Radio Companion is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
+SPDX-License-Identifier: GPL-2.0-or-later
 
-GNU Radio Companion is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 """
-
-from __future__ import absolute_import
-import six
 
 from gi.repository import Gtk, Gdk, GObject
 
@@ -32,7 +18,7 @@ def _format_doc(doc):
     docs = []
     if doc.get(''):
         docs += doc.get('').splitlines() + ['']
-    for block_name, docstring in six.iteritems(doc):
+    for block_name, docstring in doc.items():
         docs.append('--- {0} ---'.format(block_name))
         docs += docstring.splitlines()
         docs.append('')
@@ -133,7 +119,7 @@ class BlockTreeWindow(Gtk.VBox):
 
     def repopulate(self):
         self.clear()
-        for block in six.itervalues(self.platform.blocks):
+        for block in self.platform.blocks.values():
             if block.category:
                 self.add_block(block)
         self.expand_module_in_tree()
@@ -167,7 +153,7 @@ class BlockTreeWindow(Gtk.VBox):
                 iter_ = treestore.insert_before(categories[parent_category[:-1]], None)
                 treestore.set_value(iter_, NAME_INDEX, parent_cat_name)
                 treestore.set_value(iter_, KEY_INDEX, '')
-                treestore.set_value(iter_, DOC_INDEX, _format_cat_tooltip(parent_cat_name))
+                treestore.set_value(iter_, DOC_INDEX, _format_cat_tooltip(parent_category))
                 categories[parent_category] = iter_
         # add block
         iter_ = treestore.insert_before(categories[category], None)

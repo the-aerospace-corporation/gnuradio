@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef INCLUDED_GR_UHD_USRP_BLOCK_H
@@ -26,15 +14,18 @@
 #include <gnuradio/sync_block.h>
 #include <gnuradio/uhd/api.h>
 #include <uhd/usrp/multi_usrp.hpp>
+#include <cstdint>
 
 namespace gr {
 namespace uhd {
 
 GR_UHD_API const pmt::pmt_t cmd_chan_key();
 GR_UHD_API const pmt::pmt_t cmd_gain_key();
+GR_UHD_API const pmt::pmt_t cmd_power_key();
 GR_UHD_API const pmt::pmt_t cmd_freq_key();
 GR_UHD_API const pmt::pmt_t cmd_lo_offset_key();
 GR_UHD_API const pmt::pmt_t cmd_tune_key();
+GR_UHD_API const pmt::pmt_t cmd_mtune_key();
 GR_UHD_API const pmt::pmt_t cmd_lo_freq_key();
 GR_UHD_API const pmt::pmt_t cmd_dsp_freq_key();
 GR_UHD_API const pmt::pmt_t cmd_rate_key();
@@ -44,9 +35,11 @@ GR_UHD_API const pmt::pmt_t cmd_mboard_key();
 GR_UHD_API const pmt::pmt_t cmd_antenna_key();
 GR_UHD_API const pmt::pmt_t cmd_direction_key();
 GR_UHD_API const pmt::pmt_t cmd_tag_key();
+GR_UHD_API const pmt::pmt_t cmd_gpio_key();
+GR_UHD_API const pmt::pmt_t cmd_pc_clock_resync_key();
 
-GR_UHD_API const pmt::pmt_t ant_direction_rx();
-GR_UHD_API const pmt::pmt_t ant_direction_tx();
+GR_UHD_API const pmt::pmt_t direction_rx();
+GR_UHD_API const pmt::pmt_t direction_tx();
 
 /*! Base class for USRP blocks.
  * \ingroup uhd_blk
@@ -155,8 +148,11 @@ public:
      *
      * \param gain the gain in dB
      * \param chan the channel index 0 to N-1
+     * \param direction TX or RX. This is mostly used by the internal message
+     *        handling.
      */
-    virtual void set_gain(double gain, size_t chan = 0) = 0;
+    virtual void
+    set_gain(double gain, size_t chan = 0, pmt::pmt_t direction = pmt::PMT_NIL) = 0;
 
     /*!
      * Set the named gain on the dboard.
@@ -240,6 +236,65 @@ public:
      */
     virtual ::uhd::gain_range_t get_gain_range(const std::string& name,
                                                size_t chan = 0) = 0;
+
+    /*! Query if this device is capable of absolute power levels
+     *
+     * If true, the set_power_reference() and get_power_reference() APIs can be
+     * used as well.
+     * Note that if the underlying UHD version doesn't support power APIs, a
+     * warning will be printed, and the return value is always false.
+     *
+     * \param chan the channel index 0 to N-1
+     * \returns true if there is a power reference API available for this channel
+     */
+    virtual bool has_power_reference(size_t chan = 0) = 0;
+
+    /*! Set the absolute power reference level for this channel
+     *
+     * Note that this API is available for certain devices only, and only if
+     * calibration data is available. Refer to the UHD manual for greater
+     * detail: https://files.ettus.com/manual/page_power.html
+     *
+     * In a nutshell, using the power reference will configure the device such
+     * that a full-scale signal (0 dBFS) corresponds to a signal at the
+     * antenna connector of \p power_dbm.
+     * After calling this function, the device will attempt to keep the power
+     * level constant after retuning, which means the gain level may be changed
+     * after a re-tune.
+     *
+     * The device may coerce the available power level (for example, if the
+     * requested power level is not achievable by the device). The coerced
+     * value may be read by calling get_power_reference().
+     *
+     * \param power_dbm The power reference level in dBm
+     * \param chan the channel index 0 to N-1
+     * \throws std::runtime_error if the underlying UHD version does not support
+     *         the power API.
+     */
+    virtual void set_power_reference(double power_dbm, size_t chan = 0) = 0;
+
+    /*! Return the absolute power reference level for this channel
+     *
+     * Note that this API is only available for certain devices, and assuming
+     * the existence of calibration data. Refer to the UHD manual for greater
+     * detail: https://files.ettus.com/manual/page_compat.html
+     *
+     * See also set_power_reference().
+     *
+     * \param chan the channel index 0 to N-1
+     * \throws std::runtime_error if the underlying UHD version does not support
+     *         the power API.
+     */
+    virtual double get_power_reference(size_t chan = 0) = 0;
+
+    /*! Return the available power range
+     *
+     * \param chan the channel index 0 to N-1
+     * \return the power range in dBm
+     * \throws std::runtime_error if the underlying UHD version does not support
+     *         the power API.
+     */
+    virtual ::uhd::meta_range_t get_power_range(size_t chan = 0) = 0;
 
     /*!
      * Set the antenna to use for a given channel.
@@ -531,8 +586,8 @@ public:
      */
     virtual void set_gpio_attr(const std::string& bank,
                                const std::string& attr,
-                               const boost::uint32_t value,
-                               const boost::uint32_t mask = 0xffffffff,
+                               const uint32_t value,
+                               const uint32_t mask = 0xffffffff,
                                const size_t mboard = 0) = 0;
 
     /*!
@@ -551,9 +606,47 @@ public:
      * \param mboard the motherboard index 0 to M-1
      * \return the value set for this attribute
      */
-    virtual boost::uint32_t get_gpio_attr(const std::string& bank,
-                                          const std::string& attr,
-                                          const size_t mboard = 0) = 0;
+    virtual uint32_t get_gpio_attr(const std::string& bank,
+                                   const std::string& attr,
+                                   const size_t mboard = 0) = 0;
+
+    /*! Enumerate the available filters in the signal path.
+     *
+     * \param chan Channel index
+     *
+     * \return a vector of strings representing the selected filter names.
+     */
+    virtual std::vector<std::string> get_filter_names(const size_t chan = 0) = 0;
+
+    /*! Write back a filter obtained by get_filter() to the signal path.
+     *
+     * This filter can be a modified version of the originally returned one.
+     * The information about Rx or Tx is contained in the path parameter.
+     * \param path the name of the filter as returned from get_filter_names().
+     * \param filter the filter_info_base::sptr of the filter object to be written
+     * \param chan Channel index
+     */
+    virtual void set_filter(const std::string& path,
+                            ::uhd::filter_info_base::sptr filter,
+                            const size_t chan = 0) = 0;
+
+    /*! Return the filter object for the given name.
+     *
+     * \param path the name of the filter as returned from get_filter_names()
+     * \param chan Channel index
+     * \return the filter object
+     */
+    virtual ::uhd::filter_info_base::sptr get_filter(const std::string& path,
+                                                     const size_t chan = 0) = 0;
+
+    /*!
+     * Returns identifying information about this USRP's configuration.
+     * Returns motherboard ID, name, and serial.
+     * Returns daughterboard TX ID, subdev name and spec, serial, and antenna.
+     * \param chan channel index 0 to N-1
+     * \return TX info
+     */
+    virtual ::uhd::dict<std::string, std::string> get_usrp_info(size_t chan = 0) = 0;
 };
 
 } /* namespace uhd */

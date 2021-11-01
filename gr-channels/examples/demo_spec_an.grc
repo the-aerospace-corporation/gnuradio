@@ -264,8 +264,8 @@ blocks:
     label8: ''
     label9: ''
     legend: 'True'
-    maxoutbuf: ''
-    minoutbuf: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
     name: FFT Plot
     nconnections: '1'
     showports: 'True'
@@ -286,7 +286,7 @@ blocks:
     width7: '1'
     width8: '1'
     width9: '1'
-    wintype: firdes.WIN_FLATTOP
+    wintype: window.WIN_FLATTOP
     ymax: '10'
     ymin: '-140'
   states:

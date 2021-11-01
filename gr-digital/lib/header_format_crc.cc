@@ -3,20 +3,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -25,8 +13,8 @@
 
 #include <gnuradio/digital/header_buffer.h>
 #include <gnuradio/digital/header_format_crc.h>
-#include <string.h>
-#include <volk/volk.h>
+#include <volk/volk_alloc.hh>
+#include <cstring>
 
 namespace gr {
 namespace digital {
@@ -52,8 +40,8 @@ bool header_format_crc::format(int nbytes_in,
                                pmt::pmt_t& output,
                                pmt::pmt_t& info)
 {
-    uint8_t* bytes_out = (uint8_t*)volk_malloc(header_nbytes(), volk_get_alignment());
-    memset(bytes_out, 0, header_nbytes());
+    // Creating the output pmt copies data; free our own here when done.
+    volk::vector<uint8_t> bytes_out(header_nbytes());
 
     // Should this throw instead of mask if the payload is too big
     // for 12-bit representation?
@@ -68,7 +56,7 @@ bool header_format_crc::format(int nbytes_in,
     uint32_t concat = 0;
     concat = (d_header_number << 12) | (nbytes_in);
 
-    header_buffer header(bytes_out);
+    header_buffer header(bytes_out.data());
     header.add_field32(concat, 24, true);
     header.add_field8(crc);
 
@@ -76,10 +64,7 @@ bool header_format_crc::format(int nbytes_in,
     d_header_number &= 0x0FFF;
 
     // Package output data into a PMT vector
-    output = pmt::init_u8vector(header_nbytes(), bytes_out);
-
-    // Creating the output pmt copies data; free our own here.
-    volk_free(bytes_out);
+    output = pmt::init_u8vector(header_nbytes(), bytes_out.data());
 
     return true;
 }

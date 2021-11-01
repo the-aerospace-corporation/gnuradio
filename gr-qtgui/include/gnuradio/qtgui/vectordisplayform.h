@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef VECTOR_DISPLAY_FORM_H
@@ -40,9 +28,9 @@ class VectorDisplayForm : public DisplayForm
 
 public:
     VectorDisplayForm(int nplots = 1, QWidget* parent = 0);
-    ~VectorDisplayForm();
+    ~VectorDisplayForm() override;
 
-    VectorDisplayPlot* getPlot();
+    VectorDisplayPlot* getPlot() override;
 
     int getVecSize() const;
     float getVecAverage() const;
@@ -58,7 +46,7 @@ public:
     bool checkClicked();
 
 public slots:
-    void customEvent(QEvent* e);
+    void customEvent(QEvent* e) override;
 
     void setVecSize(const int);
     void setVecAverage(const float);
@@ -67,13 +55,13 @@ public slots:
     void setYaxis(double min, double max);
     void setYMax(const QString& m);
     void setYMin(const QString& m);
-    void autoScale(bool en);
+    void autoScale(bool en) override;
     void clearMaxHold();
     void clearMinHold();
 
 private slots:
-    void newData(const QEvent* updateEvent);
-    void onPlotPointSelected(const QPointF p);
+    void newData(const QEvent* updateEvent) override;
+    void onPlotPointSelected(const QPointF p) override;
 
 private:
     uint64_t d_num_real_data_points;

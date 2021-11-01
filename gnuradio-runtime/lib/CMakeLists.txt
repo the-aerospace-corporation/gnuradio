@@ -2,39 +2,30 @@
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 
 include(GrMiscUtils)
 gr_check_hdr_n_def(sys/resource.h HAVE_SYS_RESOURCE_H)
 
 ########################################################################
+# Look for libunwind
+########################################################################
+find_package(libunwind)
+
+########################################################################
 # Handle the generated constants
 ########################################################################
-execute_process(COMMAND ${PYTHON_EXECUTABLE} -c
-    "import time;print(time.strftime('%a, %d %b %Y %H:%M:%S', time.gmtime()))"
-    OUTPUT_VARIABLE BUILD_DATE OUTPUT_STRIP_TRAILING_WHITESPACE
-)
 message(STATUS "Loading build date ${BUILD_DATE} into constants...")
 message(STATUS "Loading version ${VERSION} into constants...")
 
-#double escape for windows backslash path separators
-string(REPLACE "\\" "\\\\" prefix "${prefix}")
-string(REPLACE "\\" "\\\\" SYSCONFDIR "${SYSCONFDIR}")
-string(REPLACE "\\" "\\\\" GR_PREFSDIR "${GR_PREFSDIR}")
 
+#Generate the constants file, now that we actually know which components will be enabled.
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/constants.cc.in
+  ${CMAKE_CURRENT_BINARY_DIR}/constants.cc
+  ESCAPE_QUOTES
+  @ONLY)
 
 #########################################################################
 # Include subdirs rather to populate to the sources lists.
@@ -44,11 +35,16 @@ add_subdirectory(pmt)
 ########################################################################
 # Setup library
 ########################################################################
-configure_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/constants.cc.in
-    ${CMAKE_CURRENT_BINARY_DIR}/constants.cc
-    ESCAPE_QUOTES
-    @ONLY)
+
+#Generate sine table header file for Math part of library
+set(MATH_SINE_TABLE_HEADER ${CMAKE_CURRENT_BINARY_DIR}/math/generated/sine_table.h)
+set(MATH_SINE_TABLE_GENERATOR ${CMAKE_CURRENT_SOURCE_DIR}/math/gen_sine_table.py)
+execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/math/generated")
+add_custom_command(
+  DEPENDS ${MATH_SINE_TABLE_GENERATOR}
+  OUTPUT ${MATH_SINE_TABLE_HEADER}
+  COMMAND ${PYTHON_EXECUTABLE} ${MATH_SINE_TABLE_GENERATOR} > ${MATH_SINE_TABLE_HEADER}
+)
 
 add_library(gnuradio-runtime
   ${CMAKE_CURRENT_BINARY_DIR}/constants.cc
@@ -59,21 +55,25 @@ add_library(gnuradio-runtime
   block_gateway_impl.cc
   block_registry.cc
   buffer.cc
-  feval.cc
+  buffer_double_mapped.cc
+  buffer_reader.cc
+  buffer_reader_sm.cc
+  buffer_single_mapped.cc
   flat_flowgraph.cc
   flowgraph.cc
   hier_block2.cc
   hier_block2_detail.cc
   high_res_timer.cc
+  host_buffer.cc
   io_signature.cc
   local_sighandler.cc
   logger.cc
   message.cc
-  misc.cc
   msg_accepter.cc
   msg_handler.cc
   msg_queue.cc
   pagesize.cc
+  pdu.cc
   prefs.cc
   realtime.cc
   realtime_impl.cc
@@ -85,11 +85,13 @@ add_library(gnuradio-runtime
   sync_interpolator.cc
   sys_paths.cc
   tagged_stream_block.cc
+  terminate_handler.cc
   test.cc
   top_block.cc
   top_block_impl.cc
   tpb_detail.cc
   tpb_thread_body.cc
+  transfer_type.cc
   vmcircbuf.cc
   vmcircbuf_createfilemapping.cc
   vmcircbuf_mmap_shm_open.cc
@@ -114,13 +116,62 @@ target_sources(gnuradio-runtime PRIVATE
   )
 
 # Math
+target_include_directories(gnuradio-runtime PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/math)
 target_sources(gnuradio-runtime PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/math/fast_atan2f.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/math/fxpt.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/math/random.cc
-  ${CMAKE_CURRENT_SOURCE_DIR}/math/sincos.cc
+  ${MATH_SINE_TABLE_HEADER}
   )
 
+target_link_libraries(gnuradio-runtime PUBLIC
+  gnuradio-pmt
+  Volk::volk
+  Boost::program_options
+  Boost::system
+  Boost::regex
+  Boost::thread
+  Log4Cpp::log4cpp
+  MPLib::mplib
+  # INTERFACE/PRIVATE split so users of the library can choose how to link to Python
+  # (importantly, extension modules can avoid linking against Python and resolve
+  #  their own Python symbols at runtime through the Python interpreter's linking)
+  INTERFACE
+    Python::Module
+  PRIVATE
+    Python::Python
+    libunwind::libunwind
+    pybind11::pybind11
+  )
+
+# Address linker issues with std::filesystem on Centos 8 and Debian
+target_link_libraries(gnuradio-runtime PUBLIC $<$<AND:$<CXX_COMPILER_ID:GNU>,$<VERSION_LESS:$<CXX_COMPILER_VERSION>,9.0>>:stdc++fs>)
+
+target_include_directories(gnuradio-runtime
+  PUBLIC
+    $<INSTALL_INTERFACE:include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/../include>
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+
+target_compile_definitions(gnuradio-runtime PUBLIC ${MPLIB_DEFINITIONS})
+
+# constants.cc includes boost::dll headers, force them to use std::filesystem
+target_compile_definitions(gnuradio-runtime PRIVATE BOOST_DLL_USE_STD_FS)
+
+if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.16.0")
+  target_precompile_headers(
+    gnuradio-runtime
+    PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/gnuradio/sync_block.h
+    )
+endif()
+
+########################################################################
+# Add controlport stuff to gnuradio-runtime
+########################################################################
 # Controlport
 if(ENABLE_GR_CTRLPORT)
 
@@ -134,18 +185,11 @@ target_sources(gnuradio-runtime PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/controlport/rpcserver_selector.cc
 )
 
-OPTION(ENABLE_CTRLPORT_THRIFT "Enable ControlPort Thrift support" ON)
-
 if(ENABLE_CTRLPORT_THRIFT)
-# Look if Thrift is installed and use it as a ControlPort backend.
-FIND_PACKAGE(THRIFT)
-
-if(THRIFT_FOUND)
-list(APPEND EXTRA_DEPS "THRIFT")
 MATH(EXPR CTRLPORT_BACKENDS "${CTRLPORT_BACKENDS} + 1")
 
 # Indicate thrift as an installed backend in the cmake summary.
-message(STATUS "Found and enabling Thrift backend to ControlPort")
+message(STATUS "Enabling Thrift backend to ControlPort")
 GR_APPEND_SUBCOMPONENT("thrift")
 
 # Run Thrift To compile C++ and Python files
@@ -173,9 +217,11 @@ target_sources(gnuradio-runtime PRIVATE
   # add files built by compiling gnuradio.thrift
   ${gnuradio_thrift_generated_sources}
   )
-target_link_libraries(gnuradio-runtime PUBLIC
+target_link_libraries(gnuradio-runtime PRIVATE
   Thrift::thrift
   )
+
+target_compile_definitions(gnuradio-runtime PUBLIC GR_CTRLPORT)
 
 # Add install rule to move example Thrift configuration file into a
 # documentation directory
@@ -184,12 +230,7 @@ install(
   DESTINATION ${GR_PKG_DOC_DIR}/config
 )
 
-endif(THRIFT_FOUND)
 endif(ENABLE_CTRLPORT_THRIFT)
-
-########################################################################
-# Add controlport stuff to gnuradio-runtime
-########################################################################
 
 # Save the number of backends for testing against later
 set(
@@ -199,39 +240,42 @@ set(
 
 endif(ENABLE_GR_CTRLPORT)
 
-target_link_libraries(gnuradio-runtime PUBLIC
-  gnuradio-pmt
-  ${GR_VOLK_LIB}
-  Boost::program_options
-  Boost::filesystem
-  Boost::system
-  Boost::regex
-  Boost::thread
-  Log4Cpp::log4cpp
-  MPLib::mplib
+########################################################################
+# Add misc conditional includes/definitions to gnuradio-runtime
+########################################################################
+
+if(ENABLE_PERFORMANCE_COUNTERS)
+  target_compile_definitions(gnuradio-runtime PUBLIC -DGR_PERFORMANCE_COUNTERS)
+endif()
+
+if(GR_IS_BIG_ENDIAN)
+  target_compile_definitions(gnuradio-runtime PUBLIC -DGR_IS_BIG_ENDIAN)
+endif(GR_IS_BIG_ENDIAN)
+
+if(MSVC)
+  target_compile_definitions(gnuradio-runtime PUBLIC
+    # Minimum version: "Windows Server 2003 with SP1, Windows XP with SP2"
+    -D_WIN32_WINNT=0x0502
+    # disables stupidity and enables std::min and std::max
+    -DNOMINMAX
+    # stop all kinds of compatibility warnings
+    -D_SCL_SECURE_NO_WARNINGS
+    -D_CRT_SECURE_NO_WARNINGS
+    -D_CRT_SECURE_NO_DEPRECATE
+    -D_CRT_NONSTDC_NO_DEPRECATE
   )
+endif(MSVC)
 
-target_include_directories(gnuradio-runtime
-  PUBLIC
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_PREFIX}/include>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/../include>
-  PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    )
+if(WIN32)
+  target_compile_definitions(gnuradio-runtime PUBLIC -D_USE_MATH_DEFINES)
+  if (CMAKE_SIZEOF_VOID_P EQUAL 8)
+    target_compile_definitions(gnuradio-runtime PUBLIC -DMS_WIN64)
+  endif(CMAKE_SIZEOF_VOID_P EQUAL 8)
+endif(WIN32)
 
-  if(ENABLE_GR_CTRLPORT)
-    target_compile_definitions(gnuradio-runtime PUBLIC GR_CTRLPORT)
-  endif()
-
-
-#Add libraries for winsock2.h on Windows
-check_include_file_cxx(windows.h HAVE_WINDOWS_H)
-if(HAVE_WINDOWS_H)
-    target_compile_definitions(gnuradio-runtime PUBLIC -DHAVE_WINDOWS_H -DUSING_WINSOCK -DWIN32_LEAN_AND_MEAN)
-    message(STATUS "Adding windows libs to gnuradio runtime libs...")
-    target_link_libraries(gnuradio-runtime PUBLIC ws2_32 wsock32)
-endif(HAVE_WINDOWS_H)
+if(WIN32)
+    target_compile_definitions(gnuradio-runtime PUBLIC -DWIN32_LEAN_AND_MEAN)
+endif(WIN32)
 
 #need to link with librt on ubuntu 11.10 for shm_*
 if((LINUX) OR (CMAKE_SYSTEM_NAME STREQUAL "kFreeBSD"))
@@ -278,13 +322,7 @@ if(TRY_SHM_VMCIRCBUF)
     target_compile_definitions(gnuradio-runtime PRIVATE -DTRY_SHM_VMCIRCBUF )
 endif(TRY_SHM_VMCIRCBUF)
 
-set(EXTRA_DEPS "")
-if(ENABLE_CTRLPORT_THRIFT)
-  if(THRIFT_FOUND)
-    list(APPEND EXTRA_DEPS THRIFT)
-  endif()
-endif()
-gr_library_foo(gnuradio-runtime ${EXTRA_DEPS})
+gr_library_foo(gnuradio-runtime)
 
 
 ########################################################################
@@ -298,6 +336,7 @@ if(ENABLE_TESTING)
     qa_buffer.cc
     qa_io_signature.cc
     qa_logger.cc
+    qa_host_buffer.cc
     qa_vmcircbuf.cc
   )
   list(APPEND GR_TEST_TARGET_DEPS gnuradio-runtime gnuradio-pmt)

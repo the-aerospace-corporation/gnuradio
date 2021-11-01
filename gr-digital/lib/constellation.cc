@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -29,11 +17,10 @@
 #include <gnuradio/io_signature.h>
 #include <gnuradio/math.h>
 
-#include <boost/format.hpp>
 
+#include <cassert>
 #include <cfloat>
 #include <cstdlib>
-#include <iostream>
 #include <stdexcept>
 
 namespace gr {
@@ -44,11 +31,12 @@ constellation::constellation(std::vector<gr_complex> constell,
                              std::vector<int> pre_diff_code,
                              unsigned int rotational_symmetry,
                              unsigned int dimensionality,
-                             bool normalize_points)
+                             normalization_t normalization)
     : d_constellation(constell),
       d_pre_diff_code(pre_diff_code),
       d_rotational_symmetry(rotational_symmetry),
       d_dimensionality(dimensionality),
+      d_scalefactor(1.0),
       d_re_min(1e20),
       d_re_max(1e20),
       d_im_min(1e20),
@@ -57,18 +45,40 @@ constellation::constellation(std::vector<gr_complex> constell,
       d_lut_scale(0)
 {
     unsigned int constsize = d_constellation.size();
-    if (normalize_points) {
+    switch (normalization) {
+    case NO_NORMALIZATION: {
+        break;
+    }
+    case POWER_NORMALIZATION: {
+        // Scale constellation points so that average power is 1.
+        float summed_power = 0;
+        for (unsigned int i = 0; i < constsize; i++) {
+            gr_complex c = d_constellation[i];
+            summed_power += std::norm(c);
+        }
+        d_scalefactor = sqrt(constsize / summed_power);
+        for (unsigned int i = 0; i < constsize; i++) {
+            d_constellation[i] = d_constellation[i] * d_scalefactor;
+        }
+        break;
+    }
+    case AMPLITUDE_NORMALIZATION: {
         // Scale constellation points so that average magnitude is 1.
         float summed_mag = 0;
         for (unsigned int i = 0; i < constsize; i++) {
             gr_complex c = d_constellation[i];
-            summed_mag += sqrt(c.real() * c.real() + c.imag() * c.imag());
+            summed_mag += std::abs(c);
         }
         d_scalefactor = constsize / summed_mag;
         for (unsigned int i = 0; i < constsize; i++) {
             d_constellation[i] = d_constellation[i] * d_scalefactor;
         }
+        break;
     }
+    default:
+        throw std::runtime_error("Invalid constellation normalization type.");
+    }
+
     if (pre_diff_code.empty())
         d_apply_pre_diff_code = false;
     else if (pre_diff_code.size() != constsize)
@@ -122,14 +132,10 @@ float constellation::get_distance(unsigned int index, const gr_complex* sample)
 
 unsigned int constellation::get_closest_point(const gr_complex* sample)
 {
+    float min_euclid_dist = get_distance(0, sample);
     unsigned int min_index = 0;
-    float min_euclid_dist;
-    float euclid_dist;
-
-    min_euclid_dist = get_distance(0, sample);
-    min_index = 0;
     for (unsigned int j = 1; j < d_arity; j++) {
-        euclid_dist = get_distance(j, sample);
+        float euclid_dist = get_distance(j, sample);
         if (euclid_dist < min_euclid_dist) {
             min_euclid_dist = euclid_dist;
             min_index = j;
@@ -381,19 +387,19 @@ constellation_calcdist::make(std::vector<gr_complex> constell,
                              std::vector<int> pre_diff_code,
                              unsigned int rotational_symmetry,
                              unsigned int dimensionality,
-                             bool normalize_points)
+                             normalization_t normalization)
 {
     return constellation_calcdist::sptr(new constellation_calcdist(
-        constell, pre_diff_code, rotational_symmetry, dimensionality, normalize_points));
+        constell, pre_diff_code, rotational_symmetry, dimensionality, normalization));
 }
 
 constellation_calcdist::constellation_calcdist(std::vector<gr_complex> constell,
                                                std::vector<int> pre_diff_code,
                                                unsigned int rotational_symmetry,
                                                unsigned int dimensionality,
-                                               bool normalize_points)
+                                               normalization_t normalization)
     : constellation(
-          constell, pre_diff_code, rotational_symmetry, dimensionality, normalize_points)
+          constell, pre_diff_code, rotational_symmetry, dimensionality, normalization)
 {
 }
 
@@ -412,8 +418,10 @@ constellation_sector::constellation_sector(std::vector<gr_complex> constell,
                                            std::vector<int> pre_diff_code,
                                            unsigned int rotational_symmetry,
                                            unsigned int dimensionality,
-                                           unsigned int n_sectors)
-    : constellation(constell, pre_diff_code, rotational_symmetry, dimensionality),
+                                           unsigned int n_sectors,
+                                           normalization_t normalization)
+    : constellation(
+          constell, pre_diff_code, rotational_symmetry, dimensionality, normalization),
       n_sectors(n_sectors)
 {
 }
@@ -446,7 +454,8 @@ constellation_rect::sptr constellation_rect::make(std::vector<gr_complex> conste
                                                   unsigned int real_sectors,
                                                   unsigned int imag_sectors,
                                                   float width_real_sectors,
-                                                  float width_imag_sectors)
+                                                  float width_imag_sectors,
+                                                  normalization_t normalization)
 {
     return constellation_rect::sptr(new constellation_rect(constell,
                                                            pre_diff_code,
@@ -454,7 +463,8 @@ constellation_rect::sptr constellation_rect::make(std::vector<gr_complex> conste
                                                            real_sectors,
                                                            imag_sectors,
                                                            width_real_sectors,
-                                                           width_imag_sectors));
+                                                           width_imag_sectors,
+                                                           normalization));
 }
 
 constellation_rect::constellation_rect(std::vector<gr_complex> constell,
@@ -463,9 +473,14 @@ constellation_rect::constellation_rect(std::vector<gr_complex> constell,
                                        unsigned int real_sectors,
                                        unsigned int imag_sectors,
                                        float width_real_sectors,
-                                       float width_imag_sectors)
-    : constellation_sector(
-          constell, pre_diff_code, rotational_symmetry, 1, real_sectors * imag_sectors),
+                                       float width_imag_sectors,
+                                       normalization_t normalization)
+    : constellation_sector(constell,
+                           pre_diff_code,
+                           rotational_symmetry,
+                           1,
+                           real_sectors * imag_sectors,
+                           normalization),
       n_real_sectors(real_sectors),
       n_imag_sectors(imag_sectors),
       d_width_real_sectors(width_real_sectors),
@@ -586,7 +601,7 @@ constellation_psk::~constellation_psk() {}
 unsigned int constellation_psk::get_sector(const gr_complex* sample)
 {
     float phase = arg(*sample);
-    float width = GR_M_TWOPI / n_sectors;
+    float width = (2.0 * GR_M_PI) / n_sectors;
     int sector = floor(phase / width + 0.5);
     if (sector < 0)
         sector += n_sectors;
@@ -595,7 +610,7 @@ unsigned int constellation_psk::get_sector(const gr_complex* sample)
 
 unsigned int constellation_psk::calc_sector_value(unsigned int sector)
 {
-    float phase = sector * GR_M_TWOPI / n_sectors;
+    float phase = sector * (2.0 * GR_M_PI) / n_sectors;
     gr_complex sector_center = gr_complex(cos(phase), sin(phase));
     unsigned int closest_point = get_closest_point(&sector_center);
     return closest_point;

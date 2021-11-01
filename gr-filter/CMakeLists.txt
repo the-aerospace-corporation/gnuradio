@@ -2,20 +2,8 @@
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 
 ########################################################################
 # Setup dependencies
@@ -28,7 +16,6 @@ include(GrBoost)
 include(GrComponent)
 
 GR_REGISTER_COMPONENT("gr-filter" ENABLE_GR_FILTER
-    ENABLE_VOLK
     Boost_FOUND
     ENABLE_GNURADIO_RUNTIME
     ENABLE_GR_FFT
@@ -41,23 +28,44 @@ SET(GR_PKG_FILTER_EXAMPLES_DIR ${GR_PKG_DATA_DIR}/examples/filter)
 # Begin conditional configuration
 ########################################################################
 if(ENABLE_GR_FILTER)
-
 ########################################################################
 # Add subdirectories
 ########################################################################
 add_subdirectory(include/gnuradio/filter)
 add_subdirectory(lib)
+
+# Check for scipy and pyqtgraph, but don't fail if they don't exist.
+GR_PYTHON_CHECK_MODULE_RAW(
+    "pyqtgraph"
+    "import pyqtgraph"
+    PYQTGRAPH_FOUND
+)
+GR_PYTHON_CHECK_MODULE_RAW(
+    "scipy"
+    "import scipy"
+    SCIPY_FOUND
+)
+
+if(NOT PYQTGRAPH_FOUND OR NOT SCIPY_FOUND)
+    message(WARNING
+        "PyQtGraph and Scipy are required to run the filter design tool, "
+        "but are not detected! Please make sure they are installed on "
+        "the target system."
+    )
+endif(NOT PYQTGRAPH_FOUND OR NOT SCIPY_FOUND)
+
 if(ENABLE_PYTHON)
-    add_subdirectory(swig)
     add_subdirectory(python/filter)
     add_subdirectory(python/filter/design)
     add_subdirectory(python/filter/gui)
     add_subdirectory(apps)
+    if(ENABLE_EXAMPLES)
+        add_subdirectory(examples)
+    endif(ENABLE_EXAMPLES)
 endif(ENABLE_PYTHON)
 if(ENABLE_GRC)
     add_subdirectory(grc)
 endif(ENABLE_GRC)
-add_subdirectory(examples)
 add_subdirectory(docs)
 
 ########################################################################

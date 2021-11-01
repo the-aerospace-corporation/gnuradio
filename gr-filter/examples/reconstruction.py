@@ -4,28 +4,14 @@
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 #
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
 from gnuradio import gr, digital
 from gnuradio import filter
 from gnuradio import blocks
+from gnuradio.fft import window
 import sys
 import numpy
 
@@ -58,7 +44,7 @@ def main():
     tb = 400
     proto_taps = filter.firdes.low_pass_2(1, nchans*fs,
                                           bw, tb, 80,
-                                          filter.firdes.WIN_BLACKMAN_hARRIS)
+                                          window.WIN_BLACKMAN_hARRIS)
     print("Filter length: ", len(proto_taps))
 
 

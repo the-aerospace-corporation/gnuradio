@@ -8,31 +8,32 @@
 % if flow_graph.get_option('description'):
 # Description: ${flow_graph.get_option('description')}
 % endif
-# GNU Radio version: ${version}
+# GNU Radio version: ${config.version}
 #####################
 
 <%
 class_name = flow_graph.get_option('id')
+version_list = config.version_parts
+short_version = '.'.join(version_list[0:2])
 %>\
 
 cmake_minimum_required(VERSION 3.8)
+set(CMAKE_CXX_STANDARD 14)
 
-% if generate_options == 'qt_gui':
-find_package(Qt5Widgets REQUIRED)
-% endif
+project(${class_name})
 
-include_directories(
-    ${'$'}{GNURADIO_ALL_INCLUDE_DIRS}
-    ${'$'}{Boost_INCLUDE_DIRS}
-    % if generate_options == 'qt_gui':
-    ${'$'}{Qt5Widgets_INCLUDES}
+find_package(Gnuradio "${short_version}" COMPONENTS
+    % for component in config.enabled_components.split(";"):
+    % if component.startswith("gr-"):
+    % if not component in ['gr-utils', 'gr-ctrlport']:
+    ${component.replace("gr-", "")}
     % endif
-    $ENV{HOME}/.grc_gnuradio
+    % endif
+    % endfor
 )
 
 % if generate_options == 'qt_gui':
-add_definitions(${'$'}{Qt5Widgets_DEFINITIONS})
-
+find_package(Qt5Widgets REQUIRED)
 set(CMAKE_AUTOMOC TRUE)
 % endif
 
@@ -48,21 +49,22 @@ set(CMAKE_EXE_LINKER_FLAGS " -static")
 set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
 % endif
 
-set(GR_LIBRARIES
-    boost_system
-    % if parameters:
-    boost_program_options
+% for package in packages:
+% if package:
+find_package(${package})
+% endif
+% endfor
+add_executable(${class_name} ${class_name}.cpp)
+target_link_libraries(${class_name}
+    gnuradio::gnuradio-blocks
+    % if generate_options == 'qt_gui':
+    gnuradio::gnuradio-qtgui
     % endif
-    gnuradio-blocks
-    gnuradio-runtime
-    gnuradio-pmt
-    log4cpp
     % for link in links:
     % if link:
     ${link}
     % endif
     % endfor
+
 )
 
-add_executable(${class_name} ${class_name}.cpp)
-target_link_libraries(${class_name} ${'$'}{GR_LIBRARIES})

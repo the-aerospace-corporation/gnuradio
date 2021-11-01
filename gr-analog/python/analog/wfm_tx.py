@@ -1,35 +1,19 @@
 #
-# Copyright 2005,2007,2012 Free Software Foundation, Inc.
+# Copyright 2005,2007,2012,2020 Free Software Foundation, Inc.
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 #
 
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
 
 import math
 
 from gnuradio import gr
 from gnuradio import filter
 
-from . import analog_swig as analog
+from . import analog_python as analog
 from .fm_emph import fm_preemph
 
 
@@ -65,7 +49,7 @@ class wfm_tx(gr.hier_block2):
         do_interp = audio_rate != quad_rate
 
         if do_interp:
-            interp_factor = quad_rate / audio_rate
+            interp_factor = quad_rate // audio_rate
             interp_taps = filter.optfir.low_pass(interp_factor,   # gain
                                                  quad_rate,       # Fs
                                                  16000,           # passband cutoff

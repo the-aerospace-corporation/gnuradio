@@ -2,24 +2,13 @@
 Copyright 2008-2015 Free Software Foundation, Inc.
 This file is part of GNU Radio
 
-GNU Radio Companion is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
+SPDX-License-Identifier: GPL-2.0-or-later
 
-GNU Radio Companion is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 """
 
-from __future__ import absolute_import
 
 from .base import Element
+from .Constants import ALIASES_OF
 from .utils.descriptors import lazy_property
 
 
@@ -101,6 +90,13 @@ class Connection(Element):
         if self.type not in platform.connection_templates:
             self.add_error_message('No connection known between domains "{}" and "{}"'
                                    ''.format(*self.type))
+
+        source_dtype = self.source_port.dtype
+        sink_dtype = self.sink_port.dtype
+        if source_dtype != sink_dtype and source_dtype not in ALIASES_OF.get(
+            sink_dtype, set()
+        ):
+            self.add_error_message('Source IO type "{}" does not match sink IO type "{}".'.format(source_dtype, sink_dtype))
 
         source_size = self.source_port.item_size
         sink_size = self.sink_port.item_size

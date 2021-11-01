@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef INCLUDED_FEC_SCL_LIST_H
@@ -32,6 +20,9 @@ namespace polar {
 
 struct path {
     path();
+    // Disable copy because of raw pointers.
+    path(const path&) = delete;
+    path& operator=(const path&) = delete;
     ~path();
     float path_metric;
     bool owns_vectors;
@@ -68,6 +59,11 @@ public:
     scl_list(const unsigned int list_size,
              const unsigned int block_size,
              const unsigned int block_power);
+
+    // Disable copy because of raw pointers.
+    scl_list(const scl_list&) = delete;
+    scl_list& operator=(const scl_list&) = delete;
+
     virtual ~scl_list();
     const unsigned int size() const { return d_list_size; };
     const unsigned int active_size() const { return d_active_path_counter; };

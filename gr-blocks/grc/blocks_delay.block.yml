@@ -21,7 +21,7 @@ parameters:
     default: '1'
     hide: part
 -   id: vlen
-    label: Vec Length
+    label: Vector Length
     dtype: int
     default: '1'
     hide: ${ 'part' if vlen == 1 else 'none' }
@@ -31,6 +31,9 @@ inputs:
     dtype: ${ type }
     vlen: ${ vlen }
     multiplicity: ${ num_ports }
+-   domain: message
+    id: dly
+    optional: true
 
 outputs:
 -   domain: stream
@@ -54,7 +57,5 @@ cpp_templates:
     make: 'this->${id} = blocks::delay::make(${type.size}*${vlen}, ${delay});'
     callbacks:
     - set_dly(${delay})
-    translations:
-        gr.sizeof_: 'sizeof('
 
 file_format: 1

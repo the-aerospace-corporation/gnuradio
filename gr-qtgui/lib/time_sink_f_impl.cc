@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -35,7 +23,8 @@
 #include <qwt_symbol.h>
 #include <volk/volk.h>
 
-#include <string.h>
+#include <boost/format.hpp>
+#include <cstring>
 
 namespace gr {
 namespace qtgui {
@@ -46,8 +35,8 @@ time_sink_f::sptr time_sink_f::make(int size,
                                     unsigned int nconnections,
                                     QWidget* parent)
 {
-    return gnuradio::get_initial_sptr(
-        new time_sink_f_impl(size, samp_rate, name, nconnections, parent));
+    return gnuradio::make_block_sptr<time_sink_f_impl>(
+        size, samp_rate, name, nconnections, parent);
 }
 
 time_sink_f_impl::time_sink_f_impl(int size,
@@ -63,34 +52,20 @@ time_sink_f_impl::time_sink_f_impl(int size,
       d_samp_rate(samp_rate),
       d_name(name),
       d_nconnections(nconnections),
+      d_tag_key(pmt::mp("tags")),
       d_parent(parent)
 {
     if (nconnections > 24)
         throw std::runtime_error("time_sink_f only supports up to 24 inputs");
 
-    // Required now for Qt; argc must be greater than 0 and argv
-    // must have at least one valid character. Must be valid through
-    // life of the qApplication:
-    // http://harmattan-dev.nokia.com/docs/library/html/qt4/qapplication.html
-    d_argc = 1;
-    d_argv = new char;
-    d_argv[0] = '\0';
-
-    d_main_gui = NULL;
-
     // setup PDU handling input port
     message_port_register_in(pmt::mp("in"));
-    set_msg_handler(pmt::mp("in"), boost::bind(&time_sink_f_impl::handle_pdus, this, _1));
+    set_msg_handler(pmt::mp("in"), [this](pmt::pmt_t msg) { this->handle_pdus(msg); });
 
     // +1 for the PDU buffer
     for (unsigned int n = 0; n < d_nconnections + 1; n++) {
-        d_buffers.push_back(
-            (double*)volk_malloc(d_buffer_size * sizeof(double), volk_get_alignment()));
-        memset(d_buffers[n], 0, d_buffer_size * sizeof(double));
-
-        d_fbuffers.push_back(
-            (float*)volk_malloc(d_buffer_size * sizeof(float), volk_get_alignment()));
-        memset(d_fbuffers[n], 0, d_buffer_size * sizeof(float));
+        d_buffers.emplace_back(d_buffer_size);
+        d_fbuffers.emplace_back(d_buffer_size);
     }
 
     // Set alignment properties for VOLK
@@ -112,14 +87,7 @@ time_sink_f_impl::~time_sink_f_impl()
 {
     if (!d_main_gui->isClosed())
         d_main_gui->close();
-
     // d_main_gui is a qwidget destroyed with its parent
-    for (unsigned int n = 0; n < d_nconnections + 1; n++) {
-        volk_free(d_buffers[n]);
-        volk_free(d_fbuffers[n]);
-    }
-
-    delete d_argv;
 }
 
 bool time_sink_f_impl::check_topology(int ninputs, int noutputs)
@@ -157,17 +125,6 @@ void time_sink_f_impl::initialize()
 void time_sink_f_impl::exec_() { d_qApplication->exec(); }
 
 QWidget* time_sink_f_impl::qwidget() { return d_main_gui; }
-
-#ifdef ENABLE_PYTHON
-PyObject* time_sink_f_impl::pyqwidget()
-{
-    PyObject* w = PyLong_FromVoidPtr((void*)d_main_gui);
-    PyObject* retarg = Py_BuildValue("N", w);
-    return retarg;
-}
-#else
-void* time_sink_f_impl::pyqwidget() { return NULL; }
-#endif
 
 void time_sink_f_impl::set_y_axis(double min, double max)
 {
@@ -309,15 +266,10 @@ void time_sink_f_impl::set_nsamps(const int newsize)
 
         // Resize buffers and replace data
         for (unsigned int n = 0; n < d_nconnections + 1; n++) {
-            volk_free(d_buffers[n]);
-            d_buffers[n] = (double*)volk_malloc(d_buffer_size * sizeof(double),
-                                                volk_get_alignment());
-            memset(d_buffers[n], 0, d_buffer_size * sizeof(double));
-
-            volk_free(d_fbuffers[n]);
-            d_fbuffers[n] =
-                (float*)volk_malloc(d_buffer_size * sizeof(float), volk_get_alignment());
-            memset(d_fbuffers[n], 0, d_buffer_size * sizeof(float));
+            d_buffers[n].clear();
+            d_buffers[n].resize(d_buffer_size);
+            d_fbuffers[n].clear();
+            d_fbuffers[n].resize(d_buffer_size);
         }
 
         // If delay was set beyond the new boundary, pull it back.
@@ -396,7 +348,7 @@ void time_sink_f_impl::_reset()
             // represents data that might have to be plotted again if a
             // trigger occurs and we have a trigger delay set.  The tail
             // section is between (d_end-d_trigger_delay) and d_end.
-            memmove(d_fbuffers[n],
+            memmove(d_fbuffers[n].data(),
                     &d_fbuffers[n][d_end - d_trigger_delay],
                     d_trigger_delay * sizeof(float));
 
@@ -577,7 +529,7 @@ int time_sink_f_impl::work(int noutput_items,
 
         uint64_t nr = nitems_read(idx);
         std::vector<gr::tag_t> tags;
-        get_tags_in_range(tags, idx, nr, nr + nitems);
+        get_tags_in_range(tags, idx, nr, nr + nitems + 1);
         for (size_t t = 0; t < tags.size(); t++) {
             tags[t].offset = tags[t].offset - nr + (d_index - d_start - 1);
         }
@@ -591,7 +543,7 @@ int time_sink_f_impl::work(int noutput_items,
         // Copy data to be plotted to start of buffers.
         for (n = 0; n < d_nconnections; n++) {
             // memmove(d_buffers[n], &d_buffers[n][d_start], d_size*sizeof(double));
-            volk_32f_convert_64f(d_buffers[n], &d_fbuffers[n][d_start], d_size);
+            volk_32f_convert_64f(d_buffers[n].data(), &d_fbuffers[n][d_start], d_size);
         }
 
         // Plot if we are able to update
@@ -617,6 +569,7 @@ void time_sink_f_impl::handle_pdus(pmt::pmt_t msg)
 {
     size_t len;
     pmt::pmt_t dict, samples;
+    std::vector<std::vector<gr::tag_t>> t(1);
 
     // Test to make sure this is either a PDU or a uniform vector of
     // samples. Get the samples PMT and the dictionary if it's a PDU.
@@ -629,6 +582,27 @@ void time_sink_f_impl::handle_pdus(pmt::pmt_t msg)
     } else {
         throw std::runtime_error("time_sink_c: message must be either "
                                  "a PDU or a uniform vector of samples.");
+    }
+
+    // add tag info if it is present in metadata
+    if (pmt::dict_has_key(dict, d_tag_key)) {
+        d_tags.clear();
+        pmt::pmt_t tags = pmt::dict_ref(dict, d_tag_key, pmt::PMT_NIL);
+        int len = pmt::length(tags);
+        for (int i = 0; i < len; i++) {
+            // get tag info from list
+            pmt::pmt_t tup = pmt::vector_ref(tags, i);
+            int tagval = pmt::to_long(pmt::tuple_ref(tup, 0));
+            pmt::pmt_t k = pmt::tuple_ref(tup, 1);
+            pmt::pmt_t v = pmt::tuple_ref(tup, 2);
+
+            // add the tag
+            t[0].push_back(gr::tag_t());
+            t[0][t[0].size() - 1].offset = tagval;
+            t[0][t[0].size() - 1].key = k;
+            t[0][t[0].size() - 1].value = v;
+            t[0][t[0].size() - 1].srcid = pmt::PMT_NIL;
+        }
     }
 
     len = pmt::length(samples);
@@ -647,9 +621,8 @@ void time_sink_f_impl::handle_pdus(pmt::pmt_t msg)
 
         set_nsamps(len);
 
-        volk_32f_convert_64f(d_buffers[d_nconnections], in, len);
+        volk_32f_convert_64f(d_buffers[d_nconnections].data(), in, len);
 
-        std::vector<std::vector<gr::tag_t>> t;
         d_qApplication->postEvent(d_main_gui, new TimeUpdateEvent(d_buffers, len, t));
     }
 }

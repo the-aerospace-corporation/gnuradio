@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef INCLUDED_FILTER_FIR_FILTER_WITH_BUFFER_H
@@ -25,6 +13,7 @@
 
 #include <gnuradio/filter/api.h>
 #include <gnuradio/gr_complex.h>
+#include <volk/volk_alloc.hh>
 #include <vector>
 
 namespace gr {
@@ -38,15 +27,15 @@ namespace kernel {
 class FILTER_API fir_filter_with_buffer_fff
 {
 private:
-    std::vector<float> d_taps;
-    unsigned int d_ntaps;
-    float* d_buffer_ptr;
-    float* d_buffer;
-    unsigned int d_idx;
-    float** d_aligned_taps;
-    float* d_output;
+    mutable volk::vector<float> d_output; // Temporary storage for one element.
     int d_align;
     int d_naligned;
+    std::vector<float> d_taps;
+    unsigned int d_ntaps;
+    volk::vector<float> d_buffer_ptr;
+    float* d_buffer; // Current position pointer into d_buffer_ptr.
+    unsigned int d_idx;
+    std::vector<volk::vector<float>> d_aligned_taps;
 
 public:
     // CONSTRUCTORS
@@ -60,7 +49,11 @@ public:
      */
     fir_filter_with_buffer_fff(const std::vector<float>& taps);
 
-    ~fir_filter_with_buffer_fff();
+    // Disable copy because of the raw pointer member d_buffer.
+    fir_filter_with_buffer_fff(const fir_filter_with_buffer_fff&) = delete;
+    fir_filter_with_buffer_fff& operator=(const fir_filter_with_buffer_fff&) = delete;
+    fir_filter_with_buffer_fff(fir_filter_with_buffer_fff&&) = default;
+    fir_filter_with_buffer_fff& operator=(fir_filter_with_buffer_fff&&) = default;
 
     // MANIPULATORS
 
@@ -134,15 +127,15 @@ public:
 class FILTER_API fir_filter_with_buffer_ccc
 {
 private:
-    std::vector<gr_complex> d_taps;
-    unsigned int d_ntaps;
-    gr_complex* d_buffer_ptr;
-    gr_complex* d_buffer;
-    unsigned int d_idx;
-    gr_complex** d_aligned_taps;
-    gr_complex* d_output;
+    mutable volk::vector<gr_complex> d_output; // Temporary storage for one element.
     int d_align;
     int d_naligned;
+    std::vector<gr_complex> d_taps;
+    unsigned int d_ntaps;
+    volk::vector<gr_complex> d_buffer_ptr;
+    gr_complex* d_buffer; // Current position pointer into d_buffer_ptr.
+    unsigned int d_idx;
+    std::vector<volk::vector<gr_complex>> d_aligned_taps;
 
 public:
     // CONSTRUCTORS
@@ -156,7 +149,11 @@ public:
      */
     fir_filter_with_buffer_ccc(const std::vector<gr_complex>& taps);
 
-    ~fir_filter_with_buffer_ccc();
+    // Disable copy because of the raw pointer member d_buffer.
+    fir_filter_with_buffer_ccc(const fir_filter_with_buffer_ccc&) = delete;
+    fir_filter_with_buffer_ccc& operator=(const fir_filter_with_buffer_ccc&) = delete;
+    fir_filter_with_buffer_ccc(fir_filter_with_buffer_ccc&&) = default;
+    fir_filter_with_buffer_ccc& operator=(fir_filter_with_buffer_ccc&&) = default;
 
     // MANIPULATORS
 
@@ -230,15 +227,15 @@ public:
 class FILTER_API fir_filter_with_buffer_ccf
 {
 private:
-    std::vector<float> d_taps;
-    unsigned int d_ntaps;
-    gr_complex* d_buffer_ptr;
-    gr_complex* d_buffer;
-    unsigned int d_idx;
-    float** d_aligned_taps;
-    gr_complex* d_output;
+    mutable volk::vector<gr_complex> d_output; // Temporary storage for one element.
     int d_align;
     int d_naligned;
+    std::vector<float> d_taps;
+    unsigned int d_ntaps;
+    volk::vector<gr_complex> d_buffer_ptr;
+    gr_complex* d_buffer; // Current position pointer into d_buffer_ptr.
+    unsigned int d_idx;
+    std::vector<volk::vector<float>> d_aligned_taps;
 
 public:
     // CONSTRUCTORS
@@ -252,7 +249,11 @@ public:
      */
     fir_filter_with_buffer_ccf(const std::vector<float>& taps);
 
-    ~fir_filter_with_buffer_ccf();
+    // Disable copy because of the raw pointer member d_buffer.
+    fir_filter_with_buffer_ccf(const fir_filter_with_buffer_ccf&) = delete;
+    fir_filter_with_buffer_ccf& operator=(const fir_filter_with_buffer_ccf&) = delete;
+    fir_filter_with_buffer_ccf(fir_filter_with_buffer_ccf&&) = default;
+    fir_filter_with_buffer_ccf& operator=(fir_filter_with_buffer_ccf&&) = default;
 
     // MANIPULATORS
 

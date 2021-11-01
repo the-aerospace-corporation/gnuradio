@@ -2,20 +2,8 @@
 /*
  * Copyright 2015 Free Software Foundation, Inc.
  *
- * This is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -24,12 +12,12 @@
 
 #include "atsc_trellis_encoder_impl.h"
 #include "gnuradio/dtv/atsc_consts.h"
-#include <stdio.h>
+#include <cstdio>
 
 namespace gr {
 namespace dtv {
 
-static const int DIBITS_PER_BYTE = 4;
+static constexpr int DIBITS_PER_BYTE = 4;
 
 #define SEGOF(x) ((x) / ((SEGMENT_SIZE + 1) * DIBITS_PER_BYTE))
 #define SYMOF(x) (((x) % ((SEGMENT_SIZE + 1) * DIBITS_PER_BYTE)) - 4)
@@ -49,7 +37,7 @@ static const int bit2[8] = { 0, 99, 2, 98, 4, 97, 6, 96 };
 
 atsc_trellis_encoder::sptr atsc_trellis_encoder::make()
 {
-    return gnuradio::get_initial_sptr(new atsc_trellis_encoder_impl());
+    return gnuradio::make_block_sptr<atsc_trellis_encoder_impl>();
 }
 
 atsc_trellis_encoder_impl::atsc_trellis_encoder_impl()
@@ -77,13 +65,12 @@ void atsc_trellis_encoder_impl::encode(atsc_data_segment out[NCODERS],
     unsigned char out_copy[OUTPUT_SIZE];
     unsigned char in_copy[INPUT_SIZE];
 
-    assert(sizeof(in_copy) == sizeof(in[0].data) * NCODERS);
-    assert(sizeof(out_copy) == sizeof(out[0].data) * NCODERS);
+    static_assert(sizeof(in_copy) == sizeof(in[0].data) * NCODERS, "wrong type size");
+    static_assert(sizeof(out_copy) == sizeof(out[0].data) * NCODERS, "wrong type size");
 
     // copy input into contiguous temporary buffer
     for (int i = 0; i < NCODERS; i++) {
         assert(in[i].pli.regular_seg_p());
-        plinfo::sanity_check(in[i].pli);
         memcpy(&in_copy[i * INPUT_SIZE / NCODERS],
                &in[i].data[0],
                ATSC_MPEG_RS_ENCODED_LENGTH * sizeof(in_copy[0]));
@@ -103,7 +90,6 @@ void atsc_trellis_encoder_impl::encode(atsc_data_segment out[NCODERS],
         // copy pipeline info
         out[i].pli = in[i].pli;
 
-        plinfo::sanity_check(out[i].pli);
         assert(out[i].pli.regular_seg_p());
     }
 }
@@ -219,7 +205,8 @@ void atsc_trellis_encoder_impl::encode_helper(unsigned char output[OUTPUT_SIZE],
     }         /* Chunks */
 
     /* Check up on ourselves */
-    assert(0 == (INPUT_SIZE * DIBITS_PER_BYTE) % NCODERS);
+    static_assert(0 == (INPUT_SIZE * DIBITS_PER_BYTE) % NCODERS,
+                  "size not divisible by NCODERS");
     assert(OUTPUT_SIZE == out - output);
     assert(NCODERS - ENCODER_SEG_BUMP == encoder);
 }

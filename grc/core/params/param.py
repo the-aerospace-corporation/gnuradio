@@ -1,28 +1,13 @@
 # Copyright 2008-2017 Free Software Foundation, Inc.
 # This file is part of GNU Radio
 #
-# GNU Radio Companion is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
+# SPDX-License-Identifier: GPL-2.0-or-later
 #
-# GNU Radio Companion is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
-from __future__ import absolute_import
 
 import ast
 import collections
 import textwrap
-
-import six
-from six.moves import range
 
 from .. import Constants
 from ..base import Element
@@ -49,7 +34,7 @@ class Param(Element):
         """Make a new param from nested data"""
         super(Param, self).__init__(parent)
         self.key = id
-        self.name = label.strip() or id.title()
+        self.name = 'ID' if id == 'id' else (label.strip() or id.title())
         self.category = category or Constants.DEFAULT_PARAM_TAB
 
         self.dtype = dtype
@@ -88,7 +73,7 @@ class Param(Element):
         options.attributes = collections.defaultdict(dict)
 
         padding = [''] * max(len(values), len(labels))
-        attributes = {key: value + padding for key, value in six.iteritems(attributes)}
+        attributes = {key: value + padding for key, value in attributes.items()}
 
         for i, option in enumerate(values):
             # Test against repeated keys
@@ -101,7 +86,7 @@ class Param(Element):
                 label = str(option)
             # Store the option
             options[option] = label
-            options.attributes[option] = {attrib: values[i] for attrib, values in six.iteritems(attributes)}
+            options.attributes[option] = {attrib: values[i] for attrib, values in attributes.items()}
 
         default = next(iter(options)) if options else ''
         if not self.value:
@@ -171,7 +156,7 @@ class Param(Element):
         validator = dtypes.validators.get(self.dtype, None)
         if self._init and validator:
             try:
-                validator(self)
+                validator(self,self.parent_flowgraph.get_imported_names())
             except dtypes.ValidateError as e:
                 self.add_error_message(str(e))
 
@@ -208,7 +193,7 @@ class Param(Element):
         #########################
         # ID and Enum types (not evaled)
         #########################
-        if dtype in ('id', 'stream_id','name') or self.is_enum():
+        if dtype in ('id', 'stream_id', 'name') or self.is_enum():
             if self.options.attributes:
                 expr = attributed_str(expr)
                 for key, value in self.options.attributes[expr].items():
@@ -218,7 +203,7 @@ class Param(Element):
         #########################
         # Numeric Types
         #########################
-        elif dtype in ('raw', 'complex', 'real', 'float', 'int', 'hex', 'bool'):
+        elif dtype in ('raw', 'complex', 'real', 'float', 'int', 'short', 'byte', 'hex', 'bool'):
             if expr:
                 try:
                     if isinstance(expr, str) and self.is_float(expr[:-1]):
@@ -229,7 +214,7 @@ class Param(Element):
                 except Exception as e:
                     raise Exception('Value "{}" cannot be evaluated:\n{}'.format(expr, e))
             else:
-                value = 0
+                value = None   # No parameter value provided
             if dtype == 'hex':
                 value = hex(value)
             elif dtype == 'bool':
@@ -253,12 +238,16 @@ class Param(Element):
         #########################
         # String Types
         #########################
-        elif dtype in ('string', 'file_open', 'file_save', '_multiline', '_multiline_python_external'):
+        elif dtype in ('string', 'file_open', 'file_save', 'dir_select', '_multiline', '_multiline_python_external'):
             # Do not check if file/directory exists, that is a runtime issue
             try:
-                value = self.parent_flowgraph.evaluate(expr)
-                if not isinstance(value, str):
-                    raise Exception()
+                # Do not evaluate multiline strings (code snippets or comments)
+                if dtype not in ['_multiline', '_multiline_python_external']:
+                    value = self.parent_flowgraph.evaluate(expr)
+                    if not isinstance(value, str):
+                        raise Exception()
+                else:
+                    value = str(expr)
             except Exception:
                 self._stringify_flag = True
                 value = str(expr)
@@ -300,7 +289,7 @@ class Param(Element):
         self._init = True
         value = self.get_value()
         # String types
-        if self.dtype in ('string', 'file_open', 'file_save', '_multiline', '_multiline_python_external'):
+        if self.dtype in ('string', 'file_open', 'file_save', 'dir_select', '_multiline', '_multiline_python_external'):
             if not self._init:
                 self.evaluate()
             return repr(value) if self._stringify_flag else value
@@ -403,7 +392,10 @@ class Param(Element):
             else:
                 layout = '{tab}_grid_layout_{index}'.format(tab=tab, index=index)
         else:
-            layout = 'top_grid_layout'
+            if not pos:
+                layout = 'top_layout'
+            else:
+                layout = 'top_grid_layout'
 
         widget = '%s'  # to be fill-out in the mail template
 
@@ -411,20 +403,40 @@ class Param(Element):
             row, col, row_span, col_span = parse_pos()
             collision_detection(row, col, row_span, col_span)
 
-            widget_str = textwrap.dedent("""
-                self.{layout}.addWidget({widget}, {row}, {col}, {row_span}, {col_span})
-                for r in range({row}, {row_end}):
-                    self.{layout}.setRowStretch(r, 1)
-                for c in range({col}, {col_end}):
-                    self.{layout}.setColumnStretch(c, 1)
-            """.strip('\n')).format(
-                layout=layout, widget=widget,
-                row=row, row_span=row_span, row_end=row+row_span,
-                col=col, col_span=col_span, col_end=col+col_span,
-            )
+            if self.parent_flowgraph.get_option('output_language') == 'python':
+                widget_str = textwrap.dedent("""
+                    self.{layout}.addWidget({widget}, {row}, {col}, {row_span}, {col_span})
+                    for r in range({row}, {row_end}):
+                        self.{layout}.setRowStretch(r, 1)
+                    for c in range({col}, {col_end}):
+                        self.{layout}.setColumnStretch(c, 1)
+                """.strip('\n')).format(
+                    layout=layout, widget=widget,
+                    row=row, row_span=row_span, row_end=row+row_span,
+                    col=col, col_span=col_span, col_end=col+col_span,
+                )
+            elif self.parent_flowgraph.get_option('output_language') == 'cpp':
+                widget_str = textwrap.dedent("""
+                    {layout}->addWidget({widget}, {row}, {col}, {row_span}, {col_span});
+                    for(int r = {row};r < {row_end}; r++)
+                        {layout}->setRowStretch(r, 1);
+                    for(int c = {col}; c <{col_end}; c++)
+                        {layout}->setColumnStretch(c, 1);
+                """.strip('\n')).format(
+                    layout=layout, widget=widget,
+                    row=row, row_span=row_span, row_end=row+row_span,
+                    col=col, col_span=col_span, col_end=col+col_span,
+                )
+            else:
+                widget_str = ''
 
         else:
-            widget_str = 'self.{layout}.addWidget({widget})'.format(layout=layout, widget=widget)
+            if self.parent_flowgraph.get_option('output_language') == 'python':
+                widget_str = 'self.{layout}.addWidget({widget})'.format(layout=layout, widget=widget)
+            elif self.parent_flowgraph.get_option('output_language') == 'cpp':
+                widget_str = '{layout}->addWidget({widget});'.format(layout=layout, widget=widget)
+            else:
+                widget_str = ''
 
         return widget_str
 

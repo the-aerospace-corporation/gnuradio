@@ -4,27 +4,18 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef INCLUDED_GR_RUNTIME_BLOCK_H
 #define INCLUDED_GR_RUNTIME_BLOCK_H
 
+#include <memory>
+
 #include <gnuradio/api.h>
 #include <gnuradio/basic_block.h>
+#include <gnuradio/buffer_type.h>
 #include <gnuradio/config.h>
 #include <gnuradio/logger.h>
 #include <gnuradio/tags.h>
@@ -72,7 +63,7 @@ class GR_RUNTIME_API block : public basic_block
 {
 public:
     //! Magic return values from general_work
-    enum { WORK_CALLED_PRODUCE = -2, WORK_DONE = -1 };
+    enum work_return_t { WORK_CALLED_PRODUCE = -2, WORK_DONE = -1 };
 
     /*!
      * \brief enum to represent different tag propagation policies.
@@ -88,7 +79,7 @@ public:
                                application-specific forwarding behaviour. */
     };
 
-    virtual ~block();
+    ~block() override;
 
     /*!
      * Assume block computes y_i = f(x_i, x_i-1, x_i-2, x_i-3...)
@@ -333,7 +324,7 @@ public:
 
     /*!
      * \brief return a reference to the multiple precision rational
-     * represntation of the approximate output rate / input rate
+     * representation of the approximate output rate / input rate
      */
     mpq_class& mp_relative_rate() { return d_mp_relative_rate; }
 
@@ -526,6 +517,31 @@ public:
      */
     void set_min_output_buffer(int port, long min_output_buffer);
 
+    /*!
+     * \brief Allocate the block_detail and necessary output buffers for this
+     * block.
+     */
+    void allocate_detail(int ninputs,
+                         int noutputs,
+                         const std::vector<int>& downstream_max_nitems_vec,
+                         const std::vector<uint64_t>& downstream_lcm_nitems_vec,
+                         const std::vector<uint32_t>& downstream_max_out_mult_vec);
+
+    // --------------- Custom buffer-related functions -------------
+
+    /*!
+     * \brief Replace the block's buffer with a new one owned by the block_owner
+     * parameter
+     *
+     * \details
+     * This function is used to replace the buffer on the specified output port
+     * of the block with a new buffer that is "owned" by the specified block. This
+     * function will only be called if a downstream block is using a custom buffer
+     * that is incompatible with the default buffer type created by this block.
+     *
+     */
+    buffer_sptr replace_buffer(size_t src_port, size_t dst_port, block_sptr block_owner);
+
     // --------------- Performance counter functions -------------
 
     /*!
@@ -675,17 +691,17 @@ public:
      *
      * \param mask a vector of ints of the core numbers available to this block.
      */
-    void set_processor_affinity(const std::vector<int>& mask);
+    void set_processor_affinity(const std::vector<int>& mask) override;
 
     /*!
      * \brief Remove processor affinity to a specific core.
      */
-    void unset_processor_affinity();
+    void unset_processor_affinity() override;
 
     /*!
      * \brief Get the current processor affinity.
      */
-    std::vector<int> processor_affinity() { return d_affinity; }
+    std::vector<int> processor_affinity() override { return d_affinity; }
 
     /*!
      * \brief Get the current thread priority in use
@@ -728,12 +744,12 @@ public:
      * \li fatal
      * \li emerg
      */
-    void set_log_level(std::string level);
+    void set_log_level(std::string level) override;
 
     /*!
      * \brief Get the logger's output level
      */
-    std::string log_level();
+    std::string log_level() override;
 
     /*!
      * \brief returns true when execution has completed due to a message connection
@@ -921,6 +937,16 @@ protected:
 
     void enable_update_rate(bool en);
 
+    /*!
+     * \brief Allocate a buffer for the given output port of this block. Note
+     * that the downstream max number of items must be passed in to this
+     * function for consideration.
+     */
+    buffer_sptr allocate_buffer(size_t port,
+                                int downstream_max_nitems,
+                                uint64_t downstream_lcm_nitems,
+                                uint32_t downstream_max_out_mult);
+
     std::vector<long> d_max_output_buffer;
     std::vector<long> d_min_output_buffer;
 
@@ -930,11 +956,6 @@ protected:
      * Used by calling gr::thread::scoped_lock l(d_setlock);
      */
     gr::thread::mutex d_setlock;
-
-    /*! Used by blocks to access the logger system.
-     */
-    gr::logger_ptr d_logger;
-    gr::logger_ptr d_debug_logger;
 
     // These are really only for internal use, but leaving them public avoids
     // having to work up an ever-varying list of friend GR_RUNTIME_APIs
@@ -967,7 +988,7 @@ typedef std::vector<block_sptr>::iterator block_viter_t;
 
 inline block_sptr cast_to_block_sptr(basic_block_sptr p)
 {
-    return boost::dynamic_pointer_cast<block, basic_block>(p);
+    return std::dynamic_pointer_cast<block, basic_block>(p);
 }
 
 GR_RUNTIME_API std::ostream& operator<<(std::ostream& os, const block* m);

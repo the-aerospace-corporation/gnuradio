@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this file; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -26,49 +14,38 @@
 
 #include "timing_error_detector.h"
 #include <gnuradio/math.h>
+#include <memory>
 #include <stdexcept>
 
 namespace gr {
 namespace digital {
 
-timing_error_detector* timing_error_detector::make(enum ted_type type,
-                                                   constellation_sptr constellation)
+std::unique_ptr<timing_error_detector>
+timing_error_detector::make(enum ted_type type, constellation_sptr constellation)
 {
-    timing_error_detector* ret = NULL;
     switch (type) {
     case TED_NONE:
-        break;
+        return nullptr;
     case TED_MUELLER_AND_MULLER:
-        ret = new ted_mueller_and_muller(constellation);
-        break;
+        return std::make_unique<ted_mueller_and_muller>(constellation);
     case TED_MOD_MUELLER_AND_MULLER:
-        ret = new ted_mod_mueller_and_muller(constellation);
-        break;
+        return std::make_unique<ted_mod_mueller_and_muller>(constellation);
     case TED_ZERO_CROSSING:
-        ret = new ted_zero_crossing(constellation);
-        break;
+        return std::make_unique<ted_zero_crossing>(constellation);
     case TED_GARDNER:
-        ret = new ted_gardner();
-        break;
+        return std::make_unique<ted_gardner>();
     case TED_EARLY_LATE:
-        ret = new ted_early_late();
-        break;
+        return std::make_unique<ted_early_late>();
     case TED_DANDREA_AND_MENGALI_GEN_MSK:
-        ret = new ted_generalized_msk();
-        break;
+        return std::make_unique<ted_generalized_msk>();
     case TED_SIGNAL_TIMES_SLOPE_ML:
-        ret = new ted_signal_times_slope_ml();
-        break;
+        return std::make_unique<ted_signal_times_slope_ml>();
     case TED_SIGNUM_TIMES_SLOPE_ML:
-        ret = new ted_signum_times_slope_ml();
-        break;
+        return std::make_unique<ted_signum_times_slope_ml>();
     case TED_MENGALI_AND_DANDREA_GMSK:
-        ret = new ted_gaussian_msk();
-        break;
-    default:
-        break;
+        return std::make_unique<ted_gaussian_msk>();
     }
-    return ret;
+    return nullptr;
 }
 
 timing_error_detector::timing_error_detector(enum ted_type type,
@@ -334,8 +311,8 @@ float ted_generalized_msk::compute_error_cf()
 {
     gr_complex u;
 
-    u = (d_input[0] * d_input[0] * conj(d_input[2] * d_input[2])) -
-        (d_input[1] * d_input[1] * conj(d_input[3] * d_input[3]));
+    u = (d_input[1] * d_input[1] * conj(d_input[5] * d_input[5])) -
+        (d_input[3] * d_input[3] * conj(d_input[7] * d_input[7]));
 
     return gr::branchless_clip(u.real(), 3.0f);
 }
@@ -344,8 +321,8 @@ float ted_generalized_msk::compute_error_ff()
 {
     float u;
 
-    u = (d_input[0].real() * d_input[0].real() * d_input[2].real() * d_input[2].real()) -
-        (d_input[1].real() * d_input[1].real() * d_input[3].real() * d_input[3].real());
+    u = (d_input[1].real() * d_input[1].real() * d_input[5].real() * d_input[5].real()) -
+        (d_input[3].real() * d_input[3].real() * d_input[7].real() * d_input[7].real());
 
     return gr::branchless_clip(u, 3.0f);
 }

@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -26,26 +14,23 @@
 
 #include "framer_sink_1_impl.h"
 #include <gnuradio/io_signature.h>
+#include <boost/format.hpp>
 #include <cstdio>
 #include <string>
 
 namespace gr {
 namespace digital {
 
-#define VERBOSE 0
-
 inline void framer_sink_1_impl::enter_search()
 {
-    if (VERBOSE)
-        fprintf(stderr, "@ enter_search\n");
+    GR_LOG_INFO(d_debug_logger, "enter_search");
 
     d_state = STATE_SYNC_SEARCH;
 }
 
 inline void framer_sink_1_impl::enter_have_sync()
 {
-    if (VERBOSE)
-        fprintf(stderr, "@ enter_have_sync\n");
+    GR_LOG_INFO(d_debug_logger, "enter_have_sync");
 
     d_state = STATE_HAVE_SYNC;
     d_header = 0;
@@ -54,11 +39,9 @@ inline void framer_sink_1_impl::enter_have_sync()
 
 inline void framer_sink_1_impl::enter_have_header(int payload_len, int whitener_offset)
 {
-    if (VERBOSE)
-        fprintf(stderr,
-                "@ enter_have_header (payload_len = %d) (offset = %d)\n",
-                payload_len,
-                whitener_offset);
+    GR_LOG_INFO(d_debug_logger,
+                boost::format("enter_have_header (payload_len = %d) (offset = %d)") %
+                    payload_len % whitener_offset);
 
     d_state = STATE_HAVE_HEADER;
     d_packetlen = payload_len;
@@ -70,7 +53,7 @@ inline void framer_sink_1_impl::enter_have_header(int payload_len, int whitener_
 
 framer_sink_1::sptr framer_sink_1::make(msg_queue::sptr target_queue)
 {
-    return gnuradio::get_initial_sptr(new framer_sink_1_impl(target_queue));
+    return gnuradio::make_block_sptr<framer_sink_1_impl>(target_queue);
 }
 
 framer_sink_1_impl::framer_sink_1_impl(msg_queue::sptr target_queue)
@@ -91,15 +74,14 @@ int framer_sink_1_impl::work(int noutput_items,
     const unsigned char* in = (const unsigned char*)input_items[0];
     int count = 0;
 
-    if (VERBOSE)
-        fprintf(stderr, ">>> Entering state machine\n");
+    GR_LOG_INFO(d_debug_logger, "enter state machine");
 
     while (count < noutput_items) {
         switch (d_state) {
 
         case STATE_SYNC_SEARCH: // Look for flag indicating beginning of pkt
-            if (VERBOSE)
-                fprintf(stderr, "SYNC Search, noutput=%d\n", noutput_items);
+            GR_LOG_INFO(d_debug_logger,
+                        boost::format("SYNC Search, noutput=%d") % noutput_items);
 
             while (count < noutput_items) {
                 if (in[count] & 0x2) { // Found it, set up for header decode
@@ -111,18 +93,16 @@ int framer_sink_1_impl::work(int noutput_items,
             break;
 
         case STATE_HAVE_SYNC:
-            if (VERBOSE)
-                fprintf(stderr,
-                        "Header Search bitcnt=%d, header=0x%08x\n",
-                        d_headerbitlen_cnt,
-                        d_header);
+            GR_LOG_INFO(d_debug_logger,
+                        boost::format("Header Search bitcnt=%d, header=0x%08x") %
+                            d_headerbitlen_cnt % d_header);
 
             while (count < noutput_items) { // Shift bits one at a time into header
                 d_header = (d_header << 1) | (in[count++] & 0x1);
                 if (++d_headerbitlen_cnt == HEADERBITLEN) {
 
-                    if (VERBOSE)
-                        fprintf(stderr, "got header: 0x%08x\n", d_header);
+                    GR_LOG_INFO(d_debug_logger,
+                                boost::format("got header: 0x%08x") % d_header);
 
                     // we have a full header, check to see if it has been received
                     // properly
@@ -151,8 +131,7 @@ int framer_sink_1_impl::work(int noutput_items,
             break;
 
         case STATE_HAVE_HEADER:
-            if (VERBOSE)
-                fprintf(stderr, "Packet Build\n");
+            GR_LOG_INFO(d_debug_logger, "Packet Build");
 
             while (count <
                    noutput_items) { // shift bits into bytes of packet one at a time

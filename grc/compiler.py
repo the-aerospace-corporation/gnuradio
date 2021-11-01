@@ -2,22 +2,9 @@
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 
-from __future__ import print_function, absolute_import
 
 import argparse
 import os
@@ -55,13 +42,12 @@ def main(args=None):
     )
     platform.build_library()
 
-    out_dir = args.output if not args.user_lib_dir else platform.config.hier_block_lib_dir
-    if os.path.exists(out_dir):
-        pass  # all is well
-    elif args.save_to_lib:
-        os.mkdir(out_dir)  # create missing hier_block lib directory
-    else:
-        exit('Error: Invalid output directory')
+    output_dir = args.output if not args.user_lib_dir else platform.config.hier_block_lib_dir
+    try:
+        # recursive mkdir: os.makedirs doesn't work with .. paths, resolve with realpath
+        os.makedirs(os.path.realpath(output_dir), exist_ok=True)
+    except Exception as e:
+        exit(str(e))
 
     Messages.send_init(platform)
     flow_graph = file_path = None
@@ -70,7 +56,7 @@ def main(args=None):
         Messages.send('\n')
 
         flow_graph, file_path = platform.load_and_generate_flow_graph(
-            os.path.abspath(grc_file), os.path.abspath(out_dir))
+            os.path.abspath(grc_file), os.path.abspath(output_dir))
         if not file_path:
             exit('Compilation error')
     if file_path and args.run:

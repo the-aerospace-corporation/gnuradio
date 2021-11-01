@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -27,9 +15,9 @@
 #include "puncture_ff_impl.h"
 #include <gnuradio/io_signature.h>
 #include <pmt/pmt.h>
-#include <stdio.h>
 #include <volk/volk.h>
-#include <boost/bind.hpp>
+#include <boost/format.hpp>
+#include <cstdio>
 #include <string>
 
 namespace gr {
@@ -37,7 +25,7 @@ namespace fec {
 
 puncture_ff::sptr puncture_ff::make(int puncsize, int puncpat, int delay)
 {
-    return gnuradio::get_initial_sptr(new puncture_ff_impl(puncsize, puncpat, delay));
+    return gnuradio::make_block_sptr<puncture_ff_impl>(puncsize, puncpat, delay);
 }
 
 puncture_ff_impl::puncture_ff_impl(int puncsize, int puncpat, int delay)
@@ -72,7 +60,7 @@ puncture_ff_impl::puncture_ff_impl(int puncsize, int puncpat, int delay)
     set_fixed_rate(true);
     set_relative_rate((uint64_t)(d_puncsize - d_puncholes), (uint64_t)d_puncsize);
     set_output_multiple(d_puncsize - d_puncholes);
-    // set_msg_handler(boost::bind(&puncture_ff_impl::catch_msg, this, _1));
+    // set_msg_handler(<portname>, [this](pmt::pmt_t msg) { this->catch_msg(msg); });
 }
 
 puncture_ff_impl::~puncture_ff_impl() {}

@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -28,16 +16,19 @@
 #include <gnuradio/math.h>
 #include <gnuradio/vco.h>
 
-#include <sys/time.h>
-#include <unistd.h>
 
 #ifdef HAVE_SYS_RESOURCE_H
+/* from man gtrusage
+ "including <sys/time.h> is not required these days"
+ So, we don't */
 #include <sys/resource.h>
 #endif
 
+#include <sys/time.h>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <ctime>
 
 #define ITERATIONS 5000000
 #define BLOCK_SIZE (10 * 1000) // fits in cache
@@ -78,7 +69,7 @@ static void benchmark(void test(float* x, const float* y),
         exit(1);
     }
 #else
-    clock_start = (double)clock() * (1000000. / CLOCKS_PER_SEC);
+    clock_start = (double)std::clock() * (1000000. / CLOCKS_PER_SEC);
 #endif
     // do the actual work
 
@@ -102,7 +93,7 @@ static void benchmark(void test(float* x, const float* y),
 
     double total = user + sys;
 #else
-    clock_end = (double)clock() * (1000000. / CLOCKS_PER_SEC);
+    clock_end = (double)std::clock() * (1000000. / CLOCKS_PER_SEC);
     double total = clock_end - clock_start;
 #endif
 
@@ -134,7 +125,7 @@ void basic_vco(float* output, const float* input)
 
 void native_vco(float* output, const float* input)
 {
-    gr::blocks::vco<float, float> vco;
+    gr::vco<float, float> vco;
 
     for (int j = 0; j < ITERATIONS / BLOCK_SIZE; j++) {
         vco.cos(output, input, BLOCK_SIZE, K, AMPLITUDE);
@@ -143,7 +134,7 @@ void native_vco(float* output, const float* input)
 
 void fxpt_vco(float* output, const float* input)
 {
-    gr::blocks::fxpt_vco vco;
+    gr::fxpt_vco vco;
 
     for (int j = 0; j < ITERATIONS / BLOCK_SIZE; j++) {
         vco.cos(output, input, BLOCK_SIZE, K, AMPLITUDE);

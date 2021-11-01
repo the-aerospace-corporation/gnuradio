@@ -2,20 +2,8 @@
 /*
  * Copyright 2015,2016 Free Software Foundation, Inc.
  *
- * This is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -24,7 +12,7 @@
 
 #include "dvbt_map_impl.h"
 #include <gnuradio/io_signature.h>
-#include <math.h>
+#include <cmath>
 #include <complex>
 
 namespace gr {
@@ -36,8 +24,8 @@ dvbt_map::sptr dvbt_map::make(int nsize,
                               dvbt_transmission_mode_t transmission,
                               float gain)
 {
-    return gnuradio::get_initial_sptr(
-        new dvbt_map_impl(nsize, constellation, hierarchy, transmission, gain));
+    return gnuradio::make_block_sptr<dvbt_map_impl>(
+        nsize, constellation, hierarchy, transmission, gain);
 }
 
 /*
@@ -58,32 +46,19 @@ dvbt_map_impl::dvbt_map_impl(int nsize,
              gr::dtv::GI_1_32,
              transmission),
       d_nsize(nsize),
-      d_constellation_size(0),
-      d_step(0),
-      d_alpha(0),
-      d_gain(0.0)
+      d_constellation_size(config.d_constellation_size),
+      d_step(config.d_step),
+      d_alpha(config.d_alpha),
+      d_gain(gain * config.d_norm),
+      d_constellation_points(d_constellation_size)
 {
-    // Get parameters from config object
-    d_constellation_size = config.d_constellation_size;
-    d_transmission_mode = config.d_transmission_mode;
-    d_step = config.d_step;
-    d_alpha = config.d_alpha;
-    d_gain = gain * config.d_norm;
-
-    d_constellation_points = new (std::nothrow) gr_complex[d_constellation_size];
-    if (d_constellation_points == NULL) {
-        GR_LOG_FATAL(d_logger,
-                     "DVB-T Map, cannot allocate memory for d_constellation_points.");
-        throw std::bad_alloc();
-    }
-
     make_constellation_points(d_constellation_size, d_step, d_alpha);
 }
 
 /*
  * Our virtual destructor.
  */
-dvbt_map_impl::~dvbt_map_impl() { delete[] d_constellation_points; }
+dvbt_map_impl::~dvbt_map_impl() {}
 
 unsigned int dvbt_map_impl::bin_to_gray(unsigned int val) { return (val >> 1) ^ val; }
 

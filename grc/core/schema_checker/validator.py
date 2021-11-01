@@ -1,23 +1,9 @@
 # Copyright 2016 Free Software Foundation, Inc.
 # This file is part of GNU Radio
 #
-# GNU Radio Companion is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by the
-# Free Software Foundation; either version 2 of the License, or (at your
-# option) any later version.
+# SPDX-License-Identifier: GPL-2.0-or-later
 #
-# GNU Radio Companion is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
-# details.
-#
-# You should have received a copy of the GNU General Public License along with
-# this program; if not, write to the Free Software Foundation, Inc.,
-# 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
-from __future__ import print_function
-
-import six
 
 from .utils import Message, Spec
 
@@ -54,7 +40,7 @@ class Validator(object):
             self._check_var_key_dict(data, *scheme)
 
     def _check_var_key_dict(self, data, key_type, value_scheme):
-        for key, value in six.iteritems(data):
+        for key, value in data.items():
             if not isinstance(key, key_type):
                 self._error('Key type {!r} for {!r} not in valid types'.format(
                     type(value).__name__, key))
@@ -65,7 +51,7 @@ class Validator(object):
                     type(value).__name__, key))
 
     def _check_dict(self, data, scheme):
-        for key, (types_, required, item_scheme) in six.iteritems(scheme):
+        for key, (types_, required, item_scheme) in scheme.items():
             try:
                 value = data[key]
             except KeyError:

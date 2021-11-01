@@ -2,30 +2,17 @@
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 #
 
 """
 This file contains constellations that are similar to QAM, but are not perfect squares.
 """
-from __future__ import absolute_import
-from __future__ import unicode_literals
 
-from . import digital_swig
+from . import digital_python
 from .qam import large_ampls_to_corners_mapping
+
 
 def qam32_holeinside_constellation(large_ampls_to_corners=False):
     # First make constellation for one quadrant.
@@ -50,10 +37,10 @@ def qam32_holeinside_constellation(large_ampls_to_corners=False):
         ((1, 2), 0b111),
         ((2, 1), 0b100),
         ((2, 2), 0b110),
-        )
-    points = [None]*32
+    )
+    points = [None] * 32
     for indices, number in indices_and_numbers:
-        p_in_quadrant = 0.5+indices[0] + 1j*(0.5+indices[1])
+        p_in_quadrant = 0.5 + indices[0] + 1j * (0.5 + indices[1])
         for quadrant in range(4):
             index = number + 8 * quadrant
             rotation = pow(1j, quadrant)
@@ -67,10 +54,10 @@ def qam32_holeinside_constellation(large_ampls_to_corners=False):
     width = 0.5
     pre_diff_code = []
     if not large_ampls_to_corners:
-        constellation = digital_swig.constellation_rect(points, pre_diff_code, 4,
-                                                        side, side, width, width)
+        constellation = digital_python.constellation_rect(
+            points, pre_diff_code, 4, side, side, width, width)
     else:
         sector_values = large_ampls_to_corners_mapping(side, points, width)
-        constellation = digital_swig.constellation_expl_rect(
+        constellation = digital_python.constellation_expl_rect(
             points, pre_diff_code, 4, side, side, width, width, sector_values)
     return constellation

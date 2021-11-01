@@ -2,20 +2,8 @@
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 
 ########################################################################
 include(GrPython)
@@ -27,7 +15,7 @@ GR_PYTHON_INSTALL(
     freq_xlating_fft_filter.py
     optfir.py
     pfb.py
-    rational_resampler.py
+    file_taps_loader.py
     DESTINATION ${GR_PYTHON_DIR}/gnuradio/filter
 )
 
@@ -40,11 +28,6 @@ if(ENABLE_TESTING)
   set(GR_TEST_LIBRARY_DIRS "")
   set(GR_TEST_PYTHON_DIRS
     ${CMAKE_BINARY_DIR}/gnuradio-runtime/python
-    ${CMAKE_BINARY_DIR}/gnuradio-runtime/swig	
-    ${CMAKE_BINARY_DIR}/gr-blocks/swig	
-    ${CMAKE_BINARY_DIR}/gr-fft/swig	
-    ${CMAKE_BINARY_DIR}/gr-analog/swig	
-    ${CMAKE_BINARY_DIR}/gr-filter/swig		
     )
 
   include(GrTest)
@@ -54,3 +37,5 @@ if(ENABLE_TESTING)
     GR_ADD_TEST(${py_qa_test_name} ${QA_PYTHON_EXECUTABLE} -B ${py_qa_test_file})
   endforeach(py_qa_test_file)
 endif(ENABLE_TESTING)
+
+add_subdirectory(bindings)

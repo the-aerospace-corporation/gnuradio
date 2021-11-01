@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -29,13 +17,13 @@
 #include <gnuradio/io_signature.h>
 #include <gnuradio/prefs.h>
 #include <fcntl.h>
-#include <stdio.h>
 #include <sys/ioctl.h>
 #include <sys/soundcard.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <iostream>
+#include <boost/format.hpp>
+#include <cstdio>
 #include <stdexcept>
 
 namespace gr {
@@ -64,8 +52,9 @@ oss_source::oss_source(int sampling_rate, const std::string device_name, bool ok
       d_chunk_size(0)
 {
     if ((d_fd = open(d_device_name.c_str(), O_RDONLY)) < 0) {
-        fprintf(stderr, "audio_oss_source: ");
-        perror(d_device_name.c_str());
+        GR_LOG_ERROR(d_logger,
+                     boost::format("opening device %s: %s") % d_device_name %
+                         strerror(errno));
         throw std::runtime_error("audio_oss_source");
     }
 
@@ -80,31 +69,36 @@ oss_source::oss_source(int sampling_rate, const std::string device_name, bool ok
     int format = AFMT_S16_NE;
     int orig_format = format;
     if (ioctl(d_fd, SNDCTL_DSP_SETFMT, &format) < 0) {
-        std::cerr << "audio_oss_source: " << d_device_name << " ioctl failed\n";
-        perror(d_device_name.c_str());
+        GR_LOG_ERROR(d_logger,
+                     boost::format("%s ioctl failed %s") % d_device_name %
+                         strerror(errno));
         throw std::runtime_error("audio_oss_source");
     }
 
     if (format != orig_format) {
-        fprintf(stderr, "audio_oss_source: unable to support format %d\n", orig_format);
-        fprintf(stderr, "  card requested %d instead.\n", format);
+        GR_LOG_ERROR(
+            d_logger,
+            boost::format("%s unable to support format %d. card requested %d instead.") %
+                orig_format % format);
     }
 
     // set to stereo no matter what.  Some hardware only does stereo
     int channels = 2;
     if (ioctl(d_fd, SNDCTL_DSP_CHANNELS, &channels) < 0 || channels != 2) {
-        perror("audio_oss_source: could not set STEREO mode");
+        GR_LOG_ERROR(d_logger,
+                     boost::format("could not set STEREO mode: %s") % strerror(errno));
         throw std::runtime_error("audio_oss_source");
     }
 
     // set sampling freq
     int sf = sampling_rate;
     if (ioctl(d_fd, SNDCTL_DSP_SPEED, &sf) < 0) {
-        std::cerr << "audio_oss_source: " << d_device_name << ": invalid sampling_rate "
-                  << sampling_rate << "\n";
+        GR_LOG_ERROR(d_logger,
+                     boost::format("ERROR %s: invalid sampling_rate %d") % d_device_name %
+                         sampling_rate);
         sampling_rate = 8000;
         if (ioctl(d_fd, SNDCTL_DSP_SPEED, &sf) < 0) {
-            std::cerr << "audio_oss_source: failed to set sampling_rate to 8000\n";
+            GR_LOG_ERROR(d_logger, "failed to set sampling_rate to 8000");
             throw std::runtime_error("audio_oss_source");
         }
     }
@@ -139,12 +133,13 @@ int oss_source::work(int noutput_items,
         int result_nbytes = read(d_fd, d_buffer, nbytes);
 
         if (result_nbytes < 0) {
-            perror("audio_oss_source");
+            GR_LOG_ERROR(d_logger,
+                         boost::format("audio_oss_source: %s") % strerror(errno));
             return -1; // say we're done
         }
 
         if ((result_nbytes & (bytes_per_item - 1)) != 0) {
-            fprintf(stderr, "audio_oss_source: internal error.\n");
+            GR_LOG_ERROR(d_logger, "internal error.");
             throw std::runtime_error("internal error");
         }
 

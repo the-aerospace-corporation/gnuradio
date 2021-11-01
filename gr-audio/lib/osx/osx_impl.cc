@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio.
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -27,9 +15,9 @@
 #include "../audio_registry.h"
 
 #include <gnuradio/audio/osx_impl.h>
+#include <gnuradio/logger.h>
 
 #include <algorithm>
-#include <iostream>
 #include <locale>
 #include <stdexcept>
 
@@ -163,8 +151,12 @@ void find_audio_devices(const std::string& device_name,
     if ((err = AudioObjectGetPropertyDataSize(
              kAudioObjectSystemObject, &ao_address, 0, NULL, &prop_size)) != noErr) {
 #if _OSX_AU_DEBUG_
-        std::cerr << "audio_osx::find_audio_devices: "
-                  << "Unable to retrieve number of audio objects: " << err << std::endl;
+        gr::logger_ptr logger, debug_logger;
+        gr::configure_default_loggers(
+            logger, debug_logger, "osx_impl::find_audio_devices");
+        std::ostringstream msg;
+        msg << "Unable to retrieve number of audio objects: " << err;
+        GR_LOG_ERROR(logger, msg.str());
 #endif
         return;
     }
@@ -184,8 +176,9 @@ void find_audio_devices(const std::string& device_name,
                                           &prop_size,
                                           all_dev_ids.get())) != noErr) {
 #if _OSX_AU_DEBUG_
-        std::cerr << "audio_osx::find_audio_devices: "
-                  << "Unable to retrieve audio object ids: " << err << std::endl;
+        std::ostringstream msg;
+        msg << "Unable to retrieve audio object ids: " << err;
+        GR_LOG_ERROR(logger, msg.str());
 #endif
         return;
     }
@@ -239,9 +232,9 @@ void find_audio_devices(const std::string& device_name,
         if ((err = AudioObjectGetPropertyData(
                  t_id, &ao_address, 0, NULL, &prop_size, (void*)c_name_buf)) != noErr) {
 #if _OSX_AU_DEBUG_
-            std::cerr << "audio_osx::find_audio_devices: "
-                      << "Unable to retrieve audio device name #" << (nn + 1) << ": "
-                      << err << std::endl;
+            std::ostringstream msg;
+            msg << "Unable to retrieve audio device name #" << (nn + 1) << ": " << err;
+            GR_LOG_ERROR(logger, msg.str());
 #endif
             continue;
         }

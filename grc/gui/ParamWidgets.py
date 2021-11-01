@@ -1,56 +1,61 @@
 # Copyright 2007-2016 Free Software Foundation, Inc.
 # This file is part of GNU Radio
 #
-# GNU Radio Companion is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
+# SPDX-License-Identifier: GPL-2.0-or-later
 #
-# GNU Radio Companion is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
-from __future__ import absolute_import
 import os
+import configparser
+import subprocess
 
 from gi.repository import Gtk, Gdk
 
+from . import Constants
 from . import Utils
+from .canvas.colors import LIGHT_THEME_STYLES, DARK_THEME_STYLES
 
 
-style_provider = Gtk.CssProvider()
+def have_dark_theme():
+    """
+    Returns true if the currently selected theme is a dark one.
+    """
+    def is_dark_theme(theme_name):
+        """
+        Check if a theme is dark based on its name.
+        """
+        return theme_name and (theme_name in Constants.GTK_DARK_THEMES or "dark" in theme_name.lower())
+    # GoGoGo
+    config = configparser.ConfigParser()
+    config.read(os.path.expanduser(Constants.GTK_SETTINGS_INI_PATH))
+    prefer_dark = config.get(
+        'Settings', Constants.GTK_INI_PREFER_DARK_KEY, fallback=None)
+    theme_name = config.get(
+        'Settings', Constants.GTK_INI_THEME_NAME_KEY, fallback=None)
+    if prefer_dark in ('1', 'yes', 'true', 'on') or is_dark_theme(theme_name):
+        return True
+    try:
+        theme = subprocess.check_output(
+            ["gsettings", "get", "org.gnome.desktop.interface", "gtk-theme"],
+            stderr=subprocess.DEVNULL
+        ).decode('utf-8').strip().replace("'", "")
+    except:
+        return False
+    return is_dark_theme(theme)
 
-style_provider.load_from_data(b"""
-    #dtype_complex         { background-color: #3399FF; }
-    #dtype_real            { background-color: #FF8C69; }
-    #dtype_float           { background-color: #FF8C69; }
-    #dtype_int             { background-color: #00FF99; }
-
-    #dtype_complex_vector  { background-color: #3399AA; }
-    #dtype_real_vector     { background-color: #CC8C69; }
-    #dtype_float_vector    { background-color: #CC8C69; }
-    #dtype_int_vector      { background-color: #00CC99; }
-
-    #dtype_bool            { background-color: #00FF99; }
-    #dtype_hex             { background-color: #00FF99; }
-    #dtype_string          { background-color: #CC66CC; }
-    #dtype_id              { background-color: #DDDDDD; }
-    #dtype_stream_id       { background-color: #DDDDDD; }
-    #dtype_raw             { background-color: #FFFFFF; }
-
-    #enum_custom           { background-color: #EEEEEE; }
-""")
-
-Gtk.StyleContext.add_provider_for_screen(
-    Gdk.Screen.get_default(),
-    style_provider,
-    Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-)
+def add_style_provider():
+    """
+    Load GTK styles
+    """
+    style_provider = Gtk.CssProvider()
+    dark_theme = have_dark_theme()
+    style_provider.load_from_data(
+        DARK_THEME_STYLES if dark_theme else LIGHT_THEME_STYLES)
+    Gtk.StyleContext.add_provider_for_screen(
+        Gdk.Screen.get_default(),
+        style_provider,
+        Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+    )
+add_style_provider()
 
 
 class InputParam(Gtk.HBox):
@@ -305,16 +310,16 @@ class FileParam(EntryParam):
         # build the dialog
         if self.param.dtype == 'file_open':
             file_dialog = Gtk.FileChooserDialog(
-                title = 'Open a Data File...',action = Gtk.FileChooserAction.OPEN,
+                title='Open a Data File...', action=Gtk.FileChooserAction.OPEN,
                 transient_for=self._transient_for,
             )
-            file_dialog.add_buttons( 'gtk-cancel', Gtk.ResponseType.CANCEL, 'gtk-open' , Gtk.ResponseType.OK )
+            file_dialog.add_buttons('gtk-cancel', Gtk.ResponseType.CANCEL, 'gtk-open', Gtk.ResponseType.OK)
         elif self.param.dtype == 'file_save':
             file_dialog = Gtk.FileChooserDialog(
-                title = 'Save a Data File...',action = Gtk.FileChooserAction.SAVE,
+                title='Save a Data File...', action=Gtk.FileChooserAction.SAVE,
                 transient_for=self._transient_for,
             )
-            file_dialog.add_buttons( 'gtk-cancel', Gtk.ResponseType.CANCEL, 'gtk-save', Gtk.ResponseType.OK )
+            file_dialog.add_buttons('gtk-cancel', Gtk.ResponseType.CANCEL, 'gtk-save', Gtk.ResponseType.OK)
             file_dialog.set_do_overwrite_confirmation(True)
             file_dialog.set_current_name(basename)  # show the current filename
         else:
@@ -328,3 +333,40 @@ class FileParam(EntryParam):
             self._editing_callback()
             self._apply_change()
         file_dialog.destroy()  # destroy the dialog
+
+class DirectoryParam(FileParam):
+    """Provide an entry box for a directory and a button to browse for it."""
+
+    def _handle_clicked(self, widget=None):
+        """
+        Open the directory selector, when the button is clicked.
+        On success, update the entry.
+        """
+        dirname = self.param.get_evaluated() if self.param.is_valid() else ''
+
+        if not os.path.isdir(dirname): # Check if directory exists, if not fall back to workdir
+            dirname = os.getcwd()
+
+        if self.param.dtype == "dir_select": # Setup directory selection dialog, and fail for unexpected dtype
+            dir_dialog = Gtk.FileChooserDialog(
+                title='Select a Directory...', action=Gtk.FileChooserAction.SELECT_FOLDER,
+                transient_for=self._transient_for
+            )
+        else:
+            raise ValueError("Can't open directory chooser dialog for type " + repr(self.param.dtype))
+
+        # Set dialog properties
+        dir_dialog.add_buttons('gtk-cancel', Gtk.ResponseType.CANCEL, 'gtk-open', Gtk.ResponseType.OK)
+        dir_dialog.set_current_folder(dirname)
+        dir_dialog.set_local_only(True)
+        dir_dialog.set_select_multiple(False)
+        
+        # Show dialog and update parameter on success
+        if Gtk.ResponseType.OK == dir_dialog.run():
+            path = dir_dialog.get_filename()
+            self._input.set_text(path)
+            self._editing_callback()
+            self._apply_change()
+
+        # Cleanup dialog
+        dir_dialog.destroy()

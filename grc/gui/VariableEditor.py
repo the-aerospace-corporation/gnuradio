@@ -2,22 +2,10 @@
 Copyright 2015, 2016 Free Software Foundation, Inc.
 This file is part of GNU Radio
 
-GNU Radio Companion is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
+SPDX-License-Identifier: GPL-2.0-or-later
 
-GNU Radio Companion is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 """
 
-from __future__ import absolute_import
 
 from gi.repository import Gtk, Gdk, GObject
 
@@ -111,7 +99,7 @@ class VariableEditor(Gtk.VBox):
         # Block Name or Category
         self.id_cell = Gtk.CellRendererText()
         self.id_cell.connect('edited', self._handle_name_edited_cb)
-        id_column = Gtk.TreeViewColumn("Id", self.id_cell, text=ID_INDEX)
+        id_column = Gtk.TreeViewColumn("ID", self.id_cell, text=ID_INDEX)
         id_column.set_name("id")
         id_column.set_resizable(True)
         id_column.set_max_width(Utils.scale_scalar(300))
@@ -192,18 +180,7 @@ class VariableEditor(Gtk.VBox):
             else:
                 # Evaluate and show the value (if it is a variable)
                 if block.is_variable:
-                    # Evaluate the params
-                    for key in block.params :
-                        evaluated = str(block.params[key].evaluate())
-                        self.set_tooltip_text(evaluated)
-
-                    # Evaluate the block value
-                    try:
-                        evaluated = str( eval(block.value,block.parent.namespace,block.namespace))
-                        self.set_tooltip_text(evaluated)
-                    except Exception as error:
-                        self.set_tooltip_text(str(error))
-                        pass
+                    value = str(block.evaluate(block.value))
 
         # Always set the text value.
         sp('text', value)

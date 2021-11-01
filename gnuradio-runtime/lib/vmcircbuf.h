@@ -4,26 +4,16 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef GR_VMCIRCBUF_H
 #define GR_VMCIRCBUF_H
 
 #include <gnuradio/api.h>
+#include <gnuradio/logger.h>
+#include <gnuradio/prefs.h>
 #include <gnuradio/thread/thread.h>
 #include <vector>
 
@@ -38,11 +28,16 @@ namespace gr {
 class GR_RUNTIME_API vmcircbuf
 {
 protected:
-    int d_size;
+    size_t d_size;
     char* d_base;
+    logger_ptr d_logger;
+    logger_ptr d_debug_logger;
 
     // CREATORS
-    vmcircbuf(int size) : d_size(size), d_base(0){};
+    vmcircbuf(size_t size) : d_size(size), d_base(0)
+    {
+        gr::configure_default_loggers(d_logger, d_debug_logger, "gr::vmcircbuf");
+    };
 
 public:
     virtual ~vmcircbuf();
@@ -77,7 +72,7 @@ public:
      *
      * Call this to create a doubly mapped circular buffer.
      */
-    virtual vmcircbuf* make(int size) = 0;
+    virtual vmcircbuf* make(size_t size) = 0;
 };
 
 /*
@@ -95,7 +90,7 @@ public:
     static vmcircbuf_factory* get_default_factory();
 
     static int granularity() { return get_default_factory()->granularity(); }
-    static vmcircbuf* make(int size) { return get_default_factory()->make(size); }
+    static vmcircbuf* make(size_t size) { return get_default_factory()->make(size); }
 
     // N.B. not all factories are guaranteed to work.
     // It's too hard to check everything at config time, so we check at runtime

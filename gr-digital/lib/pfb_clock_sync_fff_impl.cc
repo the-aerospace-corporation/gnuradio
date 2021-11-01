@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -42,8 +30,8 @@ pfb_clock_sync_fff::sptr pfb_clock_sync_fff::make(double sps,
                                                   float max_rate_deviation,
                                                   int osps)
 {
-    return gnuradio::get_initial_sptr(new pfb_clock_sync_fff_impl(
-        sps, gain, taps, filter_size, init_phase, max_rate_deviation, osps));
+    return gnuradio::make_block_sptr<pfb_clock_sync_fff_impl>(
+        sps, gain, taps, filter_size, init_phase, max_rate_deviation, osps);
 }
 
 static int ios[] = { sizeof(float), sizeof(float), sizeof(float), sizeof(float) };
@@ -66,12 +54,11 @@ pfb_clock_sync_fff_impl::pfb_clock_sync_fff_impl(double sps,
       d_out_idx(0)
 {
     if (taps.empty())
-        throw std::runtime_error("pfb_clock_sync_fff: please specify a filter.\n");
+        throw std::runtime_error("pfb_clock_sync_fff: please specify a filter.");
 
     // Let scheduler adjust our relative_rate.
     enable_update_rate(true);
 
-    d_nfilters = filter_size;
     d_sps = floor(sps);
 
     // Set the damping factor for a critically damped system
@@ -89,14 +76,14 @@ pfb_clock_sync_fff_impl::pfb_clock_sync_fff_impl(double sps,
     d_rate_f = d_rate - (float)d_rate_i;
     d_filtnum = (int)floor(d_k);
 
-    d_filters = std::vector<kernel::fir_filter_fff*>(d_nfilters);
-    d_diff_filters = std::vector<kernel::fir_filter_fff*>(d_nfilters);
+    d_filters.reserve(d_nfilters);
+    d_diff_filters.reserve(d_nfilters);
 
     // Create an FIR filter for each channel and zero out the taps
     std::vector<float> vtaps(1, 0);
     for (int i = 0; i < d_nfilters; i++) {
-        d_filters[i] = new kernel::fir_filter_fff(1, vtaps);
-        d_diff_filters[i] = new kernel::fir_filter_fff(1, vtaps);
+        d_filters.emplace_back(vtaps);
+        d_diff_filters.emplace_back(vtaps);
     }
 
     // Now, actually set the filters' taps
@@ -108,13 +95,7 @@ pfb_clock_sync_fff_impl::pfb_clock_sync_fff_impl(double sps,
     set_relative_rate((uint64_t)d_osps, (uint64_t)d_sps);
 }
 
-pfb_clock_sync_fff_impl::~pfb_clock_sync_fff_impl()
-{
-    for (int i = 0; i < d_nfilters; i++) {
-        delete d_filters[i];
-        delete d_diff_filters[i];
-    }
-}
+pfb_clock_sync_fff_impl::~pfb_clock_sync_fff_impl() {}
 
 bool pfb_clock_sync_fff_impl::check_topology(int ninputs, int noutputs)
 {
@@ -195,18 +176,18 @@ float pfb_clock_sync_fff_impl::clock_rate() const { return d_rate_f; }
 
 void pfb_clock_sync_fff_impl::update_gains()
 {
-    float denom = (1.0 + 2.0 * d_damping * d_loop_bw + d_loop_bw * d_loop_bw);
+    const float denom = (1.0 + 2.0 * d_damping * d_loop_bw + d_loop_bw * d_loop_bw);
     d_alpha = (4 * d_damping * d_loop_bw) / denom;
     d_beta = (4 * d_loop_bw * d_loop_bw) / denom;
 }
 
 void pfb_clock_sync_fff_impl::set_taps(const std::vector<float>& newtaps,
                                        std::vector<std::vector<float>>& ourtaps,
-                                       std::vector<kernel::fir_filter_fff*>& ourfilter)
+                                       std::vector<kernel::fir_filter_fff>& ourfilter)
 {
     int i, j;
 
-    unsigned int ntaps = newtaps.size();
+    const unsigned int ntaps = newtaps.size();
     d_taps_per_filter = (unsigned int)ceil((double)ntaps / (double)d_nfilters);
 
     // Create d_numchan vectors to store each channel's taps
@@ -229,7 +210,7 @@ void pfb_clock_sync_fff_impl::set_taps(const std::vector<float>& newtaps,
         }
 
         // Build a filter for each channel and add it's taps to it
-        ourfilter[i]->set_taps(ourtaps[i]);
+        ourfilter[i].set_taps(ourtaps[i]);
     }
 
     // Set the history to ensure enough input items for each filter
@@ -380,7 +361,7 @@ int pfb_clock_sync_fff_impl::general_work(int noutput_items,
                 count -= 1;
             }
 
-            out[i + d_out_idx] = d_filters[d_filtnum]->filter(&in[count + d_out_idx]);
+            out[i + d_out_idx] = d_filters[d_filtnum].filter(&in[count + d_out_idx]);
             d_k = d_k + d_rate_i + d_rate_f; // update phase
             d_out_idx++;
 
@@ -402,7 +383,7 @@ int pfb_clock_sync_fff_impl::general_work(int noutput_items,
         d_out_idx = 0;
 
         // Update the phase and rate estimates for this symbol
-        float diff = d_diff_filters[d_filtnum]->filter(&in[count]);
+        float diff = d_diff_filters[d_filtnum].filter(&in[count]);
         d_error = out[i] * diff;
 
         // Run the control loop to update the current phase (k) and

@@ -6,28 +6,13 @@
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 #
 
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
 
 # See gnuradio-examples/python/digital for examples
+from math import log as ln
 
 import numpy
 
@@ -35,7 +20,7 @@ from gnuradio import gr
 from gnuradio import analog
 from gnuradio import blocks, filter
 from . import modulation_utils
-from . import digital_swig as digital
+from . import digital_python as digital
 
 
 # default values (used in __init__ and add_options)
@@ -44,6 +29,7 @@ _def_sensitivity = 1
 _def_bt = 0.35
 _def_verbose = False
 _def_log = False
+_def_do_unpack = True
 
 _def_gain_mu = None
 _def_mu = 0.5
@@ -60,26 +46,28 @@ _def_omega_relative_limit = 0.005
 # /////////////////////////////////////////////////////////////////////////////
 
 class gfsk_mod(gr.hier_block2):
+    """
+    Hierarchical block for Gaussian Frequency Shift Key (GFSK)
+    modulation.
+
+    The input is a byte stream (unsigned char) and the
+    output is the complex modulated signal at baseband.
+
+    Args:
+        samples_per_symbol: samples per baud >= 2 (integer)
+        bt: Gaussian filter bandwidth * symbol time (float)
+        verbose: Print information about modulator? (bool)
+        debug: Print modualtion data to files? (bool)
+        unpack: Unpack input byte stream? (bool)
+    """
 
     def __init__(self,
                  samples_per_symbol=_def_samples_per_symbol,
                  sensitivity=_def_sensitivity,
                  bt=_def_bt,
                  verbose=_def_verbose,
-                 log=_def_log):
-        """
-        Hierarchical block for Gaussian Frequency Shift Key (GFSK)
-        modulation.
-
-        The input is a byte stream (unsigned char) and the
-        output is the complex modulated signal at baseband.
-
-        Args:
-            samples_per_symbol: samples per baud >= 2 (integer)
-            bt: Gaussian filter bandwidth * symbol time (float)
-            verbose: Print information about modulator? (bool)
-            debug: Print modualtion data to files? (bool)
-        """
+                 log=_def_log,
+                 do_unpack=_def_do_unpack):
 
         gr.hier_block2.__init__(self, "gfsk_mod",
                                 gr.io_signature(1, 1, gr.sizeof_char),       # Input signature
@@ -96,9 +84,10 @@ class gfsk_mod(gr.hier_block2):
         ntaps = 4 * samples_per_symbol			# up to 3 bits in filter at once
         #sensitivity = (pi / 2) / samples_per_symbol	# phase change per bit = pi / 2
 
+        
+
         # Turn it into NRZ data.
         #self.nrz = digital.bytes_to_syms()
-        self.unpack = blocks.packed_to_unpacked_bb(1, gr.GR_MSB_FIRST)
         self.nrz = digital.chunks_to_symbols_bf([-1, 1])
 
         # Form Gaussian filter
@@ -127,7 +116,11 @@ class gfsk_mod(gr.hier_block2):
             self._setup_logging()
 
         # Connect & Initialize base class
-        self.connect(self, self.unpack, self.nrz, self.gaussian_filter, self.fmmod, self.amp, self)
+        if do_unpack:
+            self.unpack = blocks.packed_to_unpacked_bb(1, gr.GR_MSB_FIRST)
+            self.connect(self, self.unpack, self.nrz, self.gaussian_filter, self.fmmod, self.amp, self)
+        else:
+            self.connect(self, self.nrz, self.gaussian_filter, self.fmmod, self.amp, self)
 
     def samples_per_symbol(self):
         return self._samples_per_symbol
@@ -172,6 +165,26 @@ class gfsk_mod(gr.hier_block2):
 # /////////////////////////////////////////////////////////////////////////////
 
 class gfsk_demod(gr.hier_block2):
+    """
+    Hierarchical block for Gaussian Minimum Shift Key (GFSK)
+    demodulation.
+
+    The input is the complex modulated signal at baseband.
+    The output is a stream of bits packed 1 bit per byte (the LSB)
+
+    Args:
+        samples_per_symbol: samples per baud (integer)
+        verbose: Print information about modulator? (bool)
+        log: Print modualtion data to files? (bool)
+
+    Clock recovery parameters.  These all have reasonable defaults.
+
+    Args:
+        gain_mu: controls rate of mu adjustment (float)
+        mu: unused but unremoved for backward compatibility (unused)
+        omega_relative_limit: sets max variation in omega (float, typically 0.000200 (200 ppm))
+        freq_error: bit rate error as a fraction
+    """
 
     def __init__(self,
                  samples_per_symbol=_def_samples_per_symbol,
@@ -182,27 +195,6 @@ class gfsk_demod(gr.hier_block2):
                  freq_error=_def_freq_error,
                  verbose=_def_verbose,
                  log=_def_log):
-        """
-        Hierarchical block for Gaussian Minimum Shift Key (GFSK)
-        demodulation.
-
-        The input is the complex modulated signal at baseband.
-        The output is a stream of bits packed 1 bit per byte (the LSB)
-
-        Args:
-            samples_per_symbol: samples per baud (integer)
-            verbose: Print information about modulator? (bool)
-            log: Print modualtion data to files? (bool)
-
-        Clock recovery parameters.  These all have reasonable defaults.
-
-        Args:
-            gain_mu: controls rate of mu adjustment (float)
-            mu: fractional delay [0.0, 1.0] (float)
-            omega_relative_limit: sets max variation in omega (float, typically 0.000200 (200 ppm))
-            freq_error: bit rate error as a fraction
-            float:
-        """
 
         gr.hier_block2.__init__(self, "gfsk_demod",
                                 gr.io_signature(1, 1, gr.sizeof_gr_complex), # Input signature
@@ -210,7 +202,6 @@ class gfsk_demod(gr.hier_block2):
 
         self._samples_per_symbol = samples_per_symbol
         self._gain_mu = gain_mu
-        self._mu = mu
         self._omega_relative_limit = omega_relative_limit
         self._freq_error = freq_error
         self._differential = False
@@ -225,15 +216,27 @@ class gfsk_demod(gr.hier_block2):
 
         self._gain_omega = .25 * self._gain_mu * self._gain_mu        # critically damped
 
+        self._damping = 1.0
+        self._loop_bw = -ln((self._gain_mu + self._gain_omega)/(-2.0) + 1)        # critically damped
+        self._max_dev = self._omega_relative_limit * self._samples_per_symbol
+
         # Demodulate FM
         #sensitivity = (pi / 2) / samples_per_symbol
         self.fmdemod = analog.quadrature_demod_cf(1.0 / sensitivity)
 
         # the clock recovery block tracks the symbol clock and resamples as needed.
         # the output of the block is a stream of soft symbols (float)
-        self.clock_recovery = digital.clock_recovery_mm_ff(self._omega, self._gain_omega,
-                                                           self._mu, self._gain_mu,
-                                                           self._omega_relative_limit)
+        self.clock_recovery = self.digital_symbol_sync_xx_0 = digital.symbol_sync_ff(digital.TED_MUELLER_AND_MULLER,
+                            self._omega,
+                            self._loop_bw,
+                            self._damping,
+                            1.0,  # Expected TED gain
+                            self._max_dev,
+                            1,  # Output sps
+                            digital.constellation_bpsk().base(),
+                            digital.IR_MMSE_8TAP,
+                            128,
+                            [])
 
         # slice the floats at 0, outputting 1 bit (the LSB of the output byte) per sample
         self.slicer = digital.binary_slicer_fb()
@@ -256,10 +259,10 @@ class gfsk_demod(gr.hier_block2):
 
     def _print_verbage(self):
         print("bits per symbol = %d" % self.bits_per_symbol())
-        print("M&M clock recovery omega = %f" % self._omega)
-        print("M&M clock recovery gain mu = %f" % self._gain_mu)
-        print("M&M clock recovery mu = %f" % self._mu)
-        print("M&M clock recovery omega rel. limit = %f" % self._omega_relative_limit)
+        print("Symbol Sync M&M omega = %f" % self._omega)
+        print("Symbol Sync M&M gain mu = %f" % self._gain_mu)
+        print("M&M clock recovery mu (Unused) = %f" % self._mu)
+        print("Symbol Sync M&M omega rel. limit = %f" % self._omega_relative_limit)
         print("frequency error = %f" % self._freq_error)
 
 
@@ -278,13 +281,13 @@ class gfsk_demod(gr.hier_block2):
         Adds GFSK demodulation-specific options to the standard parser
         """
         parser.add_option("", "--gain-mu", type="float", default=_def_gain_mu,
-                          help="M&M clock recovery gain mu [default=%default] (GFSK/PSK)")
+                          help="Symbol Sync M&M gain mu [default=%default] (GFSK/PSK)")
         parser.add_option("", "--mu", type="float", default=_def_mu,
-                          help="M&M clock recovery mu [default=%default] (GFSK/PSK)")
+                          help="M&M clock recovery mu [default=%default] (Unused)")
         parser.add_option("", "--omega-relative-limit", type="float", default=_def_omega_relative_limit,
-                          help="M&M clock recovery omega relative limit [default=%default] (GFSK/PSK)")
+                          help="Symbol Sync M&M omega relative limit [default=%default] (GFSK/PSK)")
         parser.add_option("", "--freq-error", type="float", default=_def_freq_error,
-                          help="M&M clock recovery frequency error [default=%default] (GFSK)")
+                          help="Symbol Sync M&M frequency error [default=%default] (GFSK)")
 
     @staticmethod
     def extract_kwargs_from_options(options):

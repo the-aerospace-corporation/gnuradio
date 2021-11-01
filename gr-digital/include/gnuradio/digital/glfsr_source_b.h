@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef INCLUDED_GR_GLFSR_SOURCE_B_H
@@ -37,7 +25,7 @@ class DIGITAL_API glfsr_source_b : virtual public sync_block
 {
 public:
     // gr::digital::glfsr_source_b::sptr
-    typedef boost::shared_ptr<glfsr_source_b> sptr;
+    typedef std::shared_ptr<glfsr_source_b> sptr;
 
     /*!
      * Make a Galois LFSR pseudo-random source block.
@@ -52,11 +40,11 @@ public:
      */
     static sptr make(unsigned int degree,
                      bool repeat = true,
-                     uint32_t mask = 0x0,
-                     uint32_t seed = 0x1);
+                     uint64_t mask = 0x0,
+                     uint64_t seed = 0x1);
 
-    virtual uint32_t period() const = 0;
-    virtual uint32_t mask() const = 0;
+    virtual uint64_t period() const = 0;
+    virtual uint64_t mask() const = 0;
 };
 
 } /* namespace digital */

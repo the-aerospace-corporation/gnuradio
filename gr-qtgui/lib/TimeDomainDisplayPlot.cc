@@ -4,52 +4,20 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef TIME_DOMAIN_DISPLAY_PLOT_C
 #define TIME_DOMAIN_DISPLAY_PLOT_C
 
+#include "TimePrecisionClass.h"
 #include <gnuradio/qtgui/TimeDomainDisplayPlot.h>
 
 #include <qwt_legend.h>
 #include <qwt_scale_draw.h>
-#include <volk/volk.h>
 #include <QColor>
 #include <cmath>
-#include <iostream>
-
-class TimePrecisionClass
-{
-public:
-    TimePrecisionClass(const int timePrecision) { d_timePrecision = timePrecision; }
-
-    virtual ~TimePrecisionClass() {}
-
-    virtual unsigned int getTimePrecision() const { return d_timePrecision; }
-
-    virtual void setTimePrecision(const unsigned int newPrecision)
-    {
-        d_timePrecision = newPrecision;
-    }
-
-protected:
-    unsigned int d_timePrecision;
-};
-
 
 class TimeDomainDisplayZoomer : public QwtPlotZoomer, public TimePrecisionClass
 {
@@ -64,7 +32,7 @@ public:
         setTrackerMode(QwtPicker::AlwaysOn);
     }
 
-    virtual ~TimeDomainDisplayZoomer() {}
+    ~TimeDomainDisplayZoomer() override {}
 
     virtual void updateTrackerText() { updateDisplay(); }
 
@@ -76,7 +44,7 @@ public:
 
 protected:
     using QwtPlotZoomer::trackerText;
-    virtual QwtText trackerText(const QPoint& p) const
+    QwtText trackerText(const QPoint& p) const override
     {
         QwtText t;
         QwtDoublePoint dp = QwtPlotZoomer::invTransform(p);
@@ -102,20 +70,13 @@ private:
     std::string d_yUnitType;
 };
 
-
 /***********************************************************************
  * Main Time domain plotter widget
  **********************************************************************/
 TimeDomainDisplayPlot::TimeDomainDisplayPlot(int nplots, QWidget* parent)
-    : DisplayPlot(nplots, parent)
+    : DisplayPlot(nplots, parent), d_xdata(1024)
 {
-    d_numPoints = 1024;
-    d_xdata = new double[d_numPoints];
-    memset(d_xdata, 0x0, d_numPoints * sizeof(double));
-
-    d_tag_text_color = Qt::black;
-    d_tag_background_color = Qt::white;
-    d_tag_background_style = Qt::NoBrush;
+    d_numPoints = d_xdata.size();
 
     d_zoomer = new TimeDomainDisplayZoomer(canvas(), 0);
 
@@ -159,8 +120,7 @@ TimeDomainDisplayPlot::TimeDomainDisplayPlot(int nplots, QWidget* parent)
     // Setup dataPoints and plot vectors
     // Automatically deleted when parent is deleted
     for (unsigned int i = 0; i < d_nplots; ++i) {
-        d_ydata.push_back(new double[d_numPoints]);
-        memset(d_ydata[i], 0x0, d_numPoints * sizeof(double));
+        d_ydata.emplace_back(d_numPoints);
 
         d_plot_curve.push_back(new QwtPlotCurve(QString("Data %1").arg(i)));
         d_plot_curve[i]->attach(this);
@@ -171,10 +131,10 @@ TimeDomainDisplayPlot::TimeDomainDisplayPlot(int nplots, QWidget* parent)
             QwtSymbol::NoSymbol, QBrush(colors[i]), QPen(colors[i]), QSize(7, 7));
 
 #if QWT_VERSION < 0x060000
-        d_plot_curve[i]->setRawData(d_xdata, d_ydata[i], d_numPoints);
+        d_plot_curve[i]->setRawData(d_xdata.data(), d_ydata[i].data(), d_numPoints);
         d_plot_curve[i]->setSymbol(*symbol);
 #else
-        d_plot_curve[i]->setRawSamples(d_xdata, d_ydata[i], d_numPoints);
+        d_plot_curve[i]->setRawSamples(d_xdata.data(), d_ydata[i].data(), d_numPoints);
         d_plot_curve[i]->setSymbol(symbol);
 #endif
     }
@@ -203,10 +163,6 @@ TimeDomainDisplayPlot::TimeDomainDisplayPlot(int nplots, QWidget* parent)
 
 TimeDomainDisplayPlot::~TimeDomainDisplayPlot()
 {
-    for (unsigned int i = 0; i < d_nplots; ++i)
-        delete[] d_ydata[i];
-    delete[] d_xdata;
-
     // d_zoomer and _panner deleted when parent deleted
 }
 
@@ -222,17 +178,17 @@ void TimeDomainDisplayPlot::plotNewData(const std::vector<double*> dataPoints,
             if (numDataPoints != d_numPoints) {
                 d_numPoints = numDataPoints;
 
-                delete[] d_xdata;
-                d_xdata = new double[d_numPoints];
+                d_xdata.resize(d_numPoints);
 
                 for (unsigned int i = 0; i < d_nplots; ++i) {
-                    delete[] d_ydata[i];
-                    d_ydata[i] = new double[d_numPoints];
+                    d_ydata[i].resize(d_numPoints);
 
 #if QWT_VERSION < 0x060000
-                    d_plot_curve[i]->setRawData(d_xdata, d_ydata[i], d_numPoints);
+                    d_plot_curve[i]->setRawData(
+                        d_xdata.data(), d_ydata[i].data(), d_numPoints);
 #else
-                    d_plot_curve[i]->setRawSamples(d_xdata, d_ydata[i], d_numPoints);
+                    d_plot_curve[i]->setRawSamples(
+                        d_xdata.data(), d_ydata[i].data(), d_numPoints);
 #endif
                 }
 
@@ -244,7 +200,8 @@ void TimeDomainDisplayPlot::plotNewData(const std::vector<double*> dataPoints,
                     for (int n = 0; n < numDataPoints; n++)
                         d_ydata[i][n] = fabs(dataPoints[i][n]);
                 } else {
-                    memcpy(d_ydata[i], dataPoints[i], numDataPoints * sizeof(double));
+                    memcpy(
+                        d_ydata[i].data(), dataPoints[i], numDataPoints * sizeof(double));
                 }
             }
 
@@ -427,7 +384,7 @@ void TimeDomainDisplayPlot::legendEntryChecked(const QVariant& plotItem,
 {
 #if QWT_VERSION < 0x060100
     std::runtime_error("TimeDomainDisplayPlot::legendEntryChecked with QVariant not "
-                       "enabled in this version of QWT.\n");
+                       "enabled in this version of QWT.");
 #else
     QwtPlotItem* p = infoToItem(plotItem);
     legendEntryChecked(p, on);
@@ -567,7 +524,7 @@ void TimeDomainDisplayPlot::enableTagMarker(unsigned int which, bool en)
         d_tag_markers_en[which] = en;
     else
         throw std::runtime_error(
-            "TimeDomainDisplayPlot: enabled tag marker does not exist.\n");
+            "TimeDomainDisplayPlot: enabled tag marker does not exist.");
 }
 
 const QColor TimeDomainDisplayPlot::getTagTextColor() { return d_tag_text_color; }

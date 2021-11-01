@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 /*******************************************************************************
@@ -31,8 +19,21 @@
 #endif
 
 #include <gnuradio/logger.h>
+
 #include <gnuradio/prefs.h>
+
+#include <log4cpp/FileAppender.hh>
+#include <log4cpp/OstreamAppender.hh>
+#include <log4cpp/PatternLayout.hh>
+#include <log4cpp/PropertyConfigurator.hh>
+#include <log4cpp/RollingFileAppender.hh>
+#include <boost/format.hpp>
+#include <boost/thread.hpp>
+
 #include <algorithm>
+#include <filesystem>
+#include <iostream>
+#include <memory>
 #include <stdexcept>
 
 namespace gr {
@@ -67,11 +68,10 @@ unsigned int logger_config::get_watch_period()
 // Method to watch config file for changes
 void logger_config::watch_file(std::string filename, unsigned int watch_period)
 {
-    std::time_t last_write(boost::filesystem::last_write_time(filename));
-    std::time_t current_time(0);
+    auto last_write = std::filesystem::last_write_time(filename);
     while (true) {
         try {
-            current_time = boost::filesystem::last_write_time(filename);
+            auto current_time = std::filesystem::last_write_time(filename);
             if (current_time > last_write) {
                 // std::cout<<"GNURadio Reloading logger
                 // configuration:"<<filename<<std::endl;
@@ -83,7 +83,7 @@ void logger_config::watch_file(std::string filename, unsigned int watch_period)
             boost::this_thread::sleep(
                 boost::posix_time::time_duration(0, 0, watch_period, 0));
         } catch (const boost::thread_interrupted&) {
-            std::cout << "GNURadio leaving logger config file watch." << std::endl;
+            std::cerr << "GNURadio leaving logger config file watch." << std::endl;
             break;
         }
     }
@@ -99,7 +99,7 @@ void logger_config::load_config(std::string filename, unsigned int watch_period)
         instance.filename = filename;
         instance.watch_period = watch_period;
         // Stop any file watching thread
-        if (instance.watch_thread != NULL)
+        if (instance.watch_thread)
             stop_watch();
         // Load configuration
         // std::cout<<"GNURadio Loading logger
@@ -107,8 +107,8 @@ void logger_config::load_config(std::string filename, unsigned int watch_period)
         logger_configured = logger_load_config(instance.filename);
         // Start watch if required
         if (instance.watch_period > 0) {
-            instance.watch_thread =
-                new boost::thread(watch_file, instance.filename, instance.watch_period);
+            instance.watch_thread = std::make_unique<boost::thread>(
+                watch_file, instance.filename, instance.watch_period);
         }
     }
 }
@@ -120,8 +120,7 @@ void logger_config::stop_watch()
     if (instance.watch_thread) {
         instance.watch_thread->interrupt();
         instance.watch_thread->join();
-        delete (instance.watch_thread);
-        instance.watch_thread = NULL;
+        instance.watch_thread.reset();
     }
 }
 
@@ -153,6 +152,31 @@ logger_ptr logger_get_logger(std::string name)
         logger->setPriority(log4cpp::Priority::NOTSET);
         return logger;
     }
+}
+
+logger_ptr logger_get_configured_logger(const std::string& name)
+{
+    if (log4cpp::Category::exists(name))
+        return &log4cpp::Category::getInstance(name);
+
+    prefs* p = prefs::singleton();
+    std::string config_file = p->get_string("LOG", "log_config", "");
+    std::string log_level = p->get_string("LOG", "log_level", "off");
+    std::string log_file = p->get_string("LOG", "log_file", "");
+
+    GR_LOG_GETLOGGER(LOG, "gr_log." + name);
+    GR_LOG_SET_LEVEL(LOG, log_level);
+
+    if (!log_file.empty()) {
+        if (log_file == "stdout") {
+            GR_LOG_SET_CONSOLE_APPENDER(LOG, "stdout", "gr::log :%p: %c{1} - %m%n");
+        } else if (log_file == "stderr") {
+            GR_LOG_SET_CONSOLE_APPENDER(LOG, "stderr", "gr::log :%p: %c{1} - %m%n");
+        } else {
+            GR_LOG_SET_FILE_APPENDER(LOG, log_file, true, "%r :%p: %c{1} - %m%n");
+        }
+    }
+    return LOG;
 }
 
 bool logger_load_config(const std::string& config_filename)
@@ -194,7 +218,7 @@ void logger_set_level(logger_ptr logger, const std::string& level)
     else if (nocase == "emerg")
         logger_set_level(logger, log4cpp::Priority::EMERG);
     else
-        throw std::runtime_error("logger_set_level: Bad level type.\n");
+        throw std::runtime_error("logger_set_level: Bad level type.");
 }
 
 void logger_set_level(logger_ptr logger, log4cpp::Priority::Value level)
@@ -263,7 +287,7 @@ void logger_add_file_appender(logger_ptr logger,
 {
     log4cpp::PatternLayout* layout = new log4cpp::PatternLayout();
     log4cpp::Appender* app =
-        new log4cpp::FileAppender("FileAppender::" + filename, filename);
+        new log4cpp::FileAppender("FileAppender::" + filename, filename, append);
     layout->setConversionPattern(pattern);
     app->setLayout(layout);
     logger->setAppender(app);

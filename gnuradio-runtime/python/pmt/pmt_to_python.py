@@ -2,24 +2,11 @@
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 
-from __future__ import unicode_literals
 
-from . import pmt_swig as pmt
+from . import pmt_python as pmt
 import numpy
 
 # SWIG isn't taking in the #define PMT_NIL;
@@ -124,7 +111,7 @@ def pmt_to_python(p):
         if pmt_check(p):
             try:
                 return to_python(p)
-            except (TypeError, ValueError):
+            except (RuntimeError, TypeError, ValueError):  # TODO: make pybind11 handle wrong_type, convert to type error
                 # This exception will be handled by the general failure case
                 pass
     raise ValueError("can't convert %s type to pmt (%s)"%(type(p),p))

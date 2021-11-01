@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -27,35 +15,26 @@
 #include "sink_uc_impl.h"
 #include <gnuradio/io_signature.h>
 #include <fcntl.h>
-#include <stdio.h>
-#include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <iostream>
+#include <boost/format.hpp>
+#include <cstdio>
+#include <cstring>
 #include <stdexcept>
-
 
 namespace gr {
 namespace video_sdl {
 
-sink_uc::sptr sink_uc::make(double framerate,
-                            int width,
-                            int height,
-                            unsigned int format,
-                            int dst_width,
-                            int dst_height)
+sink_uc::sptr
+sink_uc::make(double framerate, int width, int height, int dst_width, int dst_height)
 {
-    return gnuradio::get_initial_sptr(
-        new sink_uc_impl(framerate, width, height, format, dst_width, dst_height));
+    return gnuradio::make_block_sptr<sink_uc_impl>(
+        framerate, width, height, dst_width, dst_height);
 }
 
-sink_uc_impl::sink_uc_impl(double framerate,
-                           int width,
-                           int height,
-                           unsigned int format,
-                           int dst_width,
-                           int dst_height)
+sink_uc_impl::sink_uc_impl(
+    double framerate, int width, int height, int dst_width, int dst_height)
     : sync_block("video_sdl_sink_uc",
                  io_signature::make(1, 3, sizeof(unsigned char)),
                  io_signature::make(0, 0, 0)),
@@ -66,7 +45,6 @@ sink_uc_impl::sink_uc_impl(double framerate,
       d_height(height),
       d_dst_width(dst_width),
       d_dst_height(dst_height),
-      d_format(format),
       d_current_line(0),
       d_screen(NULL),
       d_image(NULL),
@@ -84,13 +62,12 @@ sink_uc_impl::sink_uc_impl(double framerate,
     if (dst_height < 0)
         d_dst_height = d_height;
 
-    if (0 == format)
-        d_format = IMGFMT_YV12;
-
     atexit(SDL_Quit); // check if this is the way to do this
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-        std::cerr << "video_sdl::sink_uc: Couldn't initialize SDL:" << SDL_GetError()
-                  << " \n SDL_Init(SDL_INIT_VIDEO) failed\n";
+        std::ostringstream msg;
+        msg << "Couldn't initialize SDL:" << SDL_GetError()
+            << "; SDL_Init(SDL_INIT_VIDEO) failed";
+        GR_LOG_ERROR(d_logger, msg.str());
         throw std::runtime_error("video_sdl::sink_uc");
     }
 
@@ -103,8 +80,10 @@ sink_uc_impl::sink_uc_impl(double framerate,
             SDL_ANYFORMAT); // SDL_DOUBLEBUF |SDL_SWSURFACE| SDL_HWSURFACE||SDL_FULLSCREEN
 
     if (d_screen == NULL) {
-        std::cerr << "Unable to set SDL video mode: " << SDL_GetError()
-                  << "\n SDL_SetVideoMode() Failed \n";
+        std::ostringstream msg;
+        msg << "Unable to set SDL video mode: " << SDL_GetError()
+            << "; SDL_SetVideoMode() Failed";
+        GR_LOG_ERROR(d_logger, msg.str());
         exit(1);
     }
 
@@ -114,13 +93,17 @@ sink_uc_impl::sink_uc_impl(double framerate,
 
     /* Initialize and create the YUV Overlay used for video out */
     if (!(d_image =
-              SDL_CreateYUVOverlay(d_width, d_height, SDL_YV12_OVERLAY, d_screen))) {
-        std::cerr << "SDL: Couldn't create a YUV overlay: \n" << SDL_GetError() << "\n";
+              SDL_CreateYUVOverlay(d_width, d_height, SDL_IYUV_OVERLAY, d_screen))) {
+        std::ostringstream msg;
+        msg << "SDL: Couldn't create a YUV overlay: " << SDL_GetError();
+        GR_LOG_ERROR(d_logger, msg.str());
         throw std::runtime_error("video_sdl::sink_uc");
     }
 
-    printf("SDL screen_mode %d bits-per-pixel\n", d_screen->format->BitsPerPixel);
-    printf("SDL overlay_mode %i \n", d_image->format);
+    GR_LOG_INFO(d_debug_logger,
+                boost::format("SDL screen_mode %d bits-per-pixel") %
+                    d_screen->format->BitsPerPixel);
+    GR_LOG_INFO(d_debug_logger, boost::format("SDL overlay_mode %i ") % d_image->format);
 
     d_chunk_size = std::min(1, 16384 / width); // width*16;
     d_chunk_size = d_chunk_size * width;
@@ -135,7 +118,9 @@ sink_uc_impl::sink_uc_impl(double framerate,
     // clear the surface to grey
 
     if (SDL_LockYUVOverlay(d_image)) {
-        std::cerr << "SDL: Couldn't lock YUV overlay: \n" << SDL_GetError() << "\n";
+        std::ostringstream msg;
+        msg << "SDL: Couldn't lock a YUV overlay: " << SDL_GetError();
+        GR_LOG_ERROR(d_logger, msg.str());
         throw std::runtime_error("video_sdl::sink_uc");
     }
 
@@ -197,7 +182,7 @@ int sink_uc_impl::copy_plane_to_surface(int plane,
     unsigned char* dst_pixels_2 = (unsigned char*)d_image->pixels[second_dst_plane];
     dst_pixels_2 = &dst_pixels_2[current_line * d_image->pitches[second_dst_plane]];
 
-    int src_width = (0 == plane || 12 == plane || 1122 == plane) ? d_width : d_width / 2;
+    int src_width = d_width;
     int noutput_items_produced = 0;
     int max_height = (0 == plane) ? d_height - 1 : d_height / 2 - 1;
 
@@ -280,28 +265,15 @@ int sink_uc_impl::work(int noutput_items,
         }
         break;
     case 2:
-        if (1) { // if(pixel_interleaved_uv)
-            // first channel=Y, second channel is alternating pixels U and V
-            src_pixels_0 = (unsigned char*)input_items[0];
-            src_pixels_1 = (unsigned char*)input_items[1];
-            for (int i = 0; i < noutput_items; i += d_chunk_size) {
-                copy_plane_to_surface(12, d_chunk_size / 2, src_pixels_1);
-                noutput_items_produced +=
-                    copy_plane_to_surface(0, d_chunk_size, src_pixels_0);
-                src_pixels_0 += d_chunk_size;
-                src_pixels_1 += d_chunk_size;
-            }
-        } else {
-            // first channel=Y, second channel is alternating lines U and V
-            src_pixels_0 = (unsigned char*)input_items[0];
-            src_pixels_1 = (unsigned char*)input_items[1];
-            for (int i = 0; i < noutput_items; i += d_chunk_size) {
-                copy_plane_to_surface(1222, d_chunk_size / 2, src_pixels_1);
-                noutput_items_produced +=
-                    copy_plane_to_surface(0, d_chunk_size, src_pixels_0);
-                src_pixels_0 += d_chunk_size;
-                src_pixels_1 += d_chunk_size;
-            }
+        // first channel=Y, second channel is alternating pixels U and V
+        src_pixels_0 = (unsigned char*)input_items[0];
+        src_pixels_1 = (unsigned char*)input_items[1];
+        for (int i = 0; i < noutput_items; i += d_chunk_size) {
+            copy_plane_to_surface(12, d_chunk_size / 2, src_pixels_1);
+            noutput_items_produced +=
+                copy_plane_to_surface(0, d_chunk_size, src_pixels_0);
+            src_pixels_0 += d_chunk_size;
+            src_pixels_1 += d_chunk_size;
         }
         break;
     case 1: // grey (Y) input
@@ -315,10 +287,11 @@ int sink_uc_impl::work(int noutput_items,
         }
         break;
     default: // 0 or more then 3 channels
-        std::cerr << "video_sdl::sink_uc: Wrong number of channels: ";
-        std::cerr
-            << "1, 2 or 3 channels are supported.\n  Requested number of channels is "
-            << input_items.size() << "\n";
+        std::ostringstream msg;
+        msg << "Wrong number of channels: 1, 2 or 3 channels are supported. Requested "
+               "number of channels is "
+            << input_items.size();
+        GR_LOG_ERROR(d_logger, msg.str());
         throw std::runtime_error("video_sdl::sink_uc");
     }
 

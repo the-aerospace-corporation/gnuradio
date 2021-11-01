@@ -4,27 +4,15 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef VECTOR_DISPLAY_PLOT_HPP
 #define VECTOR_DISPLAY_PLOT_HPP
 
 #include <gnuradio/qtgui/DisplayPlot.h>
-#include <stdint.h>
+#include <cstdint>
 #include <cstdio>
 #include <vector>
 
@@ -55,7 +43,13 @@ class VectorDisplayPlot : public DisplayPlot
 
 public:
     VectorDisplayPlot(int nplots, QWidget*);
-    virtual ~VectorDisplayPlot();
+    ~VectorDisplayPlot() override;
+
+    // Disable move/copy because of raw QT pointers.
+    VectorDisplayPlot(const VectorDisplayPlot&) = delete;
+    VectorDisplayPlot(VectorDisplayPlot&&) = delete;
+    VectorDisplayPlot& operator=(const VectorDisplayPlot&) = delete;
+    VectorDisplayPlot& operator=(VectorDisplayPlot&&) = delete;
 
     void setXAxisValues(const double start, const double step = 1.0);
 
@@ -67,9 +61,9 @@ public:
     void clearMaxData();
     void clearMinData();
 
-    void replot();
+    void replot() override;
 
-    void setYaxis(double min, double max);
+    void setYaxis(double min, double max) override;
     double getYMin() const;
     double getYMax() const;
 
@@ -117,7 +111,7 @@ private:
     void _resetXAxisPoints();
     void _autoScale(double bottom, double top);
 
-    std::vector<double*> d_ydata;
+    std::vector<std::vector<double>> d_ydata;
 
     QwtPlotCurve* d_min_vec_plot_curve;
     QwtPlotCurve* d_max_vec_plot_curve;
@@ -132,24 +126,24 @@ private:
     QColor d_marker_ref_level_color;
     bool d_marker_ref_level_visible;
 
-    double d_x_axis_start;
-    double d_x_axis_step;
+    double d_x_axis_start = 0;
+    double d_x_axis_step = 1.0;
 
-    double d_ymax;
-    double d_ymin;
+    double d_ymax = 10;
+    double d_ymin = -10;
 
     QwtPlotMarker* d_lower_intensity_marker;
     QwtPlotMarker* d_upper_intensity_marker;
 
     QwtPlotMarker* d_marker_ref_level;
 
-    double* d_xdata;
+    std::vector<double> d_xdata;
 
     QString d_x_axis_label;
     QString d_y_axis_label;
 
-    double* d_min_vec_data;
-    double* d_max_vec_data;
+    std::vector<double> d_min_vec_data;
+    std::vector<double> d_max_vec_data;
 
     double d_ref_level;
 };

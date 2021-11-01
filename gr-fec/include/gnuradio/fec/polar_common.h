@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 
@@ -26,7 +14,10 @@
 
 #include <vector>
 
+#include <gnuradio/blocks/unpack_k_bits.h>
 #include <gnuradio/fec/api.h>
+#include <volk/volk_alloc.hh>
+#include <cstdint>
 #include <vector>
 
 // Forward declaration for those objects. SWIG doesn't like them to be #include'd.
@@ -74,7 +65,7 @@ public:
     polar_common(int block_size,
                  int num_info_bits,
                  std::vector<int> frozen_bit_positions,
-                 std::vector<char> frozen_bit_values);
+                 std::vector<uint8_t> frozen_bit_values);
     ~polar_common();
 
 protected:
@@ -90,7 +81,7 @@ protected:
                                   const unsigned int num_bytes) const;
 
     std::vector<int> d_frozen_bit_positions;
-    std::vector<char> d_frozen_bit_values;
+    std::vector<uint8_t> d_frozen_bit_values;
     std::vector<int> d_info_bit_positions;
     std::vector<int> d_info_bit_positions_reversed;
     void setup_info_bit_positions_reversed();
@@ -101,9 +92,9 @@ protected:
     void setup_volk_vectors();
     void volk_encode(unsigned char* out_buf, const unsigned char* in_buf);
     void volk_encode_block(unsigned char* out_buf, unsigned char* in_buf);
-    unsigned char* d_volk_temp;
-    unsigned char* d_volk_frozen_bit_mask;
-    unsigned char* d_volk_frozen_bits;
+    volk::vector<unsigned char> d_volk_temp;
+    volk::vector<unsigned char> d_volk_frozen_bit_mask;
+    volk::vector<unsigned char> d_volk_frozen_bits;
 
 private:
     int d_block_size; // depending on paper called 'N' or 'm'
@@ -112,7 +103,7 @@ private:
 
     void initialize_info_bit_position_vector();
 
-    gr::blocks::kernel::unpack_k_bits*
+    gr::blocks::kernel::unpack_k_bits
         d_unpacker; // convenience for 'print_packed_bit_array' function.
 };
 

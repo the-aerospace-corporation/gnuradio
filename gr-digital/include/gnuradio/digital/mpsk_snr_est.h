@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef INCLUDED_DIGITAL_MPSK_SNR_EST_H
@@ -112,10 +100,10 @@ public:
      *  calculations.
      */
     mpsk_snr_est_simple(double alpha);
-    ~mpsk_snr_est_simple() {}
+    ~mpsk_snr_est_simple() override {}
 
-    int update(int noutput_items, const gr_complex* input);
-    double snr();
+    int update(int noutput_items, const gr_complex* input) override;
+    double snr() override;
 };
 
 
@@ -145,10 +133,10 @@ public:
      *  calculations.
      */
     mpsk_snr_est_skew(double alpha);
-    ~mpsk_snr_est_skew() {}
+    ~mpsk_snr_est_skew() override {}
 
-    int update(int noutput_items, const gr_complex* input);
-    double snr();
+    int update(int noutput_items, const gr_complex* input) override;
+    double snr() override;
 };
 
 
@@ -181,10 +169,10 @@ public:
      *  calculations.
      */
     mpsk_snr_est_m2m4(double alpha);
-    ~mpsk_snr_est_m2m4() {}
+    ~mpsk_snr_est_m2m4() override {}
 
-    int update(int noutput_items, const gr_complex* input);
-    double snr();
+    int update(int noutput_items, const gr_complex* input) override;
+    double snr() override;
 };
 
 
@@ -235,10 +223,10 @@ public:
      *  \param kw: estimate of the channel noise kurtosis (2 for AWGN)
      */
     snr_est_m2m4(double alpha, double ka, double kw);
-    ~snr_est_m2m4() {}
+    ~snr_est_m2m4() override {}
 
-    int update(int noutput_items, const gr_complex* input);
-    double snr();
+    int update(int noutput_items, const gr_complex* input) override;
+    double snr() override;
 };
 
 
@@ -276,10 +264,10 @@ public:
      *  calculations.
      */
     mpsk_snr_est_svr(double alpha);
-    ~mpsk_snr_est_svr() {}
+    ~mpsk_snr_est_svr() override {}
 
-    int update(int noutput_items, const gr_complex* input);
-    double snr();
+    int update(int noutput_items, const gr_complex* input) override;
+    double snr() override;
 };
 
 } /* namespace digital */

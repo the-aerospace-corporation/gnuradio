@@ -16,7 +16,7 @@ parameters:
     options: [complex, float]
     option_attributes:
         fcn: [c, f]
-        table: [complex_vector, real_vector]
+        table: [complex_vector, float_vector]
     hide: part
 -   id: symbol_table
     label: Symbol Table
@@ -43,9 +43,6 @@ outputs:
 -   domain: stream
     dtype: ${ out_type }
     multiplicity: ${ num_ports }
--   domain: message
-    id: set_symbol_table
-    optional: true
 
 asserts:
 - ${ num_ports > 0 }
@@ -69,7 +66,7 @@ cpp_templates:
         this->${id} = digital::chunks_to_symbols_${in_type.fcn}${out_type.fcn}::make(
             symbol_table,
             ${dimension});
-    link: ['gnuradio-digital']
+    link: ['gnuradio::gnuradio-digital']
     callbacks:
     - set_symbol_table(symbol_table)
 

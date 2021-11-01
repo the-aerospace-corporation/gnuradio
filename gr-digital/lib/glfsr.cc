@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #include <gnuradio/digital/glfsr.h>
@@ -26,7 +14,7 @@
 namespace gr {
 namespace digital {
 
-static uint32_t s_polynomial_masks[] = {
+static uint64_t s_polynomial_masks[] = {
     0x00000000,
     0x00000001, // x^1 + 1
     0x00000003, // x^2 + x^1 + 1
@@ -64,11 +52,10 @@ static uint32_t s_polynomial_masks[] = {
 
 glfsr::~glfsr() {}
 
-uint32_t glfsr::glfsr_mask(unsigned int degree)
+uint64_t glfsr::glfsr_mask(unsigned int degree)
 {
-    if (degree < 1 || degree > 32)
-        throw std::runtime_error(
-            "glfsr::glfsr_mask(): degree must be between 1 and 32 inclusive");
+    if (degree < 1 || degree > 64)
+        throw std::runtime_error("glfsr::glfsr_mask(): must be 1 <= degree <= 64");
     return s_polynomial_masks[degree];
 }
 

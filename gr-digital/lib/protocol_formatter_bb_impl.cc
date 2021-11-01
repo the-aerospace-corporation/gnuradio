@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -26,8 +14,9 @@
 
 #include "protocol_formatter_bb_impl.h"
 #include <gnuradio/io_signature.h>
-#include <stdio.h>
 #include <volk/volk.h>
+#include <boost/format.hpp>
+#include <cstdio>
 
 namespace gr {
 namespace digital {
@@ -36,8 +25,7 @@ protocol_formatter_bb::sptr
 protocol_formatter_bb::make(const header_format_base::sptr& format,
                             const std::string& len_tag_key)
 {
-    return gnuradio::get_initial_sptr(
-        new protocol_formatter_bb_impl(format, len_tag_key));
+    return gnuradio::make_block_sptr<protocol_formatter_bb_impl>(format, len_tag_key);
 }
 
 protocol_formatter_bb_impl::protocol_formatter_bb_impl(

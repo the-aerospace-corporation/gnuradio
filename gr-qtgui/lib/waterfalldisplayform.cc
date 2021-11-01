@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #include <gnuradio/qtgui/waterfalldisplayform.h>
@@ -26,7 +14,6 @@
 #include <QMessageBox>
 
 #include <cmath>
-#include <iostream>
 
 WaterfallDisplayForm::WaterfallDisplayForm(int nplots, QWidget* parent)
     : DisplayForm(nplots, parent)
@@ -35,6 +22,7 @@ WaterfallDisplayForm::WaterfallDisplayForm(int nplots, QWidget* parent)
     d_int_validator->setBottom(0);
 
     d_layout = new QGridLayout(this);
+    d_layout->setContentsMargins(0, 0, 0, 0);
     d_display_plot = new WaterfallDisplayPlot(nplots, this);
     d_layout->addWidget(d_display_plot, 0, 0);
     setLayout(d_layout);
@@ -95,9 +83,9 @@ WaterfallDisplayForm::WaterfallDisplayForm(int nplots, QWidget* parent)
     connect(
         d_avgmenu, SIGNAL(whichTrigger(float)), this, SLOT(setFFTAverage(const float)));
     connect(d_winmenu,
-            SIGNAL(whichTrigger(gr::filter::firdes::win_type)),
+            SIGNAL(whichTrigger(gr::fft::window::win_type)),
             this,
-            SLOT(setFFTWindowType(const gr::filter::firdes::win_type)));
+            SLOT(setFFTWindowType(const gr::fft::window::win_type)));
 
     PopupMenu* maxintmenu = new PopupMenu("Int. Max", this);
     d_menu->addAction(maxintmenu);
@@ -166,7 +154,7 @@ int WaterfallDisplayForm::getFFTSize() const { return d_fftsize; }
 
 float WaterfallDisplayForm::getFFTAverage() const { return d_fftavg; }
 
-gr::filter::firdes::win_type WaterfallDisplayForm::getFFTWindowType() const
+gr::fft::window::win_type WaterfallDisplayForm::getFFTWindowType() const
 {
     return d_fftwintype;
 }
@@ -210,7 +198,7 @@ void WaterfallDisplayForm::setFFTAverage(const float newavg)
     getPlot()->replot();
 }
 
-void WaterfallDisplayForm::setFFTWindowType(const gr::filter::firdes::win_type newwin)
+void WaterfallDisplayForm::setFFTWindowType(const gr::fft::window::win_type newwin)
 {
     d_fftwintype = newwin;
     d_winmenu->getActionFromWindow(newwin)->setChecked(true);

@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef SPECTRUM_GUI_CLASS_HPP
@@ -52,6 +40,13 @@ public:
                      const double newStartFrequency,
                      const double newStopFrequency);
     ~SpectrumGUIClass();
+
+    // Disable copy/move because of raw QT pointers.
+    SpectrumGUIClass(const SpectrumGUIClass&) = delete;
+    SpectrumGUIClass(SpectrumGUIClass&&) = delete;
+    SpectrumGUIClass& operator=(const SpectrumGUIClass&) = delete;
+    SpectrumGUIClass& operator=(SpectrumGUIClass&&) = delete;
+
     void reset();
 
     void openSpectrumWindow(QWidget*,
@@ -117,27 +112,26 @@ public:
 protected:
 private:
     gr::thread::mutex d_mutex;
-    int64_t _dataPoints;
+    const int64_t _dataPoints;
     std::string _title;
     double _centerFrequency;
     double _startFrequency;
     double _stopFrequency;
-    float _powerValue;
-    bool _windowOpennedFlag;
-    int _windowType;
+    float _powerValue = 1;
+    bool _windowOpennedFlag = false;
+    int _windowType = 5;
     int64_t _lastDataPointCount;
     int _fftSize;
-    gr::high_res_timer_type _lastGUIUpdateTime;
-    unsigned int _pendingGUIUpdateEventsCount;
-    int _droppedEntriesCount;
-    bool _fftBuffersCreatedFlag;
+    gr::high_res_timer_type _lastGUIUpdateTime = 0;
+    unsigned int _pendingGUIUpdateEventsCount = 0;
+    int _droppedEntriesCount = 0;
     double _updateTime;
 
-    SpectrumDisplayForm* _spectrumDisplayForm;
+    SpectrumDisplayForm* _spectrumDisplayForm = nullptr; // Deleted by QT.
 
-    float* _fftPoints;
-    double* _realTimeDomainPoints;
-    double* _imagTimeDomainPoints;
+    std::vector<float> _fftPoints;
+    std::vector<double> _realTimeDomainPoints;
+    std::vector<double> _imagTimeDomainPoints;
 };
 
 #endif /* SPECTRUM_GUI_CLASS_HPP */

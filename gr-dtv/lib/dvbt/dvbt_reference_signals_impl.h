@@ -1,21 +1,9 @@
 /* -*- c++ -*- */
 /*
- * Copyright 2015 Free Software Foundation, Inc.
+ * Copyright 2015,2020 Free Software Foundation, Inc.
  *
- * This is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef INCLUDED_DTV_DVBT_REFERENCE_SIGNALS_IMPL_H
@@ -23,20 +11,22 @@
 
 #include "dvbt_configure.h"
 #include <gnuradio/dtv/dvbt_reference_signals.h>
+#include <gnuradio/fft/fft.h>
+#include <gnuradio/logger.h>
 #include <deque>
 #include <vector>
 
 // This should eventually go into a const file
-const int SYMBOLS_PER_FRAME = 68;
-const int FRAMES_PER_SUPERFRAME = 4;
+constexpr int SYMBOLS_PER_FRAME = 68;
+constexpr int FRAMES_PER_SUPERFRAME = 4;
 
-const int SCATTERED_PILOT_SIZE_2k = 142;
-const int CONTINUAL_PILOT_SIZE_2k = 45;
-const int TPS_PILOT_SIZE_2k = 17;
+constexpr int SCATTERED_PILOT_SIZE_2k = 142;
+constexpr int CONTINUAL_PILOT_SIZE_2k = 45;
+constexpr int TPS_PILOT_SIZE_2k = 17;
 
-const int SCATTERED_PILOT_SIZE_8k = 568;
-const int CONTINUAL_PILOT_SIZE_8k = 177;
-const int TPS_PILOT_SIZE_8k = 68;
+constexpr int SCATTERED_PILOT_SIZE_8k = 568;
+constexpr int CONTINUAL_PILOT_SIZE_8k = 177;
+constexpr int TPS_PILOT_SIZE_8k = 68;
 
 namespace gr {
 namespace dtv {
@@ -47,13 +37,13 @@ private:
     // this should be first in order to be initialized first
     const dvbt_configure& config;
 
-    int d_Kmin;
-    int d_Kmax;
-    int d_fft_length;
-    int d_payload_length;
-    int d_zeros_on_left;
-    int d_zeros_on_right;
-    int d_cp_length;
+    const int d_Kmin;
+    const int d_Kmax;
+    const int d_fft_length;
+    const int d_payload_length;
+    const int d_zeros_on_left;
+    const int d_zeros_on_right;
+    const int d_cp_length;
 
     static const int d_symbols_per_frame;
     static const int d_frames_per_superframe;
@@ -89,30 +79,30 @@ private:
 
     // Variables to keep data for 2k, 8k, 4k
     int d_spilot_carriers_size;
-    gr_complex* d_spilot_carriers_val;
-    gr_complex* d_channel_gain;
+    volk::vector<gr_complex> d_spilot_carriers_val;
+    volk::vector<gr_complex> d_channel_gain;
 
     int d_cpilot_carriers_size;
     const int* d_cpilot_carriers;
-    float* d_known_phase_diff;
-    float* d_cpilot_phase_diff;
-    int d_freq_offset;
-    float d_carrier_freq_correction;
-    float d_sampling_freq_correction;
+    volk::vector<float> d_known_phase_diff;
+    volk::vector<float> d_cpilot_phase_diff;
+    int d_freq_offset = 0;
+    float d_carrier_freq_correction = 0.0;
+    float d_sampling_freq_correction = 0.0;
 
     // Variable to keep corrected OFDM symbol
-    gr_complex* d_derot_in;
+    volk::vector<gr_complex> d_derot_in;
 
     int d_tps_carriers_size;
     const int* d_tps_carriers;
-    gr_complex* d_tps_carriers_val;
+    volk::vector<gr_complex> d_tps_carriers_val;
 
     // Keeps TPS data
-    unsigned char* d_tps_data;
+    volk::vector<unsigned char> d_tps_data;
     // Keep TPS carriers values from previous symbol
-    gr_complex* d_prev_tps_symbol;
+    volk::vector<gr_complex> d_prev_tps_symbol;
     // Keep TPS carriers values from current symbol
-    gr_complex* d_tps_symbol;
+    volk::vector<gr_complex> d_tps_symbol;
     // Keeps the rcv TPS data, is a FIFO
     std::deque<char> d_rcv_tps_data;
     // Keeps the TPS sync sequence
@@ -121,29 +111,29 @@ private:
 
     // Keeps channel estimation carriers
     // we use both continual and scattered carriers
-    int* d_chanestim_carriers;
+    volk::vector<int> d_chanestim_carriers;
 
     // Keeps paload carriers
-    int* d_payload_carriers;
+    volk::vector<int> d_payload_carriers;
 
     // Indexes for all carriers
-    int d_spilot_index;
-    int d_cpilot_index;
-    int d_tpilot_index;
-    int d_symbol_index;
-    int d_symbol_index_known;
-    int d_frame_index;
-    int d_superframe_index;
-    int d_freq_offset_max;
-    int d_trigger_index;
-    int d_payload_index;
-    int d_chanestim_index;
-    int d_prev_mod_symbol_index;
-    int d_mod_symbol_index;
+    int d_spilot_index = 0;
+    int d_cpilot_index = 0;
+    int d_tpilot_index = 0;
+    int d_symbol_index = 0;
+    int d_symbol_index_known = 0;
+    int d_frame_index = 0;
+    int d_superframe_index = 0;
+    int d_freq_offset_max = 8;
+    int d_trigger_index = 0;
+    int d_payload_index = 0;
+    int d_chanestim_index = 0;
+    int d_prev_mod_symbol_index = 0;
+    int d_mod_symbol_index = 0;
     int d_equalizer_ready;
 
     // PRPS generator data buffer
-    char* d_wk;
+    std::vector<char> d_wk;
     // Generate PRBS
     void generate_prbs();
 
@@ -205,6 +195,8 @@ private:
     void process_payload_data(const gr_complex* in, gr_complex* out);
 
 public:
+    gr::logger_ptr d_logger;
+    gr::logger_ptr d_debug_logger;
     dvbt_pilot_gen(const dvbt_configure& config);
     ~dvbt_pilot_gen();
 
@@ -239,6 +231,10 @@ private:
     int d_ninput;
     int d_noutput;
 
+    fft::fft_complex_rev ofdm_fft;
+    int ofdm_fft_size;
+    float normalization;
+
 public:
     dvbt_reference_signals_impl(int itemsize,
                                 int ninput,
@@ -251,14 +247,14 @@ public:
                                 dvbt_transmission_mode_t transmission_mode = gr::dtv::T2k,
                                 int include_cell_id = 0,
                                 int cell_id = 0);
-    ~dvbt_reference_signals_impl();
+    ~dvbt_reference_signals_impl() override;
 
-    void forecast(int noutput_items, gr_vector_int& ninput_items_required);
+    void forecast(int noutput_items, gr_vector_int& ninput_items_required) override;
 
     int general_work(int noutput_items,
                      gr_vector_int& ninput_items,
                      gr_vector_const_void_star& input_items,
-                     gr_vector_void_star& output_items);
+                     gr_vector_void_star& output_items) override;
 };
 
 } // namespace dtv

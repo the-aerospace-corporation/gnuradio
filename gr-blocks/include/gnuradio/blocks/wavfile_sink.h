@@ -4,26 +4,15 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef INCLUDED_GR_WAVFILE_SINK_H
 #define INCLUDED_GR_WAVFILE_SINK_H
 
 #include <gnuradio/blocks/api.h>
+#include <gnuradio/blocks/wavfile.h>
 #include <gnuradio/sync_block.h>
 
 namespace gr {
@@ -41,18 +30,22 @@ class BLOCKS_API wavfile_sink : virtual public sync_block
 {
 public:
     // gr::blocks::wavfile_sink::sptr
-    typedef boost::shared_ptr<wavfile_sink> sptr;
+    typedef std::shared_ptr<wavfile_sink> sptr;
 
     /*
      * \param filename The .wav file to be opened
      * \param n_channels Number of channels (2 = stereo or I/Q output)
      * \param sample_rate Sample rate [S/s]
-     * \param bits_per_sample 16 or 8 bit, default is 16
+     * \param format Output format (WAV, FLAC, Ogg Vorbis, RF64)
+     * \param subformat Bits per sample
+     * \param append Append to existing file
      */
     static sptr make(const char* filename,
                      int n_channels,
                      unsigned int sample_rate,
-                     int bits_per_sample = 16);
+                     wavfile_format_t format,
+                     wavfile_subformat_t subformat,
+                     bool append = false);
 
     /*!
      * \brief Opens a new file and writes a WAV header. Thread-safe.
@@ -79,6 +72,13 @@ public:
      * is kept.
      */
     virtual void set_bits_per_sample(int bits_per_sample) = 0;
+
+    /*!
+     * \brief Enable appending to an existing file instead of
+     * creating it. This will not affect the WAV file currently
+     * opened (see set_sample_rate()).
+     */
+    virtual void set_append(bool append) = 0;
 };
 
 } /* namespace blocks */

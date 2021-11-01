@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef DOMAIN_DISPLAY_PLOT_H
@@ -36,7 +24,7 @@
 #include <qwt_scale_engine.h>
 #include <qwt_scale_widget.h>
 #include <qwt_symbol.h>
-#include <stdint.h>
+#include <cstdint>
 #include <cstdio>
 #include <vector>
 
@@ -126,9 +114,9 @@ class DisplayPlot : public QwtPlot
 
 public:
     DisplayPlot(int nplots, QWidget*);
-    virtual ~DisplayPlot();
+    ~DisplayPlot() override;
 
-    virtual void replot() = 0;
+    void replot() override = 0;
 
     const QColor getLineColor1() const;
     const QColor getLineColor2() const;

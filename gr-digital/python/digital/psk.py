@@ -3,34 +3,19 @@
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 #
 
 """
 PSK modulation and demodulation.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
 
 from math import pi, log
 from cmath import exp
 
-from . import digital_swig
+from . import digital_python
 from . import modulation_utils
 from .utils import mod_codes, gray_code
 from .generic_mod_demod import generic_mod, generic_demod
@@ -78,7 +63,7 @@ def psk_constellation(m=_def_constellation_points, mod_code=_def_mod_code,
     if post_diff_code is not None:
         inverse_post_diff_code = mod_codes.invert_code(post_diff_code)
         points = [points[x] for x in inverse_post_diff_code]
-    constellation = digital_swig.constellation_psk(points, pre_diff_code, m)
+    constellation = digital_python.constellation_psk(points, pre_diff_code, m)
     return constellation
 
 # /////////////////////////////////////////////////////////////////////////////

@@ -4,32 +4,25 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef THRIFT_SERVER_TEMPLATE_H
 #define THRIFT_SERVER_TEMPLATE_H
 
+#include <gnuradio/config.h>
 #include <gnuradio/logger.h>
 #include <gnuradio/prefs.h>
 #include <gnuradio/thrift_application_base.h>
 #include <iostream>
 
 #include "thrift/ControlPort.h"
+#ifdef THRIFT_HAS_THREADFACTORY_H
+#include <thrift/concurrency/ThreadFactory.h>
+#else
 #include <thrift/concurrency/PlatformThreadFactory.h>
+#endif
 #include <thrift/concurrency/ThreadManager.h>
 #include <thrift/server/TSimpleServer.h>
 #include <thrift/server/TThreadPoolServer.h>
@@ -50,11 +43,11 @@ protected:
     friend class thrift_application_base<TserverBase, TImplClass>;
 
 private:
-    boost::shared_ptr<TserverClass> d_handler;
-    boost::shared_ptr<thrift::TProcessor> d_processor;
-    boost::shared_ptr<thrift::transport::TServerTransport> d_serverTransport;
-    boost::shared_ptr<thrift::transport::TTransportFactory> d_transportFactory;
-    boost::shared_ptr<thrift::protocol::TProtocolFactory> d_protocolFactory;
+    std::shared_ptr<TserverClass> d_handler;
+    std::shared_ptr<thrift::TProcessor> d_processor;
+    std::shared_ptr<thrift::transport::TServerTransport> d_serverTransport;
+    std::shared_ptr<thrift::transport::TTransportFactory> d_transportFactory;
+    std::shared_ptr<thrift::protocol::TProtocolFactory> d_protocolFactory;
     /**
      * Custom TransportFactory that allows you to override the default Thrift buffer size
      * of 512 bytes.
@@ -71,10 +64,10 @@ private:
 
         virtual ~TBufferedTransportFactory() {}
 
-        virtual boost::shared_ptr<thrift::transport::TTransport>
-        getTransport(boost::shared_ptr<thrift::transport::TTransport> trans)
+        virtual std::shared_ptr<thrift::transport::TTransport>
+        getTransport(std::shared_ptr<thrift::transport::TTransport> trans)
         {
-            return boost::shared_ptr<thrift::transport::TTransport>(
+            return std::shared_ptr<thrift::transport::TTransport>(
                 new thrift::transport::TBufferedTransport(trans, bufferSize));
         }
 
@@ -133,12 +126,17 @@ thrift_server_template<TserverBase, TserverClass, TImplClass>::thrift_server_tem
                 d_processor, d_serverTransport, d_transportFactory, d_protocolFactory));
     } else {
         // std::cout << "Thrift Multi-threaded server : " << d_nthreads << std::endl;
-        boost::shared_ptr<thrift::concurrency::ThreadManager> threadManager(
+        std::shared_ptr<thrift::concurrency::ThreadManager> threadManager(
             thrift::concurrency::ThreadManager::newSimpleThreadManager(nthreads));
 
+#ifdef THRIFT_HAS_THREADFACTORY_H
+        threadManager->threadFactory(std::shared_ptr<thrift::concurrency::ThreadFactory>(
+            new thrift::concurrency::ThreadFactory()));
+#else
         threadManager->threadFactory(
-            boost::shared_ptr<thrift::concurrency::PlatformThreadFactory>(
+            std::shared_ptr<thrift::concurrency::PlatformThreadFactory>(
                 new thrift::concurrency::PlatformThreadFactory()));
+#endif
 
         threadManager->start();
 

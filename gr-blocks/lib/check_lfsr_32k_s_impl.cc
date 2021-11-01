@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -26,15 +14,17 @@
 
 #include "check_lfsr_32k_s_impl.h"
 #include <gnuradio/io_signature.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstdlib>
+
+static constexpr bool CHECK_LFSR_DEBUG = false;
 
 namespace gr {
 namespace blocks {
 
 check_lfsr_32k_s::sptr check_lfsr_32k_s::make()
 {
-    return gnuradio::get_initial_sptr(new check_lfsr_32k_s_impl());
+    return gnuradio::make_block_sptr<check_lfsr_32k_s_impl>();
 }
 
 check_lfsr_32k_s_impl::check_lfsr_32k_s_impl()
@@ -124,11 +114,11 @@ void check_lfsr_32k_s_impl::enter_SEARCHING()
     d_runlength = 0;
     d_index = 0; // reset LFSR to beginning
 
-    if (0)
-        fprintf(stdout,
-                "check_lfsr_32k: enter_SEARCHING at offset %8ld (0x%08lx)\n",
-                d_ntotal,
-                d_ntotal);
+    if (CHECK_LFSR_DEBUG)
+        GR_LOG_DEBUG(
+            d_debug_logger,
+            boost::format("check_lfsr_32k: enter_SEARCHING at offset %8ld (0x%08lx)") %
+                d_ntotal % d_ntotal);
 
     enter_MATCH0();
 }
@@ -148,25 +138,21 @@ void check_lfsr_32k_s_impl::enter_LOCKED()
 
     d_index = 3; // already matched first 3 items
 
-    if (0)
-        fprintf(stdout,
-                "check_lfsr_32k: enter_LOCKED at offset %8ld (0x%08lx)\n",
-                d_ntotal,
-                d_ntotal);
+    if (CHECK_LFSR_DEBUG)
+        GR_LOG_DEBUG(
+            d_debug_logger,
+            boost::format("check_lfsr_32k: enter_LOCKED at offset %8ld (0x%08lx)") %
+                d_ntotal % d_ntotal);
 }
 
 void check_lfsr_32k_s_impl::log_error(unsigned short expected, unsigned short actual)
 {
-    if (0)
-        fprintf(stdout,
-                "check_lfsr_32k: expected %5d (0x%04x) got %5d (0x%04x) offset %8ld "
-                "(0x%08lx)\n",
-                expected,
-                expected,
-                actual,
-                actual,
-                d_ntotal,
-                d_ntotal);
+    if (CHECK_LFSR_DEBUG)
+        GR_LOG_DEBUG(
+            d_debug_logger,
+            boost::format("check_lfsr_32k: expected %5d (0x%04x) got %5d (0x%04x) "
+                          "offset %8ld (0x%08lx)") %
+                expected % expected % actual % actual % d_ntotal % d_ntotal);
 }
 
 } /* namespace blocks */

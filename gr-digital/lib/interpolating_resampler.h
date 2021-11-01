@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this file; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef INCLUDED_DIGITAL_INTERPOLATING_RESAMPLER_H
@@ -29,6 +17,7 @@
 #include <gnuradio/filter/mmse_interp_differentiator_cc.h>
 #include <gnuradio/filter/mmse_interp_differentiator_ff.h>
 #include <gnuradio/gr_complex.h>
+#include <memory>
 #include <vector>
 
 namespace gr {
@@ -128,7 +117,7 @@ private:
 protected:
     interpolating_resampler(enum ir_type type, bool derivative = false);
 
-    bool d_derivative;
+    const bool d_derivative;
 
     float d_phase;
     float d_phase_wrapped;
@@ -171,13 +160,13 @@ public:
      * \param taps   Prototype filter for the polyphase filter bank. Only
      *               needed for some types.
      */
-    static interpolating_resampler_ccf*
+    static std::unique_ptr<interpolating_resampler_ccf>
     make(enum ir_type type,
          bool derivative = false,
          int nfilts = 32,
          const std::vector<float>& taps = std::vector<float>());
 
-    virtual ~interpolating_resampler_ccf(){};
+    ~interpolating_resampler_ccf() override{};
 
     /*!
      * \brief Return an interpolated sample.
@@ -233,13 +222,13 @@ public:
      * \param taps   Prototype filter for the polyphase filter bank. Only
      *               needed for some types.
      */
-    static interpolating_resampler_fff*
+    static std::unique_ptr<interpolating_resampler_fff>
     make(enum ir_type type,
          bool derivative = false,
          int nfilts = 32,
          const std::vector<float>& taps = std::vector<float>());
 
-    virtual ~interpolating_resampler_fff(){};
+    ~interpolating_resampler_fff() override{};
 
     /*!
      * \brief Return an interpolated sample.
@@ -285,31 +274,31 @@ public:
      *                   derivative samples as well.
      */
     interp_resampler_mmse_8tap_cc(bool derivative = false);
-    ~interp_resampler_mmse_8tap_cc();
+    ~interp_resampler_mmse_8tap_cc() override;
 
     /*!
      * \brief Return the number of taps used in any single FIR filtering
      * operation
      */
-    unsigned int ntaps() const;
+    unsigned int ntaps() const override;
 
     /*!
      * \brief Return an interpolated sample.
      * \param input Array of input samples of length ntaps().
      * \param mu Intersample phase in the range [0.0, 1.0] samples.
      */
-    gr_complex interpolate(const gr_complex input[], float mu) const;
+    gr_complex interpolate(const gr_complex input[], float mu) const override;
 
     /*!
      * \brief Return an interpolated derivative sample.
      * \param input Array of input samples of length ntaps().
      * \param mu Intersample phase in the range [0.0, 1.0] samples.
      */
-    gr_complex differentiate(const gr_complex input[], float mu) const;
+    gr_complex differentiate(const gr_complex input[], float mu) const override;
 
 private:
-    filter::mmse_fir_interpolator_cc* d_interp;
-    filter::mmse_interp_differentiator_cc* d_interp_diff;
+    filter::mmse_fir_interpolator_cc d_interp;
+    std::unique_ptr<filter::mmse_interp_differentiator_cc> d_interp_diff;
 };
 
 /*!
@@ -333,31 +322,31 @@ public:
      *                   derivative samples as well.
      */
     interp_resampler_mmse_8tap_ff(bool derivative = false);
-    ~interp_resampler_mmse_8tap_ff();
+    ~interp_resampler_mmse_8tap_ff() override;
 
     /*!
      * \brief Return the number of taps used in any single FIR filtering
      * operation
      */
-    unsigned int ntaps() const;
+    unsigned int ntaps() const override;
 
     /*!
      * \brief Return an interpolated sample.
      * \param input Array of input samples of length ntaps().
      * \param mu Intersample phase in the range [0.0, 1.0] samples.
      */
-    float interpolate(const float input[], float mu) const;
+    float interpolate(const float input[], float mu) const override;
 
     /*!
      * \brief Return an interpolated derivative sample.
      * \param input Array of input samples of length ntaps().
      * \param mu Intersample phase in the range [0.0, 1.0] samples.
      */
-    float differentiate(const float input[], float mu) const;
+    float differentiate(const float input[], float mu) const override;
 
 private:
-    filter::mmse_fir_interpolator_ff* d_interp;
-    filter::mmse_interp_differentiator_ff* d_interp_diff;
+    filter::mmse_fir_interpolator_ff d_interp;
+    std::unique_ptr<filter::mmse_interp_differentiator_ff> d_interp_diff;
 };
 
 /*************************************************************************/
@@ -387,32 +376,32 @@ public:
      *                   derivative samples as well.
      */
     interp_resampler_pfb_no_mf_cc(bool derivative = false, int nfilts = 128);
-    ~interp_resampler_pfb_no_mf_cc();
+    ~interp_resampler_pfb_no_mf_cc() override;
 
     /*!
      * \brief Return the number of taps used in any single FIR filtering
      * operation
      */
-    unsigned int ntaps() const;
+    unsigned int ntaps() const override;
 
     /*!
      * \brief Return an interpolated sample.
      * \param input Array of input samples of length ntaps().
      * \param mu Intersample phase in the range [0.0, 1.0] samples.
      */
-    gr_complex interpolate(const gr_complex input[], float mu) const;
+    gr_complex interpolate(const gr_complex input[], float mu) const override;
 
     /*!
      * \brief Return an interpolated derivative sample.
      * \param input Array of input samples of length ntaps().
      * \param mu Intersample phase in the range [0.0, 1.0] samples.
      */
-    gr_complex differentiate(const gr_complex input[], float mu) const;
+    gr_complex differentiate(const gr_complex input[], float mu) const override;
 
 private:
     int d_nfilters;
-    std::vector<filter::kernel::fir_filter_ccf*> d_filters;
-    std::vector<filter::kernel::fir_filter_ccf*> d_diff_filters;
+    std::vector<filter::kernel::fir_filter_ccf> d_filters;
+    std::vector<filter::kernel::fir_filter_ccf> d_diff_filters;
 };
 
 /*!
@@ -440,32 +429,32 @@ public:
      *                   derivative samples as well.
      */
     interp_resampler_pfb_no_mf_ff(bool derivative = false, int nfilts = 128);
-    ~interp_resampler_pfb_no_mf_ff();
+    ~interp_resampler_pfb_no_mf_ff() override;
 
     /*!
      * \brief Return the number of taps used in any single FIR filtering
      * operation
      */
-    unsigned int ntaps() const;
+    unsigned int ntaps() const override;
 
     /*!
      * \brief Return an interpolated sample.
      * \param input Array of input samples of length ntaps().
      * \param mu Intersample phase in the range [0.0, 1.0] samples.
      */
-    float interpolate(const float input[], float mu) const;
+    float interpolate(const float input[], float mu) const override;
 
     /*!
      * \brief Return an interpolated derivative sample.
      * \param input Array of input samples of length ntaps().
      * \param mu Intersample phase in the range [0.0, 1.0] samples.
      */
-    float differentiate(const float input[], float mu) const;
+    float differentiate(const float input[], float mu) const override;
 
 private:
     int d_nfilters;
-    std::vector<filter::kernel::fir_filter_fff*> d_filters;
-    std::vector<filter::kernel::fir_filter_fff*> d_diff_filters;
+    std::vector<filter::kernel::fir_filter_fff> d_filters;
+    std::vector<filter::kernel::fir_filter_fff> d_diff_filters;
 };
 
 /*************************************************************************/
@@ -497,33 +486,33 @@ public:
     interp_resampler_pfb_mf_ccf(const std::vector<float>& taps,
                                 int nfilts = 32,
                                 bool derivative = false);
-    ~interp_resampler_pfb_mf_ccf();
+    ~interp_resampler_pfb_mf_ccf() override;
 
     /*!
      * \brief Return the number of taps used in any single FIR filtering
      * operation
      */
-    unsigned int ntaps() const;
+    unsigned int ntaps() const override;
 
     /*!
      * \brief Return an interpolated sample.
      * \param input Array of input samples of length ntaps().
      * \param mu Intersample phase in the range [0.0, 1.0] samples.
      */
-    gr_complex interpolate(const gr_complex input[], float mu) const;
+    gr_complex interpolate(const gr_complex input[], float mu) const override;
 
     /*!
      * \brief Return an interpolated derivative sample.
      * \param input Array of input samples of length ntaps().
      * \param mu Intersample phase in the range [0.0, 1.0] samples.
      */
-    gr_complex differentiate(const gr_complex input[], float mu) const;
+    gr_complex differentiate(const gr_complex input[], float mu) const override;
 
 private:
     int d_nfilters;
     const unsigned int d_taps_per_filter;
-    std::vector<filter::kernel::fir_filter_ccf*> d_filters;
-    std::vector<filter::kernel::fir_filter_ccf*> d_diff_filters;
+    std::vector<filter::kernel::fir_filter_ccf> d_filters;
+    std::vector<filter::kernel::fir_filter_ccf> d_diff_filters;
 
     std::vector<std::vector<float>> d_taps;
     std::vector<std::vector<float>> d_diff_taps;
@@ -556,33 +545,33 @@ public:
     interp_resampler_pfb_mf_fff(const std::vector<float>& taps,
                                 int nfilts = 32,
                                 bool derivative = false);
-    ~interp_resampler_pfb_mf_fff();
+    ~interp_resampler_pfb_mf_fff() override;
 
     /*!
      * \brief Return the number of taps used in any single FIR filtering
      * operation
      */
-    unsigned int ntaps() const;
+    unsigned int ntaps() const override;
 
     /*!
      * \brief Return an interpolated sample.
      * \param input Array of input samples of length ntaps().
      * \param mu Intersample phase in the range [0.0, 1.0] samples.
      */
-    float interpolate(const float input[], float mu) const;
+    float interpolate(const float input[], float mu) const override;
 
     /*!
      * \brief Return an interpolated derivative sample.
      * \param input Array of input samples of length ntaps().
      * \param mu Intersample phase in the range [0.0, 1.0] samples.
      */
-    float differentiate(const float input[], float mu) const;
+    float differentiate(const float input[], float mu) const override;
 
 private:
     int d_nfilters;
     const unsigned int d_taps_per_filter;
-    std::vector<filter::kernel::fir_filter_fff*> d_filters;
-    std::vector<filter::kernel::fir_filter_fff*> d_diff_filters;
+    std::vector<filter::kernel::fir_filter_fff> d_filters;
+    std::vector<filter::kernel::fir_filter_fff> d_diff_filters;
 
     std::vector<std::vector<float>> d_taps;
     std::vector<std::vector<float>> d_diff_taps;

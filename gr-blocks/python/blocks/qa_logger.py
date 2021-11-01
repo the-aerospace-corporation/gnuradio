@@ -4,24 +4,13 @@
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 #
 
 
 from gnuradio import gr, gr_unittest, blocks
+
 
 class test_logger (gr_unittest.TestCase):
 
@@ -57,9 +46,9 @@ class test_logger (gr_unittest.TestCase):
         # Make sure exception is throw on bogus data
         self.assertRaises(RuntimeError, ns.set_log_level, "11")
 
-
     def test_log_level_for_tb(self):
-        # Test the python API for getting and setting log levels for a top_block
+        # Test the python API for getting and setting log levels for a
+        # top_block
         nsrc = blocks.null_source(4)
         nsnk = blocks.null_sink(4)
         # Set all log levels to a known state
@@ -76,10 +65,12 @@ class test_logger (gr_unittest.TestCase):
         self.assertEqual(nsnk.log_level(), "alert")
 
     def test_log_level_for_hier_block(self):
-        # Test the python API for getting and setting log levels for hier blocks
+        # Test the python API for getting and setting log levels for hier
+        # blocks
         nsrc = blocks.null_source(4)
         nsnk = blocks.null_sink(4)
-        b = blocks.stream_to_vector_decimator(4, 1, 1, 1) # just a random hier block that exists
+        b = blocks.stream_to_vector_decimator(
+            4, 1, 1, 1)  # just a random hier block that exists
         tb = gr.top_block()
         tb.connect(nsrc, b, nsnk)
         tb.set_log_level("debug")
@@ -93,5 +84,6 @@ class test_logger (gr_unittest.TestCase):
         self.assertEqual(nsnk.log_level(), "alert")
         self.assertEqual(b.one_in_n.log_level(), "alert")
 
+
 if __name__ == '__main__':
-    gr_unittest.run(test_logger, "test_logger.xml")
+    gr_unittest.run(test_logger)

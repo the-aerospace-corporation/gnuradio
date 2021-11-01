@@ -20,13 +20,13 @@ python_template = Template(filename=PYTHON_TEMPLATE)
 
 class TopBlockGenerator(object):
 
-    def __init__(self, flow_graph, file_path):
+    def __init__(self, flow_graph, output_dir):
         """
         Initialize the top block generator object.
 
         Args:
             flow_graph: the flow graph object
-            file_path: the path to write the file to
+            output_dir: the path for written files
         """
 
         self._flow_graph = FlowGraphProxy(flow_graph)
@@ -35,11 +35,11 @@ class TopBlockGenerator(object):
         self._mode = TOP_BLOCK_FILE_MODE
         # Handle the case where the directory is read-only
         # In this case, use the system's temp directory
-        if not os.access(file_path, os.W_OK):
-            file_path = tempfile.gettempdir()
+        if not os.access(output_dir, os.W_OK):
+            output_dir = tempfile.gettempdir()
         filename = self._flow_graph.get_option('id') + '.py'
-        self.file_path = os.path.join(file_path, filename)
-        self._dirname = file_path
+        self.file_path = os.path.join(output_dir, filename)
+        self.output_dir = output_dir
 
     def _warnings(self):
         throttling_blocks = [b for b in self._flow_graph.get_enabled_blocks()
@@ -103,14 +103,15 @@ class TopBlockGenerator(object):
         monitors = fg.get_monitors()
 
         for block in fg.iter_enabled_blocks():
-            key = block.key
-            file_path = os.path.join(self._dirname, block.name + '.py')
-            if key == 'epy_block':
+            if block.key == 'epy_block':
                 src = block.params['_source_code'].get_value()
-                output.append((file_path, src))
-            elif key == 'epy_module':
+            elif block.key == 'epy_module':
                 src = block.params['source_code'].get_value()
-                output.append((file_path, src))
+            else:
+                continue
+
+            file_path = os.path.join(self.output_dir, block.module_name + ".py")
+            output.append((file_path, src))
 
         self.namespace = {
             'flow_graph': fg,
@@ -118,7 +119,8 @@ class TopBlockGenerator(object):
             'parameters': parameters,
             'monitors': monitors,
             'generate_options': self._generate_options,
-            'version': platform.config.version
+            'version': platform.config.version,
+            'catch_exceptions': fg.get_option('catch_exceptions')
         }
         flow_graph_code = python_template.render(
             title=title,
@@ -190,7 +192,7 @@ class TopBlockGenerator(object):
 
         blocks = [
             b for b in fg.blocks
-            if b.enabled and not (b.get_bypassed() or b.is_import or b in parameters or b.key == 'options')
+            if b.enabled and not (b.get_bypassed() or b.is_import or b.is_snippet or b in parameters or b.key == 'options')
         ]
 
         blocks = expr_utils.sort_objects(blocks, operator.attrgetter('name'), _get_block_sort_text)
@@ -307,19 +309,19 @@ class TopBlockGenerator(object):
                 porta = con.source_port
                 portb = con.sink_port
                 fg = self._flow_graph
-                             
+
                 if porta.dtype == 'bus' and portb.dtype == 'bus':
                     # which bus port is this relative to the bus structure
                     if len(porta.bus_structure) == len(portb.bus_structure):
-                        for port_num_a,port_num_b in zip(porta.bus_structure,portb.bus_structure):
+                        for port_num_a, port_num_b in zip(porta.bus_structure, portb.bus_structure):
                             hidden_porta = porta.parent.sources[port_num_a]
                             hidden_portb = portb.parent.sinks[port_num_b]
                             connection = fg.parent_platform.Connection(
                                 parent=self, source=hidden_porta, sink=hidden_portb)
                             code = template.render(make_port_sig=make_port_sig, source=hidden_porta, sink=hidden_portb)
                             rendered.append(code)
-                            
 
-            
+
+
 
         return rendered

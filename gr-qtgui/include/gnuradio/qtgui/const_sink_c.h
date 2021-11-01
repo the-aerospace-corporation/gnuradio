@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef INCLUDED_QTGUI_CONST_SINK_C_H
@@ -60,7 +48,7 @@ class QTGUI_API const_sink_c : virtual public sync_block
 {
 public:
     // gr::qtgui::const_sink_c::sptr
-    typedef boost::shared_ptr<const_sink_c> sptr;
+    typedef std::shared_ptr<const_sink_c> sptr;
 
     /*!
      * \brief Build a constellation plot sink.
@@ -75,12 +63,6 @@ public:
 
     virtual void exec_() = 0;
     virtual QWidget* qwidget() = 0;
-
-#ifdef ENABLE_PYTHON
-    virtual PyObject* pyqwidget() = 0;
-#else
-    virtual void* pyqwidget() = 0;
-#endif
 
     virtual void set_y_axis(double min, double max) = 0;
     virtual void set_x_axis(double min, double max) = 0;
@@ -149,7 +131,16 @@ public:
     virtual int nsamps() const = 0;
     virtual void reset() = 0;
 
+    // Disallow copy/move because of the pointer.
+    const_sink_c(const const_sink_c&) = delete;
+    const_sink_c& operator=(const const_sink_c&) = delete;
+    const_sink_c(const_sink_c&&) = delete;
+    const_sink_c& operator=(const_sink_c&&) = delete;
+
     QApplication* d_qApplication;
+
+protected:
+    const_sink_c() = default;
 };
 
 } /* namespace qtgui */

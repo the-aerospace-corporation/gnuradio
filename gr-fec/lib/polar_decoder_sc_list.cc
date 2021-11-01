@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -28,9 +16,9 @@
 #include <gnuradio/fec/polar_decoder_sc_list.h>
 #include <gnuradio/io_signature.h>
 #include <volk/volk.h>
-
 #include <algorithm>
 #include <cmath>
+#include <memory>
 
 namespace gr {
 namespace fec {
@@ -40,7 +28,7 @@ generic_decoder::sptr polar_decoder_sc_list::make(int max_list_size,
                                                   int block_size,
                                                   int num_info_bits,
                                                   std::vector<int> frozen_bit_positions,
-                                                  std::vector<char> frozen_bit_values)
+                                                  std::vector<uint8_t> frozen_bit_values)
 {
     return generic_decoder::sptr(new polar_decoder_sc_list(max_list_size,
                                                            block_size,
@@ -53,14 +41,14 @@ polar_decoder_sc_list::polar_decoder_sc_list(int max_list_size,
                                              int block_size,
                                              int num_info_bits,
                                              std::vector<int> frozen_bit_positions,
-                                             std::vector<char> frozen_bit_values)
+                                             std::vector<uint8_t> frozen_bit_values)
     : polar_decoder_common(
-          block_size, num_info_bits, frozen_bit_positions, frozen_bit_values)
+          block_size, num_info_bits, frozen_bit_positions, frozen_bit_values),
+      d_scl(std::make_unique<polar::scl_list>(max_list_size, block_size, block_power()))
 {
-    d_scl = new polar::scl_list(max_list_size, block_size, block_power());
 }
 
-polar_decoder_sc_list::~polar_decoder_sc_list() { delete d_scl; }
+polar_decoder_sc_list::~polar_decoder_sc_list() {}
 
 void polar_decoder_sc_list::generic_work(void* in_buffer, void* out_buffer)
 {

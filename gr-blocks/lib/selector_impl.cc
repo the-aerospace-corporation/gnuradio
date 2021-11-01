@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -26,7 +14,7 @@
 
 #include "selector_impl.h"
 #include <gnuradio/io_signature.h>
-#include <string.h>
+#include <cstring>
 #include <stdexcept>
 
 namespace gr {
@@ -35,8 +23,7 @@ namespace blocks {
 selector::sptr
 selector::make(size_t itemsize, unsigned int input_index, unsigned int output_index)
 {
-    return gnuradio::get_initial_sptr(
-        new selector_impl(itemsize, input_index, output_index));
+    return gnuradio::make_block_sptr<selector_impl>(itemsize, input_index, output_index);
 }
 
 selector_impl::selector_impl(size_t itemsize,
@@ -55,7 +42,14 @@ selector_impl::selector_impl(size_t itemsize,
     message_port_register_in(pmt::mp("en"));
     set_msg_handler(pmt::mp("en"), [this](pmt::pmt_t msg) { this->handle_enable(msg); });
 
-    // TODO: add message ports for input_index and output_index
+    message_port_register_in(pmt::mp("iindex"));
+    set_msg_handler(pmt::mp("iindex"),
+                    [this](pmt::pmt_t msg) { this->handle_msg_input_index(msg); });
+    message_port_register_in(pmt::mp("oindex"));
+    set_msg_handler(pmt::mp("oindex"),
+                    [this](pmt::pmt_t msg) { this->handle_msg_output_index(msg); });
+
+    set_tag_propagation_policy(TPP_CUSTOM);
 }
 
 selector_impl::~selector_impl() {}
@@ -78,6 +72,44 @@ void selector_impl::set_output_index(unsigned int output_index)
         throw std::out_of_range("output_index must be < noutputs");
 }
 
+void selector_impl::handle_msg_input_index(pmt::pmt_t msg)
+{
+    pmt::pmt_t data = pmt::cdr(msg);
+
+    if (pmt::is_integer(data)) {
+        const unsigned int new_port = pmt::to_long(data);
+
+        if (new_port < d_num_inputs)
+            set_input_index(new_port);
+        else
+            GR_LOG_WARN(
+                d_logger,
+                "handle_msg_input_index: port index greater than available ports.");
+    } else
+        GR_LOG_WARN(
+            d_logger,
+            "handle_msg_input_index: Non-PMT type received, expecting integer PMT");
+}
+
+void selector_impl::handle_msg_output_index(pmt::pmt_t msg)
+{
+    pmt::pmt_t data = pmt::cdr(msg);
+
+    if (pmt::is_integer(data)) {
+        const unsigned int new_port = pmt::to_long(data);
+        if (new_port < d_num_outputs)
+            set_output_index(new_port);
+        else
+            GR_LOG_WARN(
+                d_logger,
+                "handle_msg_output_index: port index greater than available ports.");
+    } else
+        GR_LOG_WARN(
+            d_logger,
+            "handle_msg_output_index: Non-PMT type received, expecting integer PMT");
+}
+
+
 void selector_impl::handle_enable(pmt::pmt_t msg)
 {
     if (pmt::is_bool(msg)) {
@@ -94,8 +126,9 @@ void selector_impl::forecast(int noutput_items, gr_vector_int& ninput_items_requ
 {
     unsigned ninputs = ninput_items_required.size();
     for (unsigned i = 0; i < ninputs; i++) {
-        ninput_items_required[i] = noutput_items;
+        ninput_items_required[i] = 0;
     }
+    ninput_items_required[d_input_index] = noutput_items;
 }
 
 bool selector_impl::check_topology(int ninputs, int noutputs)
@@ -119,8 +152,20 @@ int selector_impl::general_work(int noutput_items,
     const uint8_t** in = (const uint8_t**)&input_items[0];
     uint8_t** out = (uint8_t**)&output_items[0];
 
+
     gr::thread::scoped_lock l(d_mutex);
     if (d_enabled) {
+        auto nread = nitems_read(d_input_index);
+        auto nwritten = nitems_written(d_output_index);
+
+        std::vector<tag_t> tags;
+        get_tags_in_window(tags, d_input_index, 0, noutput_items);
+
+        for (auto tag : tags) {
+            tag.offset -= (nread - nwritten);
+            add_item_tag(d_output_index, tag);
+        }
+
         std::copy(in[d_input_index],
                   in[d_input_index] + noutput_items * d_itemsize,
                   out[d_output_index]);

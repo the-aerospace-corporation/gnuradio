@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -33,7 +21,7 @@ namespace blocks {
 patterned_interleaver::sptr patterned_interleaver::make(size_t itemsize,
                                                         std::vector<int> pattern)
 {
-    return gnuradio::get_initial_sptr(new patterned_interleaver_impl(itemsize, pattern));
+    return gnuradio::make_block_sptr<patterned_interleaver_impl>(itemsize, pattern);
 }
 
 patterned_interleaver_impl::patterned_interleaver_impl(size_t itemsize,
@@ -46,7 +34,7 @@ patterned_interleaver_impl::patterned_interleaver_impl(size_t itemsize,
       d_counts(pattern_max(pattern) + 1, 0),
       d_itemsize(itemsize)
 {
-    BOOST_FOREACH (int i, d_pattern) {
+    for (const auto& i : d_pattern) {
         d_counts[i]++;
     }
     set_output_multiple(d_pattern.size());

@@ -2,20 +2,8 @@
 /*
  * Copyright 2015,2016 Free Software Foundation, Inc.
  *
- * This is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -515,8 +503,8 @@ dvbt_viterbi_decoder::sptr dvbt_viterbi_decoder::make(dvb_constellation_t conste
                                                       dvb_code_rate_t coderate,
                                                       int bsize)
 {
-    return gnuradio::get_initial_sptr(
-        new dvbt_viterbi_decoder_impl(constellation, hierarchy, coderate, bsize));
+    return gnuradio::make_block_sptr<dvbt_viterbi_decoder_impl>(
+        constellation, hierarchy, coderate, bsize);
 }
 
 /*
@@ -530,17 +518,14 @@ dvbt_viterbi_decoder_impl::dvbt_viterbi_decoder_impl(dvb_constellation_t constel
             io_signature::make(1, 1, sizeof(unsigned char)),
             io_signature::make(1, 1, sizeof(unsigned char))),
       config(constellation, hierarchy, coderate, coderate),
+      d_k(config.d_cr_k),
+      d_n(config.d_cr_n),
+      d_m(config.d_m),
       d_bsize(bsize),
-      d_init(0),
-      store_pos(0)
+      d_nsymbols(d_bsize * d_n / d_m),
+      d_nbits(2 * d_k * d_bsize),
+      d_inbits(d_nbits)
 {
-    // Determine k - input of encoder
-    d_k = config.d_cr_k;
-    // Determine n - output of encoder
-    d_n = config.d_cr_n;
-    // Determine m - constellation symbol size
-    d_m = config.d_m;
-    // Determine puncturing vector and traceback
     if (config.d_code_rate_HP == C1_2) {
         d_puncture = d_puncture_1_2;
         d_ntraceback = 5;
@@ -571,25 +556,6 @@ dvbt_viterbi_decoder_impl::dvbt_viterbi_decoder_impl(dvb_constellation_t constel
     assert((d_bsize * d_n) % d_m == 0);
     set_output_multiple(d_bsize * d_k / 8);
 
-    /*
-     * Calculate process variables:
-     * Number of symbols (d_m bits) in all blocks
-     * It is also the number of input bytes since
-     * one byte always contains just one symbol.
-     */
-    d_nsymbols = d_bsize * d_n / d_m;
-    // Number of bits after depuncturing a block (before decoding)
-    d_nbits = 2 * d_k * d_bsize;
-    // Number of output bytes after decoding
-    d_nout = d_nbits / 2 / 8;
-
-    // Allocate the buffer for the bits
-    d_inbits = new (std::nothrow) unsigned char[d_nbits];
-    if (d_inbits == NULL) {
-        GR_LOG_FATAL(d_logger, "Viterbi Decoder, cannot allocate memory for d_inbits.");
-        throw std::bad_alloc();
-    }
-
     mettab[0][0] = 1;
     mettab[0][1] = 0;
     mettab[1][0] = 0;
@@ -605,7 +571,7 @@ dvbt_viterbi_decoder_impl::dvbt_viterbi_decoder_impl(dvb_constellation_t constel
 /*
  * Our virtual destructor.
  */
-dvbt_viterbi_decoder_impl::~dvbt_viterbi_decoder_impl() { delete[] d_inbits; }
+dvbt_viterbi_decoder_impl::~dvbt_viterbi_decoder_impl() {}
 
 void dvbt_viterbi_decoder_impl::forecast(int noutput_items,
                                          gr_vector_int& ninput_items_required)

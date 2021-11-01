@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -26,14 +14,14 @@
 
 #include "delay_impl.h"
 #include <gnuradio/io_signature.h>
-#include <string.h>
+#include <cstring>
 
 namespace gr {
 namespace blocks {
 
 delay::sptr delay::make(size_t itemsize, int delay)
 {
-    return gnuradio::get_initial_sptr(new delay_impl(itemsize, delay));
+    return gnuradio::make_block_sptr<delay_impl>(itemsize, delay);
 }
 
 delay_impl::delay_impl(size_t itemsize, int delay)
@@ -47,6 +35,9 @@ delay_impl::delay_impl(size_t itemsize, int delay)
     }
     set_dly(delay);
     d_delta = 0;
+
+    message_port_register_in(pmt::mp("dly"));
+    set_msg_handler(pmt::mp("dly"), [this](pmt::pmt_t msg) { this->handle_msg(msg); });
 }
 
 delay_impl::~delay_impl() {}
@@ -65,11 +56,30 @@ void delay_impl::set_dly(int d)
     // protects from quickly-repeated calls to this function that
     // would end with d_delta=0.
     if (d != dly()) {
-        gr::thread::scoped_lock l(d_mutex_delay);
+        gr::thread::scoped_lock l(d_setlock);
         int old = dly();
         set_history(d + 1);
         declare_sample_delay(history() - 1);
         d_delta += dly() - old;
+    }
+}
+
+void delay_impl::handle_msg(pmt::pmt_t msg)
+{
+    if (pmt::is_number(msg)) {
+        int value = pmt::to_long(msg);
+        set_dly(value);
+    } else {
+        if (pmt::is_pair(msg)) {
+            pmt::pmt_t data = pmt::cdr(msg);
+            if (pmt::is_number(data)) {
+                int value = pmt::to_long(data);
+                set_dly(value);
+            } else
+                GR_LOG_WARN(
+                    d_logger,
+                    "Delay message must be a number or a number pair.  Ignoring value.");
+        }
     }
 }
 
@@ -78,7 +88,7 @@ int delay_impl::general_work(int noutput_items,
                              gr_vector_const_void_star& input_items,
                              gr_vector_void_star& output_items)
 {
-    gr::thread::scoped_lock l(d_mutex_delay);
+    gr::thread::scoped_lock l(d_setlock);
     assert(input_items.size() == output_items.size());
 
     const char* iptr;

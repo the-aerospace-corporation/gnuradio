@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -39,9 +27,8 @@ freq_xlating_fir_filter<IN_T, OUT_T, TAP_T>::make(int decimation,
                                                   double center_freq,
                                                   double sampling_freq)
 {
-    return gnuradio::get_initial_sptr(
-        new freq_xlating_fir_filter_impl<IN_T, OUT_T, TAP_T>(
-            decimation, taps, center_freq, sampling_freq));
+    return gnuradio::make_block_sptr<freq_xlating_fir_filter_impl<IN_T, OUT_T, TAP_T>>(
+        decimation, taps, center_freq, sampling_freq);
 }
 
 template <class IN_T, class OUT_T, class TAP_T>
@@ -55,36 +42,38 @@ freq_xlating_fir_filter_impl<IN_T, OUT_T, TAP_T>::freq_xlating_fir_filter_impl(
                      io_signature::make(1, 1, sizeof(OUT_T)),
                      decimation),
       d_proto_taps(taps),
+      d_composite_fir({}),
       d_center_freq(center_freq),
+      d_prev_center_freq(0),
       d_sampling_freq(sampling_freq),
-      d_updated(false)
+      d_updated(false),
+      d_decim(decimation)
 {
-    std::vector<gr_complex> dummy_taps;
-    d_composite_fir =
-        new kernel::fir_filter<IN_T, OUT_T, gr_complex>(decimation, dummy_taps);
-
     this->set_history(this->d_proto_taps.size());
     this->build_composite_fir();
 
     this->message_port_register_in(pmt::mp("freq"));
-    this->set_msg_handler(
-        pmt::mp("freq"),
-        boost::bind(
-            &freq_xlating_fir_filter_impl<IN_T, OUT_T, TAP_T>::handle_set_center_freq,
-            this,
-            _1));
-}
-
-template <class IN_T, class OUT_T, class TAP_T>
-freq_xlating_fir_filter_impl<IN_T, OUT_T, TAP_T>::~freq_xlating_fir_filter_impl()
-{
-    delete d_composite_fir;
+    this->set_msg_handler(pmt::mp("freq"),
+                          [this](pmt::pmt_t msg) { this->handle_set_center_freq(msg); });
 }
 
 template <class IN_T, class OUT_T, class TAP_T>
 void freq_xlating_fir_filter_impl<IN_T, OUT_T, TAP_T>::build_composite_fir()
 {
     std::vector<gr_complex> ctaps(d_proto_taps.size());
+
+    // In order to avoid phase jumps during a retune, adjust the phase
+    // of the rotator. Phase delay of a symmetric, odd length FIR is (N-1)/2.
+    // Scale phase delay by delta omega to get the difference in phase response
+    // caused by retuning. Subtract from the current rotator phase.
+
+    gr_complex phase = d_r.phase();
+    phase /= std::abs(phase);
+    float delta_freq = d_center_freq - d_prev_center_freq;
+    float delta_omega = 2.0 * GR_M_PI * delta_freq / d_sampling_freq;
+    float delta_phase = -delta_omega * (d_proto_taps.size() - 1) / 2.0;
+    phase *= exp(gr_complex(0, delta_phase));
+    d_r.set_phase(phase);
 
     // The basic principle of this block is to perform:
     //    x(t) -> (mult by -fwT0) -> LPF -> decim -> y(t)
@@ -99,8 +88,9 @@ void freq_xlating_fir_filter_impl<IN_T, OUT_T, TAP_T>::build_composite_fir()
         ctaps[i] = d_proto_taps[i] * exp(gr_complex(0, i * fwT0));
     }
 
-    d_composite_fir->set_taps(ctaps);
+    d_composite_fir.set_taps(ctaps);
     d_r.set_phase_incr(exp(gr_complex(0, -fwT0 * this->decimation())));
+    d_prev_center_freq = d_center_freq;
 }
 
 template <class IN_T, class OUT_T, class TAP_T>
@@ -175,9 +165,15 @@ int freq_xlating_fir_filter_impl<IN_T, OUT_T, TAP_T>::work(
 
     unsigned j = 0;
     for (int i = 0; i < noutput_items; i++) {
-        out[i] = d_r.rotate(d_composite_fir->filter(&in[j]));
-        j += this->decimation();
+        out[i] = d_composite_fir.filter(&in[j]);
+        j += d_decim;
     }
+
+    // re-use of the same buffer as the input and output is safe for many volk functions
+    // and faster than creating local temporary memory in the work function and doing an
+    // extra copy. So out is used below as both the in and out params to the rotate
+    // function.
+    d_r.rotateN(out, out, noutput_items);
 
     return noutput_items;
 }

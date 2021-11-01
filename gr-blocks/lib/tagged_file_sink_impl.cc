@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -26,10 +14,11 @@
 
 #include "tagged_file_sink_impl.h"
 #include <gnuradio/io_signature.h>
-#include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <boost/format.hpp>
+#include <cerrno>
 #include <iostream>
 #include <stdexcept>
 
@@ -55,7 +44,7 @@ namespace blocks {
 
 tagged_file_sink::sptr tagged_file_sink::make(size_t itemsize, double samp_rate)
 {
-    return gnuradio::get_initial_sptr(new tagged_file_sink_impl(itemsize, samp_rate));
+    return gnuradio::make_block_sptr<tagged_file_sink_impl>(itemsize, samp_rate);
 }
 
 tagged_file_sink_impl::tagged_file_sink_impl(size_t itemsize, double samp_rate)
@@ -63,12 +52,13 @@ tagged_file_sink_impl::tagged_file_sink_impl(size_t itemsize, double samp_rate)
                  io_signature::make(1, 1, itemsize),
                  io_signature::make(0, 0, 0)),
       d_itemsize(itemsize),
+      d_sample_rate(samp_rate),
+      d_state(state_t::NOT_IN_BURST),
+      d_handle(nullptr),
       d_n(0),
-      d_sample_rate(samp_rate)
+      d_last_N(0),
+      d_timeval(0)
 {
-    d_state = NOT_IN_BURST;
-    d_last_N = 0;
-    d_timeval = 0;
 }
 
 tagged_file_sink_impl::~tagged_file_sink_impl() {}
@@ -86,9 +76,6 @@ int tagged_file_sink_impl::work(int noutput_items,
 
     std::vector<tag_t> all_tags;
     get_tags_in_range(all_tags, 0, start_N, end_N);
-
-    std::sort(all_tags.begin(), all_tags.end(), tag_t::offset_compare);
-
     std::vector<tag_t>::iterator vitr = all_tags.begin();
 
     // Look for a time tag and initialize d_timeval.
@@ -107,7 +94,7 @@ int tagged_file_sink_impl::work(int noutput_items,
 
     int idx = 0, idx_stop = 0;
     while (idx < noutput_items) {
-        if (d_state == NOT_IN_BURST) {
+        if (d_state == state_t::NOT_IN_BURST) {
             while (vitr != all_tags.end()) {
                 if ((pmt::eqv((*vitr).key, bkey)) && pmt::is_true((*vitr).value)) {
 
@@ -164,26 +151,30 @@ int tagged_file_sink_impl::work(int noutput_items,
                                      O_WRONLY | O_CREAT | O_TRUNC | OUR_O_LARGEFILE |
                                          OUR_O_BINARY,
                                      0664)) < 0) {
-                        perror(filename.str().c_str());
+                        GR_LOG_ERROR(d_logger,
+                                     boost::format("::open %s: %s") % filename.str() %
+                                         strerror(errno));
                         return -1;
                     }
 
                     // FIXME:
                     // if((d_handle = fdopen (fd, d_is_binary ? "wb" : "w")) == NULL) {
                     if ((d_handle = fdopen(fd, "wb")) == NULL) {
-                        perror(filename.str().c_str());
+                        GR_LOG_ERROR(d_logger,
+                                     boost::format("fdopen %s: %s") % filename.str() %
+                                         strerror(errno));
                         ::close(fd); // don't leak file descriptor if fdopen fails.
                     }
 
                     // std::cout << "Created new file: " << filename.str() << std::endl;
 
-                    d_state = IN_BURST;
+                    d_state = state_t::IN_BURST;
                     break;
                 }
 
                 vitr++;
             }
-            if (d_state == NOT_IN_BURST)
+            if (d_state == state_t::NOT_IN_BURST)
                 return noutput_items;
         } else { // In burst
             while (vitr != all_tags.end()) {
@@ -198,11 +189,13 @@ int tagged_file_sink_impl::work(int noutput_items,
                         &inbuf[d_itemsize * idx], d_itemsize, idx_stop - idx, d_handle);
                     if (count == 0) {
                         if (ferror(d_handle)) {
-                            perror("tagged_file_sink: error writing file");
+                            GR_LOG_ERROR(d_logger,
+                                         boost::format("writing file(1): %s") %
+                                             strerror(errno));
                         }
                     }
                     idx = idx_stop;
-                    d_state = NOT_IN_BURST;
+                    d_state = state_t::NOT_IN_BURST;
                     vitr++;
                     fclose(d_handle);
                     break;
@@ -210,12 +203,14 @@ int tagged_file_sink_impl::work(int noutput_items,
                     vitr++;
                 }
             }
-            if (d_state == IN_BURST) {
+            if (d_state == state_t::IN_BURST) {
                 int count = fwrite(
                     &inbuf[d_itemsize * idx], d_itemsize, noutput_items - idx, d_handle);
                 if (count == 0) {
                     if (ferror(d_handle)) {
-                        perror("tagged_file_sink: error writing file");
+                        GR_LOG_ERROR(d_logger,
+                                     boost::format("writing file(2): %s") %
+                                         strerror(errno));
                     }
                 }
                 idx = noutput_items;

@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef INCLUDED_GR_UHD_BLOCK_IMPL_H
@@ -26,8 +14,8 @@
 #include <gnuradio/uhd/usrp_block.h>
 #include <pmt/pmt.h>
 #include <uhd/usrp/multi_usrp.hpp>
-#include <boost/bind.hpp>
 #include <boost/dynamic_bitset.hpp>
+#include <functional>
 
 
 namespace gr {
@@ -43,55 +31,54 @@ static const std::string ALL_LOS;
 class usrp_block_impl : virtual public usrp_block
 {
 public:
-    typedef boost::function<::uhd::sensor_value_t(const std::string&)> get_sensor_fn_t;
-    typedef boost::function<void(const pmt::pmt_t&, int, const pmt::pmt_t&)>
-        cmd_handler_t;
-
-    static const double LOCK_TIMEOUT;
+    typedef std::function<::uhd::sensor_value_t(const std::string&)> get_sensor_fn_t;
+    typedef std::function<void(const pmt::pmt_t&, int, const pmt::pmt_t&)> cmd_handler_t;
 
     /**********************************************************************
      * Public API calls (see usrp_block.h for docs)
      **********************************************************************/
     // Getters
-    ::uhd::sensor_value_t get_mboard_sensor(const std::string& name, size_t mboard);
-    std::vector<std::string> get_mboard_sensor_names(size_t mboard);
-    std::string get_time_source(const size_t mboard);
-    std::vector<std::string> get_time_sources(const size_t mboard);
-    std::string get_clock_source(const size_t mboard);
-    std::vector<std::string> get_clock_sources(const size_t mboard);
-    double get_clock_rate(size_t mboard);
-    ::uhd::time_spec_t get_time_now(size_t mboard = 0);
-    ::uhd::time_spec_t get_time_last_pps(size_t mboard);
-    ::uhd::usrp::multi_usrp::sptr get_device(void);
-    std::vector<std::string> get_gpio_banks(const size_t mboard);
-    boost::uint32_t get_gpio_attr(const std::string& bank,
-                                  const std::string& attr,
-                                  const size_t mboard = 0);
-    size_t get_num_mboards();
+    ::uhd::sensor_value_t get_mboard_sensor(const std::string& name,
+                                            size_t mboard) override;
+    std::vector<std::string> get_mboard_sensor_names(size_t mboard) override;
+    std::string get_time_source(const size_t mboard) override;
+    std::vector<std::string> get_time_sources(const size_t mboard) override;
+    std::string get_clock_source(const size_t mboard) override;
+    std::vector<std::string> get_clock_sources(const size_t mboard) override;
+    double get_clock_rate(size_t mboard) override;
+    ::uhd::time_spec_t get_time_now(size_t mboard = 0) override;
+    ::uhd::time_spec_t get_time_last_pps(size_t mboard) override;
+    ::uhd::usrp::multi_usrp::sptr get_device(void) override;
+    std::vector<std::string> get_gpio_banks(const size_t mboard) override;
+    uint32_t get_gpio_attr(const std::string& bank,
+                           const std::string& attr,
+                           const size_t mboard = 0) override;
+    size_t get_num_mboards() override;
 
     // Setters
-    void set_time_source(const std::string& source, const size_t mboard);
-    void set_clock_source(const std::string& source, const size_t mboard);
-    void set_clock_rate(double rate, size_t mboard);
-    void set_time_now(const ::uhd::time_spec_t& time_spec, size_t mboard);
-    void set_time_next_pps(const ::uhd::time_spec_t& time_spec);
-    void set_time_unknown_pps(const ::uhd::time_spec_t& time_spec);
-    void set_command_time(const ::uhd::time_spec_t& time_spec, size_t mboard);
-    void set_user_register(const uint8_t addr, const uint32_t data, size_t mboard);
-    void clear_command_time(size_t mboard);
+    void set_time_source(const std::string& source, const size_t mboard) override;
+    void set_clock_source(const std::string& source, const size_t mboard) override;
+    void set_clock_rate(double rate, size_t mboard) override;
+    void set_time_now(const ::uhd::time_spec_t& time_spec, size_t mboard) override;
+    void set_time_next_pps(const ::uhd::time_spec_t& time_spec) override;
+    void set_time_unknown_pps(const ::uhd::time_spec_t& time_spec) override;
+    void set_command_time(const ::uhd::time_spec_t& time_spec, size_t mboard) override;
+    void
+    set_user_register(const uint8_t addr, const uint32_t data, size_t mboard) override;
+    void clear_command_time(size_t mboard) override;
     void set_gpio_attr(const std::string& bank,
                        const std::string& attr,
-                       const boost::uint32_t value,
-                       const boost::uint32_t mask,
-                       const size_t mboard);
+                       const uint32_t value,
+                       const uint32_t mask,
+                       const size_t mboard) override;
 
     // RPC
-    void setup_rpc();
+    void setup_rpc() override;
 
     /**********************************************************************
      * Structors
      * ********************************************************************/
-    virtual ~usrp_block_impl();
+    ~usrp_block_impl() override;
 
 protected:
     /*! \brief Components common to USRP sink and source.
@@ -127,12 +114,18 @@ protected:
     void
     _cmd_handler_looffset(const pmt::pmt_t& lo_offset, int chan, const pmt::pmt_t& msg);
     void _cmd_handler_gain(const pmt::pmt_t& gain, int chan, const pmt::pmt_t& msg);
+    void _cmd_handler_power(const pmt::pmt_t& power_dbm, int chan, const pmt::pmt_t& msg);
     void _cmd_handler_antenna(const pmt::pmt_t& ant, int chan, const pmt::pmt_t& msg);
     void _cmd_handler_rate(const pmt::pmt_t& rate, int chan, const pmt::pmt_t& msg);
     void _cmd_handler_tune(const pmt::pmt_t& tune, int chan, const pmt::pmt_t& msg);
+    void _cmd_handler_mtune(const pmt::pmt_t& tune, int chan, const pmt::pmt_t& msg);
     void _cmd_handler_bw(const pmt::pmt_t& bw, int chan, const pmt::pmt_t& msg);
     void _cmd_handler_lofreq(const pmt::pmt_t& lofreq, int chan, const pmt::pmt_t& msg);
     void _cmd_handler_dspfreq(const pmt::pmt_t& dspfreq, int chan, const pmt::pmt_t& msg);
+    void _cmd_handler_gpio(const pmt::pmt_t& gpio_attr, int chan, const pmt::pmt_t& msg);
+    void _cmd_handler_pc_clock_resync(const pmt::pmt_t& timespec,
+                                      int chan,
+                                      const pmt::pmt_t& msg);
 
     /**********************************************************************
      * Helpers
@@ -142,7 +135,9 @@ protected:
     void _update_stream_args(const ::uhd::stream_args_t& stream_args_);
 
     // should be const, doesn't work though 'cause missing operator=() for tune_request_t
-    void _update_curr_tune_req(::uhd::tune_request_t& tune_req, int chan);
+    void _update_curr_tune_req(::uhd::tune_request_t& tune_req,
+                               int chan,
+                               pmt::pmt_t direction = pmt::PMT_NIL);
 
     /*! \brief Wait until a timeout or a sensor returns 'locked'.
      *
@@ -205,7 +200,7 @@ protected:
     _set_center_freq_from_internals(size_t chan, pmt::pmt_t direction) = 0;
 
     //! Calls _set_center_freq_from_internals() on all channels
-    void _set_center_freq_from_internals_allchans(pmt::pmt_t direction);
+    void _set_center_freq_from_internals_allchans();
 
     /**********************************************************************
      * Members
@@ -218,17 +213,26 @@ protected:
     bool _stream_now;
     ::uhd::time_spec_t _start_time;
     bool _start_time_set;
+    bool _force_tune;
 
     /****** Command interface related **********/
     //! Stores a list of commands for later execution
     std::vector<pmt::pmt_t> _pending_cmds;
     //! Shadows the last value we told the USRP to tune to for every channel
     // (this is not necessarily the true value the USRP is currently tuned to!).
-    std::vector<::uhd::tune_request_t> _curr_tune_req;
-    boost::dynamic_bitset<> _chans_to_tune;
+    std::vector<::uhd::tune_request_t> _curr_tx_tune_req;
+    std::vector<::uhd::tune_request_t> _curr_rx_tune_req;
+    boost::dynamic_bitset<> _tx_chans_to_tune;
+    boost::dynamic_bitset<> _rx_chans_to_tune;
 
     //! Stores the individual command handlers
     ::uhd::dict<pmt::pmt_t, cmd_handler_t> _msg_cmd_handlers;
+
+    //! Will check a command for a direction key, if it does not exist this will use
+    // the default value for the block via _direction() defined below
+    const pmt::pmt_t get_cmd_or_default_direction(const pmt::pmt_t& cmd) const;
+    //! Block direction overloaded by block impl to return "RX"/"TX" for source/sink
+    virtual const pmt::pmt_t _direction() const = 0;
 };
 
 } /* namespace uhd */

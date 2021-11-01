@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -32,8 +20,9 @@
 #include <qwt_symbol.h>
 #include <volk/volk.h>
 
-#include <string.h>
+
 #include <algorithm>
+#include <cstring>
 
 namespace gr {
 namespace qtgui {
@@ -46,8 +35,8 @@ freq_sink_c::sptr freq_sink_c::make(int fftsize,
                                     int nconnections,
                                     QWidget* parent)
 {
-    return gnuradio::get_initial_sptr(
-        new freq_sink_c_impl(fftsize, wintype, fc, bw, name, nconnections, parent));
+    return gnuradio::make_block_sptr<freq_sink_c_impl>(
+        fftsize, wintype, fc, bw, name, nconnections, parent);
 }
 
 freq_sink_c_impl::freq_sink_c_impl(int fftsize,
@@ -63,7 +52,8 @@ freq_sink_c_impl::freq_sink_c_impl(int fftsize,
       d_fftsize(fftsize),
       d_fft_shift(fftsize),
       d_fftavg(1.0),
-      d_wintype((filter::firdes::win_type)(wintype)),
+      d_wintype((fft::window::win_type)(wintype & 0xFF)),
+      d_window_normalize(wintype & (1 << 15)),
       d_center_freq(fc),
       d_bandwidth(bw),
       d_name(name),
@@ -72,56 +62,30 @@ freq_sink_c_impl::freq_sink_c_impl(int fftsize,
       d_port_bw(pmt::mp("bw")),
       d_parent(parent)
 {
-    // Required now for Qt; argc must be greater than 0 and argv
-    // must have at least one valid character. Must be valid through
-    // life of the qApplication:
-    // http://harmattan-dev.nokia.com/docs/library/html/qt4/qapplication.html
-    d_argc = 1;
-    d_argv = new char;
-    d_argv[0] = '\0';
-
     // setup bw input port
     message_port_register_in(d_port_bw);
-    set_msg_handler(d_port_bw, boost::bind(&freq_sink_c_impl::handle_set_bw, this, _1));
+    set_msg_handler(d_port_bw, [this](pmt::pmt_t msg) { this->handle_set_bw(msg); });
 
     // setup output message port to post frequency when display is
     // double-clicked
     message_port_register_out(d_port);
     message_port_register_in(d_port);
-    set_msg_handler(d_port, boost::bind(&freq_sink_c_impl::handle_set_freq, this, _1));
+    set_msg_handler(d_port, [this](pmt::pmt_t msg) { this->handle_set_freq(msg); });
 
     // setup PDU handling input port
     message_port_register_in(pmt::mp("in"));
-    set_msg_handler(pmt::mp("in"), boost::bind(&freq_sink_c_impl::handle_pdus, this, _1));
+    set_msg_handler(pmt::mp("in"), [this](pmt::pmt_t msg) { this->handle_pdus(msg); });
 
-    d_main_gui = NULL;
+    d_fft = std::make_unique<fft::fft_complex_fwd>(d_fftsize);
+    d_fbuf.resize(d_fftsize);
 
-    // Perform fftshift operation;
-    // this is usually desired when plotting
-    d_shift = true;
-
-    d_fft = new fft::fft_complex(d_fftsize, true);
-    d_fbuf = (float*)volk_malloc(d_fftsize * sizeof(float), volk_get_alignment());
-    memset(d_fbuf, 0, d_fftsize * sizeof(float));
-
-    d_index = 0;
     // save the last "connection" for the PDU memory
-    for (int i = 0; i < d_nconnections; i++) {
-        d_residbufs.push_back((gr_complex*)volk_malloc(d_fftsize * sizeof(gr_complex),
-                                                       volk_get_alignment()));
-        d_magbufs.push_back(
-            (double*)volk_malloc(d_fftsize * sizeof(double), volk_get_alignment()));
-
-        std::fill_n(d_residbufs[i], d_fftsize, 0);
-        memset(d_magbufs[i], 0, d_fftsize * sizeof(double));
+    for (int i = 0; i < d_nconnections + 1; i++) {
+        d_residbufs.emplace_back(d_fftsize);
+        d_magbufs.emplace_back(d_fftsize);
     }
 
-    d_residbufs.push_back(
-        (gr_complex*)volk_malloc(d_fftsize * sizeof(gr_complex), volk_get_alignment()));
-    d_pdu_magbuf = (double*)volk_malloc(d_fftsize * sizeof(double), volk_get_alignment());
-    d_magbufs.push_back(d_pdu_magbuf);
-    std::fill_n(d_residbufs[d_nconnections], d_fftsize, 0);
-    memset(d_pdu_magbuf, 0, d_fftsize * sizeof(double));
+    d_pdu_magbuf = d_magbufs[d_magbufs.size() - 1].data();
 
     buildwindow();
 
@@ -134,16 +98,6 @@ freq_sink_c_impl::~freq_sink_c_impl()
 {
     if (!d_main_gui->isClosed())
         d_main_gui->close();
-
-    // +1 to handle PDU buffers; will also take care of d_pdu_magbuf
-    for (int i = 0; i < d_nconnections + 1; i++) {
-        volk_free(d_residbufs[i]);
-        volk_free(d_magbufs[i]);
-    }
-    delete d_fft;
-    volk_free(d_fbuf);
-
-    delete d_argv;
 }
 
 bool freq_sink_c_impl::check_topology(int ninputs, int noutputs)
@@ -185,17 +139,6 @@ void freq_sink_c_impl::exec_() { d_qApplication->exec(); }
 
 QWidget* freq_sink_c_impl::qwidget() { return d_main_gui; }
 
-#ifdef ENABLE_PYTHON
-PyObject* freq_sink_c_impl::pyqwidget()
-{
-    PyObject* w = PyLong_FromVoidPtr((void*)d_main_gui);
-    PyObject* retarg = Py_BuildValue("N", w);
-    return retarg;
-}
-#else
-void* freq_sink_c_impl::pyqwidget() { return NULL; }
-#endif
-
 void freq_sink_c_impl::set_fft_size(const int fftsize)
 {
     if ((fftsize > 16) && (fftsize < 16384))
@@ -213,12 +156,18 @@ void freq_sink_c_impl::set_fft_average(const float fftavg)
 
 float freq_sink_c_impl::fft_average() const { return d_fftavg; }
 
-void freq_sink_c_impl::set_fft_window(const filter::firdes::win_type win)
+void freq_sink_c_impl::set_fft_window(const fft::window::win_type win)
 {
     d_main_gui->setFFTWindowType(win);
 }
 
-filter::firdes::win_type freq_sink_c_impl::fft_window() { return d_wintype; }
+fft::window::win_type freq_sink_c_impl::fft_window() { return d_wintype; }
+
+void freq_sink_c_impl::set_fft_window_normalized(const bool enable)
+{
+    d_window_normalize = enable;
+    buildwindow();
+}
 
 void freq_sink_c_impl::set_frequency_range(const double centerfreq,
                                            const double bandwidth)
@@ -406,7 +355,7 @@ bool freq_sink_c_impl::windowreset()
 {
     gr::thread::scoped_lock lock(d_setlock);
 
-    filter::firdes::win_type newwintype;
+    fft::window::win_type newwintype;
     newwintype = d_main_gui->getFFTWindowType();
     if (d_wintype != newwintype) {
         d_wintype = newwintype;
@@ -419,8 +368,8 @@ bool freq_sink_c_impl::windowreset()
 void freq_sink_c_impl::buildwindow()
 {
     d_window.clear();
-    if (d_wintype != filter::firdes::WIN_NONE) {
-        d_window = filter::firdes::window(d_wintype, d_fftsize, 6.76);
+    if (d_wintype != fft::window::WIN_NONE) {
+        d_window = fft::window::build(d_wintype, d_fftsize, 6.76, d_window_normalize);
     }
 }
 
@@ -435,20 +384,14 @@ bool freq_sink_c_impl::fftresize()
         // Resize residbuf and replace data
         // +1 to handle PDU buffers
         for (int i = 0; i < d_nconnections + 1; i++) {
-            volk_free(d_residbufs[i]);
-            volk_free(d_magbufs[i]);
-
-            d_residbufs[i] = (gr_complex*)volk_malloc(newfftsize * sizeof(gr_complex),
-                                                      volk_get_alignment());
-            d_magbufs[i] =
-                (double*)volk_malloc(newfftsize * sizeof(double), volk_get_alignment());
-
-            std::fill_n(d_residbufs[i], newfftsize, 0);
-            memset(d_magbufs[i], 0, newfftsize * sizeof(double));
+            d_residbufs[i].clear();
+            d_residbufs[i].resize(newfftsize);
+            d_magbufs[i].clear();
+            d_magbufs[i].resize(newfftsize);
         }
 
         // Update the pointer to the newly allocated memory
-        d_pdu_magbuf = d_magbufs[d_nconnections];
+        d_pdu_magbuf = d_magbufs[d_nconnections].data();
 
         // Set new fft size and reset buffer index
         // (throws away any currently held data, but who cares?)
@@ -459,12 +402,10 @@ bool freq_sink_c_impl::fftresize()
         buildwindow();
 
         // Reset FFTW plan for new size
-        delete d_fft;
-        d_fft = new fft::fft_complex(d_fftsize, true);
+        d_fft = std::make_unique<fft::fft_complex_fwd>(d_fftsize);
 
-        volk_free(d_fbuf);
-        d_fbuf = (float*)volk_malloc(d_fftsize * sizeof(float), volk_get_alignment());
-        memset(d_fbuf, 0, d_fftsize * sizeof(float));
+        d_fbuf.clear();
+        d_fbuf.resize(d_fftsize);
 
         d_fft_shift.resize(d_fftsize);
 
@@ -537,9 +478,10 @@ void freq_sink_c_impl::_test_trigger_tags(int start, int nitems)
     }
 }
 
-void freq_sink_c_impl::_test_trigger_norm(int nitems, std::vector<double*> inputs)
+void freq_sink_c_impl::_test_trigger_norm(int nitems,
+                                          std::vector<volk::vector<double>> inputs)
 {
-    const double* in = (const double*)inputs[d_trigger_channel];
+    const double* in = (const double*)inputs[d_trigger_channel].data();
     for (int i = 0; i < nitems; i++) {
         d_trigger_count++;
 
@@ -594,9 +536,10 @@ int freq_sink_c_impl::work(int noutput_items,
             // Perform FFT and shift operations into d_magbufs
             for (int n = 0; n < d_nconnections; n++) {
                 in = (const gr_complex*)input_items[n];
-                memcpy(d_residbufs[n], &in[d_index], sizeof(gr_complex) * d_fftsize);
+                memcpy(
+                    d_residbufs[n].data(), &in[d_index], sizeof(gr_complex) * d_fftsize);
 
-                fft(d_fbuf, d_residbufs[n], d_fftsize);
+                fft(d_fbuf.data(), d_residbufs[n].data(), d_fftsize);
                 for (int x = 0; x < d_fftsize; x++) {
                     d_magbufs[n][x] = (double)((1.0 - d_fftavg) * d_magbufs[n][x] +
                                                (d_fftavg)*d_fbuf[x]);
@@ -673,15 +616,18 @@ void freq_sink_c_impl::handle_pdus(pmt::pmt_t msg)
         size_t max = std::min(d_fftsize, static_cast<int>(len));
         for (int n = 0; n < nffts; n++) {
             // Clear in case (max-min) < d_fftsize
-            std::fill_n(d_residbufs[d_nconnections], d_fftsize, 0x00);
+            std::fill(std::begin(d_residbufs[d_nconnections]),
+                      std::end(d_residbufs[d_nconnections]),
+                      0x00);
 
             // Copy in as much of the input samples as we can
-            memcpy(
-                d_residbufs[d_nconnections], &in[min], sizeof(gr_complex) * (max - min));
+            memcpy(d_residbufs[d_nconnections].data(),
+                   &in[min],
+                   sizeof(gr_complex) * (max - min));
 
             // Apply the window and FFT; copy data into the PDU
             // magnitude buffer.
-            fft(d_fbuf, d_residbufs[d_nconnections], d_fftsize);
+            fft(d_fbuf.data(), d_residbufs[d_nconnections].data(), d_fftsize);
             for (int x = 0; x < d_fftsize; x++) {
                 d_pdu_magbuf[x] += (double)d_fbuf[x];
             }

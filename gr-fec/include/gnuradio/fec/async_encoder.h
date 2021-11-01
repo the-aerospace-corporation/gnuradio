@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef INCLUDED_FEC_ASYNC_ENCODER_H
@@ -26,7 +14,7 @@
 #include <gnuradio/block.h>
 #include <gnuradio/fec/api.h>
 #include <gnuradio/fec/generic_encoder.h>
-#include <boost/shared_ptr.hpp>
+#include <memory>
 
 namespace gr {
 namespace fec {
@@ -73,7 +61,7 @@ namespace fec {
 class FEC_API async_encoder : virtual public block
 {
 public:
-    typedef boost::shared_ptr<async_encoder> sptr;
+    typedef std::shared_ptr<async_encoder> sptr;
 
     /*!
      * Build the PDU-based FEC encoder block from an FECAPI encoder object.
@@ -92,10 +80,10 @@ public:
                      bool rev_pack = true,
                      int mtu = 1500);
 
-    virtual int general_work(int noutput_items,
-                             gr_vector_int& ninput_items,
-                             gr_vector_const_void_star& input_items,
-                             gr_vector_void_star& output_items) = 0;
+    int general_work(int noutput_items,
+                     gr_vector_int& ninput_items,
+                     gr_vector_const_void_star& input_items,
+                     gr_vector_void_star& output_items) override = 0;
 };
 
 } /* namespace fec */

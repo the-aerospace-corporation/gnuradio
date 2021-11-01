@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -27,7 +15,7 @@
 #include <gnuradio/fft/fft.h>
 #include <gnuradio/filter/mmse_fir_interpolator_ff.h>
 #include <gnuradio/math.h>
-#include <volk/volk.h>
+#include <volk/volk_alloc.hh>
 #include <boost/test/unit_test.hpp>
 #include <cmath>
 #include <cstdio>
@@ -46,7 +34,7 @@ BOOST_AUTO_TEST_CASE(t1)
     // use aligned malloc and make sure that everything in this
     // buffer is properly initialized.
     static const unsigned N = 100;
-    float* input = (float*)volk_malloc((N + 10) * sizeof(float), volk_get_alignment());
+    volk::vector<float> input(N + 10);
 
     for (unsigned i = 0; i < N + 10; i++)
         input[i] = test_fcn((double)i);
@@ -63,7 +51,6 @@ BOOST_AUTO_TEST_CASE(t1)
             // printf ("%9.6f  %9.6f  %9.6f\n", expected, actual, expected - actual);
         }
     }
-    volk_free(input);
 }
 
 } /* namespace filter */

@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef INCLUDED_FILTER_FFT_FILTER_H
@@ -26,6 +14,8 @@
 #include <gnuradio/fft/fft.h>
 #include <gnuradio/filter/api.h>
 #include <gnuradio/gr_complex.h>
+#include <gnuradio/logger.h>
+#include <volk/volk_alloc.hh>
 #include <vector>
 
 namespace gr {
@@ -71,15 +61,17 @@ private:
     int d_nsamples;
     int d_fftsize; // fftsize = ntaps + nsamples - 1
     int d_decimation;
-    fft::fft_real_fwd* d_fwdfft; // forward "plan"
-    fft::fft_real_rev* d_invfft; // inverse "plan"
-    int d_nthreads;              // number of FFTW threads to use
-    std::vector<float> d_tail;   // state carried between blocks for overlap-add
-    std::vector<float> d_taps;   // stores time domain taps
-    gr_complex* d_xformed_taps;  // Fourier xformed taps
+    std::unique_ptr<fft::fft_real_fwd> d_fwdfft; // forward "plan"
+    std::unique_ptr<fft::fft_real_rev> d_invfft; // inverse "plan"
+    int d_nthreads;                              // number of FFTW threads to use
+    std::vector<float> d_tail; // state carried between blocks for overlap-add
+    std::vector<float> d_taps; // stores time domain taps
+    volk::vector<gr_complex> d_xformed_taps; // Fourier xformed taps
 
     void compute_sizes(int ntaps);
     int tailsize() const { return d_ntaps - 1; }
+
+    gr::logger_ptr d_logger, d_debug_logger;
 
 public:
     /*!
@@ -95,7 +87,14 @@ public:
      */
     fft_filter_fff(int decimation, const std::vector<float>& taps, int nthreads = 1);
 
-    ~fft_filter_fff();
+    // Disallow copy.
+    //
+    // This prevents accidentally doing needless copies, not just of fft_filter_xxx,
+    // but every block that contains one.
+    fft_filter_fff(const fft_filter_fff&) = delete;
+    fft_filter_fff& operator=(const fft_filter_fff&) = delete;
+    fft_filter_fff(fft_filter_fff&&) = default;
+    fft_filter_fff& operator=(fft_filter_fff&&) = default;
 
     /*!
      * \brief Set new taps for the filter.
@@ -175,15 +174,17 @@ private:
     int d_nsamples;
     int d_fftsize; // fftsize = ntaps + nsamples - 1
     int d_decimation;
-    fft::fft_complex* d_fwdfft;     // forward "plan"
-    fft::fft_complex* d_invfft;     // inverse "plan"
-    int d_nthreads;                 // number of FFTW threads to use
+    std::unique_ptr<fft::fft_complex_fwd> d_fwdfft; // forward "plan"
+    std::unique_ptr<fft::fft_complex_rev> d_invfft; // inverse "plan"
+    int d_nthreads;                                 // number of FFTW threads to use
     std::vector<gr_complex> d_tail; // state carried between blocks for overlap-add
     std::vector<gr_complex> d_taps; // stores time domain taps
-    gr_complex* d_xformed_taps;     // Fourier xformed taps
+    volk::vector<gr_complex> d_xformed_taps; // Fourier xformed taps
 
     void compute_sizes(int ntaps);
     int tailsize() const { return d_ntaps - 1; }
+
+    gr::logger_ptr d_logger, d_debug_logger;
 
 public:
     /*!
@@ -199,7 +200,14 @@ public:
      */
     fft_filter_ccc(int decimation, const std::vector<gr_complex>& taps, int nthreads = 1);
 
-    ~fft_filter_ccc();
+    // Disallow copy.
+    //
+    // This prevents accidentally doing needless copies, not just of fft_filter_xxx,
+    // but every block that contains one.
+    fft_filter_ccc(const fft_filter_ccc&) = delete;
+    fft_filter_ccc& operator=(const fft_filter_ccc&) = delete;
+    fft_filter_ccc(fft_filter_ccc&&) = default;
+    fft_filter_ccc& operator=(fft_filter_ccc&&) = default;
 
     /*!
      * \brief Set new taps for the filter.
@@ -279,15 +287,17 @@ private:
     int d_nsamples;
     int d_fftsize; // fftsize = ntaps + nsamples - 1
     int d_decimation;
-    fft::fft_complex* d_fwdfft;     // forward "plan"
-    fft::fft_complex* d_invfft;     // inverse "plan"
-    int d_nthreads;                 // number of FFTW threads to use
+    std::unique_ptr<fft::fft_complex_fwd> d_fwdfft; // forward "plan"
+    std::unique_ptr<fft::fft_complex_rev> d_invfft; // inverse "plan"
+    int d_nthreads;                                 // number of FFTW threads to use
     std::vector<gr_complex> d_tail; // state carried between blocks for overlap-add
     std::vector<float> d_taps;      // stores time domain taps
-    gr_complex* d_xformed_taps;     // Fourier xformed taps
+    volk::vector<gr_complex> d_xformed_taps; // Fourier xformed taps
 
     void compute_sizes(int ntaps);
     int tailsize() const { return d_ntaps - 1; }
+
+    gr::logger_ptr d_logger, d_debug_logger;
 
 public:
     /*!
@@ -303,7 +313,14 @@ public:
      */
     fft_filter_ccf(int decimation, const std::vector<float>& taps, int nthreads = 1);
 
-    ~fft_filter_ccf();
+    // Disallow copy.
+    //
+    // This prevents accidentally doing needless copies, not just of fft_filter_xxx,
+    // but every block that contains one.
+    fft_filter_ccf(const fft_filter_ccf&) = delete;
+    fft_filter_ccf& operator=(const fft_filter_ccf&) = delete;
+    fft_filter_ccf(fft_filter_ccf&&) = default;
+    fft_filter_ccf& operator=(fft_filter_ccf&&) = default;
 
     /*!
      * \brief Set new taps for the filter.

@@ -3,19 +3,8 @@ Copyright 2010-2011,2014,2018 Free Software Foundation, Inc.
 
 This file is part of GNU Radio
 
-GNU Radio Companion is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
+SPDX-License-Identifier: GPL-2.0-or-later
 
-GNU Radio Companion is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 """
 
 import sys
@@ -23,7 +12,7 @@ import sys
 MAIN_TMPL = """\
 id: uhd_usrp_${sourk}
 label: 'UHD: USRP ${sourk.title()}'
-flags: throttle
+flags: [python, cpp, throttle]
 
 parameters:
 -   id: type
@@ -59,20 +48,26 @@ parameters:
 -   id: dev_args
     label: Device Arguments
     dtype: string
-    default: '""'
     hide: ${'$'}{ 'none' if dev_args else 'part'}
 -   id: sync
     label: Sync
     dtype: enum
-    options: [sync, pc_clock, none]
-    option_labels: [Unknown PPS, PC Clock, No Sync]
+    options: [sync, pc_clock, pc_clock_next_pps, gps_time, none]
+    option_labels: [Unknown PPS, PC Clock, PC Clock on Next PPS, GPS Time on Next PPS, No Sync]
     hide: ${'$'}{ 'none' if sync else 'part'}
+-   id: start_time
+    label: Start Time (seconds)
+    dtype: real
+    default: -1.0
+    options: [-1.0]
+    option_labels: [Default]
+    hide: ${'$'}{ 'none' if start_time >= 0.0 else 'part' }
 -   id: clock_rate
     label: Clock Rate (Hz)
     dtype: real
     default: 0e0
-    options: [0e0, 200e6, 184.32e6, 120e6, 30.72e6]
-    option_labels: [Default, 200 MHz, 184.32 MHz, 120 MHz, 30.72 MHz]
+    options: [0e0, 200e6, 184.32e6, 153.6e6, 125.0e6, 122.88e6, 120e6, 30.72e6]
+    option_labels: [Default, 200 MHz, 184.32 MHz, 153.6 MHz, 125 MHz, 122.88 MHz, 120 MHz, 30.72 MHz]
     hide: ${'$'}{ 'none' if clock_rate else 'part' }
 -   id: num_mboards
     label: Num Mboards
@@ -135,7 +130,11 @@ templates:
         import time
     make: |
         uhd.usrp_${sourk}(
+            ${'%'} if clock_rate():
+            ",".join((${'$'}{dev_addr}, ${'$'}{dev_args}, "master_clock_rate=${'$'}{clock_rate}")),
+            ${'%'} else:
             ",".join((${'$'}{dev_addr}, ${'$'}{dev_args})),
+            ${'%'} endif
             uhd.stream_args(
                 cpu_format="${'$'}{type}",
                 ${'%'} if otw:
@@ -150,26 +149,63 @@ templates:
                 channels=list(range(0,${'$'}{nchan})),
                 ${'%'} endif
             ),
+            % if sourk == 'sink':
             ${'%'} if len_tag_name:
             ${'$'}{len_tag_name},
             ${'%'} endif
+            % endif
         )
         % for m in range(max_mboards):
         ${'%'} if context.get('num_mboards')() > ${m}:
-        ${'%'} if context.get('sd_spec${m}')():
-        self.${'$'}{id}.set_subdev_spec(${'$'}{${'sd_spec' + str(m)}}, ${m})
-        ${'%'} endif
-        ${'%'} if context.get('time_source${m}')():
-        self.${'$'}{id}.set_time_source(${'$'}{${'time_source' + str(m)}}, ${m})
-        ${'%'} endif
+        ########################################################################
         ${'%'} if context.get('clock_source${m}')():
         self.${'$'}{id}.set_clock_source(${'$'}{${'clock_source' + str(m)}}, ${m})
         ${'%'} endif
+        ########################################################################
+        ${'%'} if context.get('time_source${m}')():
+        self.${'$'}{id}.set_time_source(${'$'}{${'time_source' + str(m)}}, ${m})
         ${'%'} endif
-        % endfor
+        ########################################################################
+        ${'%'} if context.get('sd_spec${m}')():
+        self.${'$'}{id}.set_subdev_spec(${'$'}{${'sd_spec' + str(m)}}, ${m})
+        ${'%'} endif
+        ########################################################################
+        ${'%'} endif
+        % endfor  # for m in range(max_mboards)
+        self.${'$'}{id}.set_samp_rate(${'$'}{samp_rate})
+        ${'%'} if sync == 'sync':
+        self.${'$'}{id}.set_time_unknown_pps(uhd.time_spec(0))
+        ${'%'} elif sync == 'pc_clock':
+        self.${'$'}{id}.set_time_now(uhd.time_spec(time.time()), uhd.ALL_MBOARDS)
+        ${'%'} elif sync == 'pc_clock_next_pps':
+        _last_pps_time = self.${'$'}{id}.get_time_last_pps().get_real_secs()
+        # Poll get_time_last_pps() every 50 ms until a change is seen
+        while(self.${'$'}{id}.get_time_last_pps().get_real_secs() == _last_pps_time):
+            time.sleep(0.05)
+        # Set the time to PC time on next PPS
+        self.${'$'}{id}.set_time_next_pps(uhd.time_spec(int(time.time()) + 1.0))
+        # Sleep 1 second to ensure next PPS has come
+        time.sleep(1)
+        ${'%'} elif sync == 'gps_time':
+        # Set the time to GPS time on next PPS
+        # get_mboard_sensor("gps_time") returns just after the PPS edge,
+        # thus add one second and set the time on the next PPS
+        self.${'$'}{id}.set_time_next_pps(uhd.time_spec(self.${'$'}{id}.get_mboard_sensor("gps_time").to_int() + 1.0))
+        # Sleep 1 second to ensure next PPS has come
+        time.sleep(1)
+        ${'%'} else:
+        # No synchronization enforced.
+        ${'%'} endif
+
         % for n in range(max_nchan):
         ${'%'} if context.get('nchan')() > ${n}:
         self.${'$'}{id}.set_center_freq(${'$'}{${'center_freq' + str(n)}}, ${n})
+        ${'%'} if context.get('ant${n}')():
+        self.${'$'}{id}.set_antenna(${'$'}{${'ant' + str(n)}}, ${n})
+        ${'%'} endif
+        ${'%'} if context.get('bw${n}')():
+        self.${'$'}{id}.set_bandwidth(${'$'}{${'bw' + str(n)}}, ${n})
+        ${'%'} endif
         % if sourk == 'source':
         ${'%'} if context.get('rx_agc${n}')() == 'Enabled':
         self.${'$'}{id}.set_rx_agc(True, ${n})
@@ -177,41 +213,42 @@ templates:
         self.${'$'}{id}.set_rx_agc(False, ${n})
         ${'%'} endif
         ${'%'} if context.get('rx_agc${n}')() != 'Enabled':
-        ${'%'} if bool(eval(context.get('norm_gain' + '${n}')())):
+        ${'%'} if context.get('gain_type' + '${n}')() == 'normalized':
         self.${'$'}{id}.set_normalized_gain(${'$'}{${'gain' + str(n)}}, ${n})
+        ${'%'} elif context.get('gain_type' + '${n}')() == 'power':
+        self.${'$'}{id}.set_power_reference(${'$'}{${'gain' + str(n)}}, ${n})
         ${'%'} else:
         self.${'$'}{id}.set_gain(${'$'}{${'gain' + str(n)}}, ${n})
         ${'%'} endif
+        ${'%'} endif  # if rx_agc${n} != 'Enabled'
+        ${'%'} if context.get('dc_offs_enb${n}')() in ('auto', 'disabled'):
+        self.${'$'}{id}.set_auto_dc_offset(${'$'}{True if ${'dc_offs_enb' + str(n)} == 'auto' else False}, ${n})
+        ${'%'} elif context.get('dc_offs_enb${n}')() == 'manual':
+        self.${'$'}{id}.set_dc_offset(${'$'}{${'dc_offs' + str(n)}}, ${n})
+        ${'%'} endif
+        ${'%'} if context.get('iq_imbal_enb${n}')() in ('auto', 'disabled'):
+        self.${'$'}{id}.set_auto_iq_balance(${'$'}{True if ${'iq_imbal_enb' + str(n)} == 'auto' else False}, ${n})
+        ${'%'} elif context.get('iq_imbal_enb${n}')() == 'manual':
+        self.${'$'}{id}.set_iq_balance(${'$'}{${'iq_imbal' + str(n)}}, ${n})
         ${'%'} endif
         % else:
-        ${'%'} if bool(eval(context.get('norm_gain' + '${n}')())):
+        ${'%'} if context.get('gain_type' + '${n}')() == 'normalized':
         self.${'$'}{id}.set_normalized_gain(${'$'}{${'gain' + str(n)}}, ${n})
+        ${'%'} elif context.get('gain_type' + '${n}')() == 'power':
+        self.${'$'}{id}.set_power_reference(${'$'}{${'gain' + str(n)}}, ${n})
         ${'%'} else:
         self.${'$'}{id}.set_gain(${'$'}{${'gain' + str(n)}}, ${n})
         ${'%'} endif
-        % endif
-        ${'%'} if context.get('ant${n}')():
-        self.${'$'}{id}.set_antenna(${'$'}{${'ant' + str(n)}}, ${n})
-        ${'%'} endif
-        ${'%'} if context.get('bw${n}')():
-        self.${'$'}{id}.set_bandwidth(${'$'}{${'bw' + str(n)}}, ${n})
-        ${'%'} endif
+        % endif  # if sourk == 'source'
+
         ${'%'} if context.get('show_lo_controls')():
         self.${'$'}{id}.set_lo_source(${'$'}{${'lo_source' + str(n)}}, uhd.ALL_LOS, ${n})
         self.${'$'}{id}.set_lo_export_enabled(${'$'}{${'lo_export' + str(n)}}, uhd.ALL_LOS, ${n})
         ${'%'} endif
-        ${'%'} endif
-        % endfor
-        ${'%'} if clock_rate():
-        self.${'$'}{id}.set_clock_rate(${'$'}{clock_rate}, uhd.ALL_MBOARDS)
-        ${'%'} endif
-        self.${'$'}{id}.set_samp_rate(${'$'}{samp_rate})
-        ${'%'} if sync == 'sync':
-        self.${'$'}{id}.set_time_unknown_pps(uhd.time_spec())
-        ${'%'} elif sync == 'pc_clock':
-        self.${'$'}{id}.set_time_now(uhd.time_spec(time.time()), uhd.ALL_MBOARDS)
-        ${'%'} else:
-        # No synchronization enforced.
+        ${'%'} endif  # nchan > n
+        % endfor  # for n in range(max_nchan)
+        ${'%'} if start_time() >= 0.0:
+        self.${'$'}{id}.set_start_time(uhd.time_spec(${'$'}{start_time}))
         ${'%'} endif
     callbacks:
     -   set_samp_rate(${'$'}{samp_rate})
@@ -222,10 +259,23 @@ templates:
     -   ${'$'}{'set_rx_agc(False, ${n})' if context.get('rx_agc${n}')() == 'Disabled' else ''}
     -   |
         ${'%'} if context.get('rx_agc${n}')() != 'Enabled':
-        self.${'$'}{id}.set_${'$'}{'normalized_' if bool(eval(context.get('norm_gain${n}')())) else ''}gain(${'$'}{${'gain' + str(n)}}, ${n})
+        ${'%'} if context.get('gain_type' + '${n}')() == 'normalized':
+        self.${'$'}{id}.set_normalized_gain(${'$'}{${'gain' + str(n)}}, ${n})
+        ${'%'} elif context.get('gain_type' + '${n}')() == 'power':
+        self.${'$'}{id}.set_power_reference(${'$'}{${'gain' + str(n)}}, ${n})
+        ${'%'} else:
+        self.${'$'}{id}.set_gain(${'$'}{${'gain' + str(n)}}, ${n})
+        ${'%'} endif
         ${'%'} endif
     % else:
-    -   self.${'$'}{id}.set_${'$'}{'normalized_' if bool(eval(context.get('norm_gain${n}')())) else ''}gain(${'$'}{${'gain' + str(n)}}, ${n})
+    -   |
+        ${'%'} if context.get('gain_type' + '${n}')() == 'normalized':
+        self.${'$'}{id}.set_normalized_gain(${'$'}{${'gain' + str(n)}}, ${n})
+        ${'%'} elif context.get('gain_type' + '${n}')() == 'power':
+        self.${'$'}{id}.set_power_reference(${'$'}{${'gain' + str(n)}}, ${n})
+        ${'%'} else:
+        self.${'$'}{id}.set_gain(${'$'}{${'gain' + str(n)}}, ${n})
+        ${'%'} endif
     % endif
     -   ${'$'}{'set_lo_source(' + lo_source${n} + ', uhd.ALL_LOS, ${n})' if show_lo_controls else ''}
     -   ${'$'}{'set_lo_export_enabled(' + lo_export${n} + ', uhd.ALL_LOS, ${n})' if show_lo_controls else ''}
@@ -233,6 +283,113 @@ templates:
     -   set_bandwidth(${'$'}{${'bw' + str(n)}}, ${n})
     % endfor
 
+cpp_templates:
+    includes: [ '#include <gnuradio/uhd/usrp_${sourk}.h>' ]
+    declarations: 'gr::uhd::usrp_${sourk}::sptr ${'$'}{id};'
+    make: |
+      this->${'$'}{id} = gr::uhd::usrp_${sourk}::make(
+         ::uhd::device_addr_t("${'$'}{",".join((str(dev_addr).strip('"\\''), str(dev_args).strip('"\\''))) if len(str(dev_args).strip('"\\'')) > 0 else dev_addr.strip('"\\'')}"),
+         ::uhd::stream_args_t("${'$'}{type}", "${'$'}{otw}"));
+      % for m in range(max_mboards):
+      ${'%'} if context.get('num_mboards')() > ${m}:
+      ${'%'} if context.get('sd_spec${m}')():
+      this->${'$'}{id}->set_subdev_spec(${'$'}{${'sd_spec' + str(m)}}, ${m});
+      ${'%'} endif
+      ${'%'} if context.get('time_source${m}')():
+      this->${'$'}{id}->set_time_source(${'$'}{${'time_source' + str(m)}}, ${m});
+      ${'%'} endif
+      ${'%'} if context.get('clock_source${m}')():
+      this->${'$'}{id}->set_clock_source("${'$'}{${'clock_source' + str(m)}.strip('\\'')}", ${m});
+      ${'%'} endif
+      ${'%'} endif
+      % endfor
+      this->${'$'}{id}->set_samp_rate(${'$'}{samp_rate});
+      ${'%'} if sync == 'sync':
+      this->${'$'}{id}->set_time_unknown_pps(::uhd::time_spec_t());
+      ${'%'} elif sync == 'pc_clock':
+      this->${'$'}{id}->set_time_now(::uhd::time_spec_t(time(NULL)), ::uhd::usrp::multi_usrp::ALL_MBOARDS);
+      ${'%'} else:
+      // No synchronization enforced.
+      ${'%'} endif
+
+      % for n in range(max_nchan):
+      ${'%'} if context.get('nchan')() > ${n}:
+      this->${'$'}{id}->set_center_freq(${'$'}{${'center_freq' + str(n)}}, ${n});
+      % if sourk == 'source':
+      ${'%'} if context.get('rx_agc${n}')() == 'Enabled':
+      this->${'$'}{id}->set_rx_agc(True, ${n});
+      ${'%'} elif context.get('rx_agc${n}')() == 'Disabled':
+      this->${'$'}{id}->set_rx_agc(False, ${n});
+      ${'%'} endif
+      ${'%'} if context.get('rx_agc${n}')() != 'Enabled':
+      ${'%'} if context.get('gain_type' + '${n}')() == 'normalized':
+      this->${'$'}{id}->set_normalized_gain(${'$'}{${'gain' + str(n)}}, ${n});
+      ${'%'} elif context.get('gain_type' + '${n}')() == 'power':
+      this->${'$'}{id}->set_power_reference(${'$'}{${'gain' + str(n)}}, ${n});
+      ${'%'} else:
+      this->${'$'}{id}->set_gain(${'$'}{${'gain' + str(n)}}, ${n});
+      ${'%'} endif
+      ${'%'} endif
+      % else:
+      ${'%'} if context.get('gain_type' + '${n}')() == 'normalized':
+      this->${'$'}{id}->set_normalized_gain(${'$'}{${'gain' + str(n)}}, ${n});
+      ${'%'} elif context.get('gain_type' + '${n}')() == 'power':
+      this->${'$'}{id}->set_power_reference(${'$'}{${'gain' + str(n)}}, ${n});
+      ${'%'} else:
+      this->${'$'}{id}->set_gain(${'$'}{${'gain' + str(n)}}, ${n});
+      ${'%'} endif
+      % endif
+      ${'%'} if context.get('ant${n}')():
+      this->${'$'}{id}->set_antenna(${'$'}{${'ant' + str(n)}}, ${n});
+      ${'%'} endif
+      ${'%'} if context.get('bw${n}')():
+      this->${'$'}{id}->set_bandwidth(${'$'}{${'bw' + str(n)}}, ${n});
+      ${'%'} endif
+      ${'%'} if context.get('show_lo_controls')():
+      this->${'$'}{id}->set_lo_source(${'$'}{${'lo_source' + str(n)}}, ::uhd::usrp::multi_usrp::ALL_LOS, ${n});
+      this->${'$'}{id}->set_lo_export_enabled(${'$'}{${'lo_export' + str(n)}}, ::uhd::usrp::multi_usrp::ALL_LOS, ${n});
+      ${'%'} endif
+      ${'%'} endif
+      % endfor
+      ${'%'} if clock_rate():
+      this->${'$'}{id}->set_clock_rate(${'$'}{clock_rate}, ::uhd::usrp::multi_usrp::ALL_MBOARDS);
+      ${'%'} endif
+      ${'%'} if start_time() >= 0.0:
+      this->${'$'}{id}->set_start_time(::uhd::time_spec_t(${'$'}{float(start_time)}));
+      ${'%'} endif
+    link: ['gnuradio-uhd uhd']
+    callbacks:
+    - set_samp_rate(${'$'}{samp_rate})
+    % for n in range(max_nchan):
+    -   set_center_freq(${'$'}{${'center_freq' + str(n)}}, ${n})
+    % if sourk == 'source':
+    -   ${'$'}{'set_rx_agc(True, ${n})' if context.get('rx_agc${n}')() == 'Enabled' else ''}
+    -   ${'$'}{'set_rx_agc(False, ${n})' if context.get('rx_agc${n}')() == 'Disabled' else ''}
+    -   |
+        ${'%'} if context.get('rx_agc${n}')() != 'Enabled':
+        ${'%'} if context.get('gain_type' + '${n}')() == 'normalized':
+        this->${'$'}{id}->set_normalized_gain(${'$'}{${'gain' + str(n)}}, ${n});
+        ${'%'} elif context.get('gain_type' + '${n}')() == 'power':
+        this->${'$'}{id}->set_power_reference(${'$'}{${'gain' + str(n)}}, ${n});
+        ${'%'} else:
+        this->${'$'}{id}->set_gain(${'$'}{${'gain' + str(n)}}, ${n});
+        ${'%'} endif
+        ${'%'} endif
+    % else:
+    -   |
+        ${'%'} if context.get('gain_type' + '${n}')() == 'normalized':
+        this->${'$'}{id}->set_normalized_gain(${'$'}{${'gain' + str(n)}}, ${n});
+        ${'%'} elif context.get('gain_type' + '${n}')() == 'power':
+        this->${'$'}{id}->set_power_reference(${'$'}{${'gain' + str(n)}}, ${n});
+        ${'%'} else:
+        this->${'$'}{id}->set_gain(${'$'}{${'gain' + str(n)}}, ${n});
+        ${'%'} endif
+    % endif
+    -   ${'$'}{'set_lo_source(' + lo_source${n} + ', ::uhd::usrp::multi_usrp::ALL_LOS, ${n})' if show_lo_controls else ''}
+    -   ${'$'}{'set_lo_export_enabled(' + lo_export${n} + ', ::uhd::usrp::multi_usrp::ALL_LOS, ${n})' if show_lo_controls else ''}
+    -   set_antenna(${'$'}{${'ant' + str(n)}}, ${n})
+    -   set_bandwidth(${'$'}{${'bw' + str(n)}}, ${n})
+    % endfor
 
 documentation: |-
     The UHD USRP ${sourk.title()} Block:
@@ -317,7 +474,7 @@ PARAMS_TMPL = """
 -   id: center_freq${n}
     label: 'Ch${n}: Center Freq (Hz)'
     category: RF Options
-    dtype: real
+    dtype: raw
     default: '0'
     hide: ${'$'}{ 'none' if (nchan > ${n}) else 'all' }
 % if sourk == 'source':
@@ -340,28 +497,27 @@ PARAMS_TMPL = """
 % else:
     hide: ${'$'}{ 'none' if nchan > ${n} else 'all' }
 % endif
--   id: norm_gain${n}
+-   id: gain_type${n}
     label: 'Ch${n}: Gain Type'
     category: RF Options
-    dtype: string
-    default: 'False'
-    options: ['False', 'True']
-    option_labels: [Absolute (dB), Normalized]
+    dtype: enum
+    options: [default, normalized, power]
+    option_labels: [Absolute (dB), Normalized, Absolute Power (dBm)]
 % if sourk == 'source':
-    hide: ${'$'}{ 'all' if nchan <= ${n} or rx_agc${n} == 'Enabled' else ('none' if bool(eval('norm_gain' + str(${n}))) else 'part')}
+    hide: ${'$'}{ 'all' if nchan <= ${n} or rx_agc${n} == 'Enabled' else ('part' if (eval('gain_type' + str(${n})) == 'default') else 'none')}
 % else:
-    hide: ${'$'}{ 'all' if nchan <= ${n} else ('none' if bool(eval('norm_gain' + str(${n}))) else 'part')}
+    hide: ${'$'}{ 'all' if nchan <= ${n} else ('part' if (eval('gain_type' + str(${n})) == 'default') else 'none')}
 % endif
 -   id: ant${n}
     label: 'Ch${n}: Antenna'
     category: RF Options
     dtype: string
 % if sourk == 'source':
-    options: [TX/RX, RX2, RX1]
+    options: ['"TX/RX"', '"RX2"', '"RX1"']
     option_labels: [TX/RX, RX2, RX1]
-    default: RX2
+    default: '"RX2"'
 % else:
-    options: [TX/RX]
+    options: ['"TX/RX"']
     option_labels: [TX/RX]
 % endif
     hide: ${'$'}{ 'all' if not nchan > ${n} else ('none' if eval('ant' + str(${n})) else 'part')}
@@ -389,15 +545,29 @@ PARAMS_TMPL = """
 -   id: dc_offs_enb${n}
     label: 'Ch${n}: Enable DC Offset Correction'
     category: FE Corrections
-    dtype: raw
-    default: '""'
+    dtype: enum
+    options: [default, auto, disabled, manual]
+    option_labels: [Default, Automatic, Disabled, Manual]
     hide: ${'$'}{ 'all' if not nchan > ${n} else 'part'}
+-   id: dc_offs${n}
+    label: 'Ch${n}: DC Offset Correction Value'
+    category: FE Corrections
+    dtype: complex
+    default: 0+0j
+    hide: ${'$'}{ 'all' if not dc_offs_enb${n} == 'manual' else 'part'}
 -   id: iq_imbal_enb${n}
     label: 'Ch${n}: Enable IQ Imbalance Correction'
     category: FE Corrections
-    dtype: raw
-    default: '""'
+    dtype: enum
+    options: [default, auto, disabled, manual]
+    option_labels: [Default, Automatic, Disabled, Manual]
     hide: ${'$'}{ 'all' if not nchan > ${n} else 'part'}
+-   id: iq_imbal${n}
+    label: 'Ch${n}: IQ imbalance Correction Value'
+    category: FE Corrections
+    dtype: complex
+    default: 0+0j
+    hide: ${'$'}{ 'all' if not iq_imbal_enb${n} == 'manual' else 'part'}
 % endif
 """
 
@@ -414,6 +584,7 @@ TSBTAG_PARAM = """
 -   id: len_tag_name
     label: TSB tag name
     dtype: string
+    default: '""'
     hide: ${ 'none' if len(str(len_tag_name)) else 'part'}
 """
 

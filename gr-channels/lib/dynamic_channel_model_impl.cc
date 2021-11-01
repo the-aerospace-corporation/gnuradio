@@ -4,25 +4,12 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #include "dynamic_channel_model_impl.h"
 #include <gnuradio/io_signature.h>
-#include <iostream>
 
 namespace gr {
 namespace channels {
@@ -42,20 +29,20 @@ dynamic_channel_model::sptr dynamic_channel_model::make(double samp_rate,
                                                         double noise_amp,
                                                         double noise_seed)
 {
-    return gnuradio::get_initial_sptr(new dynamic_channel_model_impl(samp_rate,
-                                                                     sro_std_dev,
-                                                                     sro_max_dev,
-                                                                     cfo_std_dev,
-                                                                     cfo_max_dev,
-                                                                     N,
-                                                                     doppler_freq,
-                                                                     LOS_model,
-                                                                     K,
-                                                                     delays,
-                                                                     mags,
-                                                                     ntaps_mpath,
-                                                                     noise_amp,
-                                                                     noise_seed));
+    return gnuradio::make_block_sptr<dynamic_channel_model_impl>(samp_rate,
+                                                                 sro_std_dev,
+                                                                 sro_max_dev,
+                                                                 cfo_std_dev,
+                                                                 cfo_max_dev,
+                                                                 N,
+                                                                 doppler_freq,
+                                                                 LOS_model,
+                                                                 K,
+                                                                 delays,
+                                                                 mags,
+                                                                 ntaps_mpath,
+                                                                 noise_amp,
+                                                                 noise_seed);
 }
 
 // Hierarchical block constructor

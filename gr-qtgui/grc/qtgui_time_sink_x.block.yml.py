@@ -252,7 +252,7 @@ inputs:
 -   domain: stream
     dtype: ${ type.t }
     multiplicity: ${ (0 if type.startswith('msg') else nconnections) }
-    optional: true
+    optional: ${ (True if type.startswith('msg') else False) }
 
 templates:
     imports: |-
@@ -275,7 +275,8 @@ templates:
             ${size}, #size
             ${srate}, #samp_rate
             ${name}, #name
-            ${0 if type.startswith('msg') else nconnections} #number of inputs
+            ${0 if type.startswith('msg') else nconnections}, #number of inputs
+            None # parent
         )
         self.${id}.set_update_time(${update_time})
         self.${id}.set_y_axis(${ymin}, ${ymax})
@@ -335,7 +336,7 @@ templates:
             self.${id}.set_line_alpha(i, alphas[i])
         % endif
 
-        ${win} = sip.wrapinstance(self.${id}.pyqwidget(), Qt.QWidget)
+        ${win} = sip.wrapinstance(self.${id}.qwidget(), Qt.QWidget)
         ${gui_hint() % win}
 
 documentation: |-

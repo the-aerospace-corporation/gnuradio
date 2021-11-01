@@ -24,7 +24,6 @@
   - blocks_vector_sink_x
   - blocks_tag_debug
   - blocks_message_debug
-  - blocks_random_pdu
   - blocks_message_strobe
   - blocks_message_strobe_random
   - blocks_tags_strobe
@@ -39,6 +38,11 @@
   - blocks_file_meta_source
   - blocks_file_meta_sink
   - blocks_tagged_file_sink
+- IQ Correction:
+  - blocks_correctiq_auto
+  - blocks_correctiq_man
+  - blocks_swapiq
+  - blocks_correctiq
 - Level Controllers:
   - blocks_mute_xx
   - blocks_sample_and_hold_xx
@@ -78,13 +82,10 @@
   - blocks_message_strobe
   - blocks_message_strobe_random
   - blocks_message_debug
-  - blocks_pdu_filter
-  - blocks_pdu_remove
-  - blocks_pdu_set
-  - blocks_pdu_to_tagged_stream
   - blocks_tagged_stream_multiply_length
-  - blocks_tagged_stream_to_pdu
-  - blocks_random_pdu
+  - blocks_var_to_msg
+  - blocks_msgpair_to_var
+  - blocks_msg_meta_to_pair
 - Misc:
   - blocks_throttle
   - blocks_vector_source_x
@@ -96,17 +97,12 @@
   - blocks_copy
   - blocks_selector
   - blocks_nop
+  - blocks_phase_shift
   - xmlrpc_server
   - xmlrpc_client
 - Modulators:
   - blocks_vco_f
   - blocks_vco_c
-- Networking Tools:
-  - blocks_tuntap_pdu
-  - blocks_socket_pdu
-  - blocks_tcp_server_sink
-  - blocks_udp_source
-  - blocks_udp_sink
 - Peak Detectors:
   - blocks_burst_tagger
   - blocks_peak_detector_xb
@@ -117,6 +113,7 @@
   - blocks_interleave
   - blocks_keep_m_in_n
   - blocks_keep_one_in_n
+  - blocks_stream_demux
   - blocks_stream_mux
   - blocks_stream_to_streams
   - blocks_stream_to_vector
@@ -125,6 +122,7 @@
   - blocks_stream_to_vector_decimator
   - blocks_vector_to_stream
   - blocks_vector_to_streams
+  - blocks_matrix_interleaver
   - blocks_patterned_interleaver
   - blocks_endian_swap
   - blocks_vector_insert_x

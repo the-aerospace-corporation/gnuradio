@@ -2,24 +2,10 @@
 Copyright 2013 Free Software Foundation, Inc.
 This file is part of GNU Radio
 
-GNU Radio Companion is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
+SPDX-License-Identifier: GPL-2.0-or-later
 
-GNU Radio Companion is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 """
 
-from __future__ import absolute_import
-
-import six
 
 from gi.repository import Gtk, GObject
 
@@ -73,7 +59,7 @@ class ParserErrorsDialog(Gtk.Dialog):
         """set up data model"""
         self.tree_store.clear()
         self._error_logs = error_logs
-        for filename, errors in six.iteritems(error_logs):
+        for filename, errors in error_logs.items():
             parent = self.tree_store.append(None, [str(filename)])
             try:
                 with open(filename, 'r') as fp:

@@ -4,27 +4,14 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #include <gnuradio/qtgui/displayform.h>
 
 #include <QFileDialog>
 #include <QPixmap>
-#include <iostream>
 
 DisplayForm::DisplayForm(int nplots, QWidget* parent)
     : QWidget(parent), d_nplots(nplots), d_system_specified_flag(false)
@@ -156,16 +143,10 @@ DisplayForm::~DisplayForm()
     // deleted
 }
 
-void DisplayForm::resizeEvent(QResizeEvent* e)
-{
-    // QSize s = size();
-    // emit d_display_plot->resizeSlot(&s);
-}
-
 void DisplayForm::mousePressEvent(QMouseEvent* e)
 {
     bool ctrloff = Qt::ControlModifier != QApplication::keyboardModifiers();
-    if ((e->button() == Qt::MidButton) && ctrloff && (d_menu_on)) {
+    if ((e->button() == Qt::MiddleButton) && ctrloff && (d_menu_on)) {
         if (d_stop_state == false)
             d_stop_act->setText(tr("Stop"));
         else
@@ -314,7 +295,7 @@ void DisplayForm::setAxisLabels(bool en)
 
 void DisplayForm::saveFigure()
 {
-    QPixmap qpix = QPixmap::grabWidget(this);
+    QPixmap qpix = this->grab();
 
     QString types = QString(tr("JPEG file (*.jpg);;Portable Network Graphics file "
                                "(*.png);;Bitmap file (*.bmp);;TIFF file (*.tiff)"));

@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -27,9 +15,9 @@
 #include "file_meta_sink_impl.h"
 #include <gnuradio/io_signature.h>
 #include <fcntl.h>
-#include <stdio.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <boost/format.hpp>
 #include <cstdio>
 #include <stdexcept>
 
@@ -65,15 +53,15 @@ file_meta_sink::sptr file_meta_sink::make(size_t itemsize,
                                           pmt::pmt_t extra_dict,
                                           bool detached_header)
 {
-    return gnuradio::get_initial_sptr(new file_meta_sink_impl(itemsize,
-                                                              filename,
-                                                              samp_rate,
-                                                              relative_rate,
-                                                              type,
-                                                              complex,
-                                                              max_segment_size,
-                                                              extra_dict,
-                                                              detached_header));
+    return gnuradio::make_block_sptr<file_meta_sink_impl>(itemsize,
+                                                          filename,
+                                                          samp_rate,
+                                                          relative_rate,
+                                                          type,
+                                                          complex,
+                                                          max_segment_size,
+                                                          extra_dict,
+                                                          detached_header);
 }
 
 file_meta_sink_impl::file_meta_sink_impl(size_t itemsize,
@@ -107,7 +95,7 @@ file_meta_sink_impl::file_meta_sink_impl(size_t itemsize,
         d_state = STATE_INLINE;
 
     if (!open(filename))
-        throw std::runtime_error("file_meta_sink: can't open file\n");
+        throw std::runtime_error("file_meta_sink: can't open file");
 
     pmt::pmt_t timestamp = pmt::make_tuple(pmt::from_uint64(0), pmt::from_double(0));
 
@@ -167,7 +155,7 @@ bool file_meta_sink_impl::_open(FILE** fp, const char* filename)
     if ((fd = ::open(filename,
                      O_WRONLY | O_CREAT | O_TRUNC | OUR_O_LARGEFILE | OUR_O_BINARY,
                      0664)) < 0) {
-        perror(filename);
+        GR_LOG_ERROR(d_logger, boost::format("%s: %s") % filename % strerror(errno));
         return false;
     }
 
@@ -177,7 +165,7 @@ bool file_meta_sink_impl::_open(FILE** fp, const char* filename)
     }
 
     if ((*fp = fdopen(fd, "wb")) == NULL) {
-        perror(filename);
+        GR_LOG_ERROR(d_logger, boost::format("%s: %s") % filename % strerror(errno));
         ::close(fd); // don't leak file descriptor if fdopen fails.
     }
 
@@ -242,8 +230,8 @@ void file_meta_sink_impl::write_header(FILE* fp, pmt::pmt_t header, pmt::pmt_t e
     std::string header_str = pmt::serialize_str(header);
     std::string extra_str = pmt::serialize_str(extra);
 
-    if ((header_str.size() != METADATA_HEADER_SIZE) && (extra_str.size() != d_extra_size))
-        throw std::runtime_error("file_meta_sink: header or extra_dict is wrong size.\n");
+    if ((header_str.size() != METADATA_HEADER_SIZE) || (extra_str.size() != d_extra_size))
+        throw std::runtime_error("file_meta_sink: header or extra_dict is wrong size.");
 
     size_t nwritten = 0;
     while (nwritten < header_str.size()) {
@@ -252,7 +240,7 @@ void file_meta_sink_impl::write_header(FILE* fp, pmt::pmt_t header, pmt::pmt_t e
         nwritten += count;
         if ((count == 0) && (ferror(fp))) {
             fclose(fp);
-            throw std::runtime_error("file_meta_sink: error writing header to file.\n");
+            throw std::runtime_error("file_meta_sink: error writing header to file.");
         }
     }
 
@@ -263,7 +251,7 @@ void file_meta_sink_impl::write_header(FILE* fp, pmt::pmt_t header, pmt::pmt_t e
         nwritten += count;
         if ((count == 0) && (ferror(fp))) {
             fclose(fp);
-            throw std::runtime_error("file_meta_sink: error writing extra to file.\n");
+            throw std::runtime_error("file_meta_sink: error writing extra to file.");
         }
     }
 
@@ -311,9 +299,13 @@ void file_meta_sink_impl::update_last_header_inline()
     pmt::pmt_t s = pmt::from_uint64(seg_size);
     update_header(mp("bytes"), s);
     update_header(mp("strt"), pmt::from_uint64(METADATA_HEADER_SIZE + d_extra_size));
-    fseek(d_fp, -seg_size - hdrlen, SEEK_CUR);
+    if (fseek(d_fp, -seg_size - hdrlen, SEEK_CUR) == -1) {
+        throw std::runtime_error("fseek() failed.");
+    }
     write_header(d_fp, d_header, d_extra);
-    fseek(d_fp, seg_size, SEEK_CUR);
+    if (fseek(d_fp, seg_size, SEEK_CUR) == -1) {
+        throw std::runtime_error("fseek() failed.");
+    }
 }
 
 void file_meta_sink_impl::update_last_header_detached()
@@ -325,7 +317,9 @@ void file_meta_sink_impl::update_last_header_detached()
     pmt::pmt_t s = pmt::from_uint64(seg_size);
     update_header(mp("bytes"), s);
     update_header(mp("strt"), pmt::from_uint64(METADATA_HEADER_SIZE + d_extra_size));
-    fseek(d_hdr_fp, -hdrlen, SEEK_CUR);
+    if (fseek(d_hdr_fp, -hdrlen, SEEK_CUR) == -1) {
+        throw std::runtime_error("fseek() failed.");
+    }
     write_header(d_hdr_fp, d_header, d_extra);
 }
 
@@ -391,9 +385,8 @@ int file_meta_sink_impl::work(int noutput_items,
     std::vector<tag_t> all_tags;
     get_tags_in_range(all_tags, 0, abs_N, end_N);
 
-    std::vector<tag_t>::iterator itr;
-    for (itr = all_tags.begin(); itr != all_tags.end(); itr++) {
-        int item_offset = (int)(itr->offset - abs_N);
+    for (const auto& tag : all_tags) {
+        int item_offset = (int)(tag.offset - abs_N);
 
         // Write date to file up to the next tag location
         while (nwritten < item_offset) {
@@ -419,11 +412,11 @@ int file_meta_sink_impl::work(int noutput_items,
 
         if (d_total_seg_size > 0) {
             update_last_header();
-            update_header(itr->key, itr->value);
+            update_header(tag.key, tag.value);
             write_and_update();
             d_total_seg_size = 0;
         } else {
-            update_header(itr->key, itr->value);
+            update_header(tag.key, tag.value);
             update_last_header();
         }
     }

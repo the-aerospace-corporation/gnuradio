@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #include <gnuradio/fec/gf2vec.h>
@@ -25,13 +13,13 @@
 
 GF2Vec::GF2Vec(int size) { vec.resize(size); }
 
-void GF2Vec::set_vec(const std::vector<char> in) { vec = in; }
+void GF2Vec::set_vec(const std::vector<uint8_t> in) { vec = in; }
 
-std::vector<char> GF2Vec::get_vec() { return vec; }
+std::vector<uint8_t> GF2Vec::get_vec() { return vec; }
 
 int GF2Vec::size() { return vec.size(); }
 
-char& GF2Vec::operator[](int i) { return vec[i]; }
+uint8_t& GF2Vec::operator[](int i) { return vec[i]; }
 
 GF2Vec operator+(GF2Vec a, GF2Vec b)
 {
@@ -52,7 +40,7 @@ GF2Vec GF2Vec::sub_vector(int from, int to)
     return x;
 }
 
-char operator*(GF2Vec a, GF2Vec b)
+uint8_t operator*(GF2Vec a, GF2Vec b)
 {
     char sum;
     sum = char(0);

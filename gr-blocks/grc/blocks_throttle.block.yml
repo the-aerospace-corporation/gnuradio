@@ -16,7 +16,7 @@ parameters:
     dtype: real
     default: samp_rate
 -   id: vlen
-    label: Vec Length
+    label: Vector Length
     dtype: int
     default: '1'
     hide: ${ 'part' if vlen == 1 else 'none' }
@@ -35,6 +35,7 @@ outputs:
 -   domain: stream
     dtype: ${ type }
     vlen: ${ vlen }
+    optional: true
 
 asserts:
 - ${ vlen > 0 }
@@ -48,11 +49,10 @@ templates:
 cpp_templates:
     includes: ['#include <gnuradio/blocks/throttle.h>']
     declarations: 'blocks::throttle::sptr ${id};'
-    make: 'this->${id} = blocks::throttle::make(${type.size})*${vlen}, ${samples_per_second}, ${ignoretag});'
+    make: 'this->${id} = blocks::throttle::make(${type.size}*${vlen}, ${samples_per_second}, ${ignoretag});'
     callbacks:
     - set_sample_rate(${samples_per_second})
     translations:
-        gr.sizeof_: 'sizeof('
         'True': 'true'
         'False': 'false'
 

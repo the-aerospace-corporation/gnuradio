@@ -8,7 +8,7 @@ parameters:
     dtype: enum
     options: [complex, float, int, short, byte]
     option_attributes:
-        const_type: [complex, real, int, short, gr.sizeof_char]
+        const_type: [complex, real, int, short, byte]
         fcn: [c, f, i, s, b]
     hide: part
 -   id: const
@@ -27,10 +27,11 @@ templates:
     - set_offset(${const})
 
 cpp_templates:
-    includes: ['#include <gnuradio/analog/sig_source_${type.fcn}.h>']
+    includes: ['#include <gnuradio/analog/sig_source.h>']
+    declarations: 'analog::sig_source_${type.fcn}::sptr ${id};'
     make: 'this->${id} = analog::sig_source_${type.fcn}::make(0, analog::GR_CONST_WAVE, 0, 0, ${const});'
     callbacks:
     - set_offset(${const})
-    link: ['gnuradio-analog']
+    link: ['gnuradio::gnuradio-analog']
 
 file_format: 1

@@ -2,26 +2,12 @@
 Copyright 2008-2011 Free Software Foundation, Inc.
 This file is part of GNU Radio
 
-GNU Radio Companion is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
+SPDX-License-Identifier: GPL-2.0-or-later
 
-GNU Radio Companion is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 """
 
-from __future__ import absolute_import, print_function
 
 import string
-
-import six
 
 
 def expr_replace(expr, replace_dict):
@@ -92,7 +78,7 @@ def sort_objects2(objects, id_getter, expr_getter, check_circular=True):
 
     def dependent_ids(obj):
         deps = dependencies(expr_getter(obj))
-        return [id_ if id_ in deps else None for id_ in known_ids]
+        return [id_ if id_ in deps else '' for id_ in known_ids]
 
     objects = sorted(objects, key=dependent_ids)
 
@@ -196,7 +182,7 @@ def _get_graph(exprs):
     var_graph = _graph()
     for var in vars:
         var_graph.add_node(var)
-    for var, expr in six.iteritems(exprs):
+    for var, expr in exprs.items():
         for dep in get_variable_dependencies(expr, vars):
             if dep != var:
                 var_graph.add_edge(dep, var)

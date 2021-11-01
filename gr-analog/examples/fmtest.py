@@ -4,28 +4,14 @@
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 #
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
 from gnuradio import gr
 from gnuradio import blocks
 from gnuradio import filter
+from gnuradio.fft import window
 from gnuradio import analog
 from gnuradio import channels
 import sys, math, time
@@ -97,7 +83,7 @@ class fmtest(gr.top_block):
         self._chan_rate = self._if_rate / self._M
         self._taps = filter.firdes.low_pass_2(1, self._if_rate, bw, t_bw,
                                               attenuation_dB=100,
-                                              window=filter.firdes.WIN_BLACKMAN_hARRIS)
+                                              window=window.WIN_BLACKMAN_hARRIS)
         tpc = math.ceil(float(len(self._taps)) / float(self._M))
 
         print("Number of taps:     ", len(self._taps))

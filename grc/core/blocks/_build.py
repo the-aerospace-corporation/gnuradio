@@ -1,21 +1,9 @@
 # Copyright 2016 Free Software Foundation, Inc.
 # This file is part of GNU Radio
 #
-# GNU Radio Companion is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
+# SPDX-License-Identifier: GPL-2.0-or-later
 #
-# GNU Radio Companion is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
-from __future__ import absolute_import
 
 import itertools
 import re
@@ -64,11 +52,12 @@ def build(id, label='', category='', flags='', documentation='',
 
     cpp_templates = cpp_templates or {}
     cls.cpp_templates = MakoTemplates(
-        includes=cpp_templates.get('includes', ''),
+        includes=cpp_templates.get('includes', []),
         make=cpp_templates.get('make', ''),
         callbacks=cpp_templates.get('callbacks', []),
         var_make=cpp_templates.get('var_make', ''),
         link=cpp_templates.get('link', []),
+        packages=cpp_templates.get('packages', []),
         translations=cpp_templates.get('translations', []),
         declarations=cpp_templates.get('declarations', ''),
     )
@@ -128,12 +117,12 @@ def build_params(params_raw, have_inputs, have_outputs, flags, block_id):
         if param_id in params:
             raise Exception('Param id "{}" is not unique'.format(param_id))
 
-        if 'option_attributes' in param_data:
-            _validate_option_attributes(param_data, block_id)
-
         base_key = param_data.get('base_key', None)
         param_data_ext = base_params_n.get(base_key, {}).copy()
         param_data_ext.update(param_data)
+
+        if 'option_attributes' in param_data:
+            _validate_option_attributes(param_data_ext, block_id)
 
         add_param(**param_data_ext)
         base_params_n[param_id] = param_data_ext

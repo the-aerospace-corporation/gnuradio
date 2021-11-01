@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -33,8 +21,8 @@ namespace blocks {
 tagged_stream_multiply_length::sptr tagged_stream_multiply_length::make(
     size_t itemsize, const std::string& lengthtagname, double scalar)
 {
-    return gnuradio::get_initial_sptr(
-        new tagged_stream_multiply_length_impl(itemsize, lengthtagname, scalar));
+    return gnuradio::make_block_sptr<tagged_stream_multiply_length_impl>(
+        itemsize, lengthtagname, scalar);
 }
 
 tagged_stream_multiply_length_impl::tagged_stream_multiply_length_impl(
@@ -49,9 +37,8 @@ tagged_stream_multiply_length_impl::tagged_stream_multiply_length_impl(
     set_tag_propagation_policy(TPP_DONT);
     set_relative_rate(1, 1);
     message_port_register_in(pmt::intern("set_scalar"));
-    set_msg_handler(
-        pmt::intern("set_scalar"),
-        boost::bind(&tagged_stream_multiply_length_impl::set_scalar_pmt, this, _1));
+    set_msg_handler(pmt::intern("set_scalar"),
+                    [this](pmt::pmt_t msg) { this->set_scalar_pmt(msg); });
 }
 
 tagged_stream_multiply_length_impl::~tagged_stream_multiply_length_impl() {}

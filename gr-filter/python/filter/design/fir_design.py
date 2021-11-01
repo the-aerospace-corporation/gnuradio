@@ -1,27 +1,13 @@
-from __future__ import division
-from __future__ import unicode_literals
 # Copyright 2012 Free Software Foundation, Inc.
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 #
 
 import scipy
-from gnuradio import filter
+from gnuradio import filter, fft
 from PyQt5 import QtGui
 
 
@@ -41,7 +27,7 @@ def design_win_lpf(fs, gain, wintype, mainwin):
         try:
             taps = filter.firdes.low_pass_2(gain, fs, pb, tb,
                                             atten, wintype)
-        except RuntimeError as e:
+        except (RuntimeError, IndexError)  as e:
             reply = QtGui.QMessageBox.information(mainwin, "Runtime Error",
                                                   e.args[0], QtGui.QMessageBox.Ok)
             return ([], [], ret)
@@ -170,12 +156,12 @@ def design_win_hb(fs, gain, wintype, mainwin):
     ret = r and ret
     trwidth, r = getfloat(mainwin.gui.firhbtrEdit.text())
     ret = r and ret
-    filtwin = {filter.firdes.WIN_HAMMING: 'hamming',
-               filter.firdes.WIN_HANN: 'hanning',
-               filter.firdes.WIN_BLACKMAN: 'blackman',
-               filter.firdes.WIN_RECTANGULAR: 'boxcar',
-               filter.firdes.WIN_KAISER: ('kaiser', 4.0),
-               filter.firdes.WIN_BLACKMAN_hARRIS: 'blackmanharris'}
+    filtwin = {fft.window.WIN_HAMMING: 'hamming',
+               fft.window.WIN_HANN: 'hanning',
+               fft.window.WIN_BLACKMAN: 'blackman',
+               fft.window.WIN_RECTANGULAR: 'boxcar',
+               fft.window.WIN_KAISER: ('kaiser', 4.0),
+               fft.window.WIN_BLACKMAN_hARRIS: 'blackmanharris'}
 
     if int(filtord) & 1:
         reply = QtGui.QMessageBox.information(mainwin, "Filter order should be even",

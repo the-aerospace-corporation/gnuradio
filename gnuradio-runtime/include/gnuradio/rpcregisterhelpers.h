@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef RPCREGISTERHELPERS_H
@@ -27,13 +15,11 @@
 #include <gnuradio/rpcserver_base.h>
 #include <gnuradio/rpcserver_booter_base.h>
 #include <gnuradio/rpcserver_selector.h>
-#include <stdio.h>
-#include <iostream>
 #include <sstream>
 
 // Fixes circular dependency issue before including block_registry.h
 class rpcbasic_base;
-typedef boost::shared_ptr<rpcbasic_base> rpcbasic_sptr;
+typedef std::shared_ptr<rpcbasic_base> rpcbasic_sptr;
 
 #include <gnuradio/block_registry.h>
 
@@ -54,14 +40,14 @@ public:
     {
         ;
     }
-    ~rpcextractor_base() { ; }
+    ~rpcextractor_base() override { ; }
 
-    void post(pmt::pmt_t which_port, pmt::pmt_t msg)
+    void post(pmt::pmt_t which_port, pmt::pmt_t msg) override
     {
         (void)which_port;
         (void)msg;
         throw std::runtime_error(
-            "rpcextractor_base: no post defined for this data type.\n");
+            "rpcextractor_base: no post defined for this data type.");
     }
 
 protected:
@@ -74,14 +60,14 @@ class rpcextractor_base<T, void> : public virtual gr::messages::msg_accepter
 {
 public:
     rpcextractor_base(T* source, void (T::*func)()) : _source(source), _func(func) { ; }
-    ~rpcextractor_base() { ; }
+    ~rpcextractor_base() override { ; }
 
-    void post(pmt::pmt_t which_port, pmt::pmt_t msg)
+    void post(pmt::pmt_t which_port, pmt::pmt_t msg) override
     {
         (void)which_port;
         (void)msg;
         throw std::runtime_error(
-            "rpcextractor_base: no post defined for this data type.\n");
+            "rpcextractor_base: no post defined for this data type.");
     }
 
 protected:
@@ -119,7 +105,7 @@ public:
     rpcinserter_base(T* source, Tfrom (T::*func)()) : _source(source), _func(func) { ; }
     rpcinserter_base() { ; }
 
-    pmt::pmt_t retrieve()
+    pmt::pmt_t retrieve() override
     {
         assert(0);
         return pmt::pmt_t();
@@ -175,9 +161,12 @@ public:
     {
         ;
     }
-    ~rpchandler_base() { ; }
+    ~rpchandler_base() override { ; }
 
-    void post(pmt::pmt_t which_port, pmt::pmt_t msg) { _source->post(which_port, msg); }
+    void post(pmt::pmt_t which_port, pmt::pmt_t msg) override
+    {
+        _source->post(which_port, msg);
+    }
 
 protected:
     T* _source;
@@ -911,7 +900,7 @@ struct rpcbasic_register_set : public rpcbasic_base {
 #endif
     }
 
-    ~rpcbasic_register_set()
+    ~rpcbasic_register_set() override
     {
 #ifdef GR_RPCSERVER_ENABLED
         rpcmanager::get()->i()->unregisterConfigureCallback(d_id);
@@ -1056,7 +1045,7 @@ struct rpcbasic_register_trigger : public rpcbasic_base {
 #endif
     }
 
-    ~rpcbasic_register_trigger()
+    ~rpcbasic_register_trigger() override
     {
 #ifdef GR_RPCSERVER_ENABLED
         rpcmanager::get()->i()->unregisterConfigureCallback(d_id);
@@ -1331,7 +1320,7 @@ public:
 #endif
     }
 
-    ~rpcbasic_register_get()
+    ~rpcbasic_register_get() override
     {
 #ifdef GR_RPCSERVER_ENABLED
         rpcmanager::get()->i()->unregisterQueryCallback(d_id);
@@ -1543,7 +1532,7 @@ public:
     {
         throw std::runtime_error(
             "ERROR: rpcbasic_register_variable_rw called with no args. if this happens "
-            "someone used rpcbasic_register_variable_rw incorrectly.\n");
+            "someone used rpcbasic_register_variable_rw incorrectly.");
     };
 
     void set(Tfrom _variable)
@@ -1653,7 +1642,7 @@ public:
 #endif
     }
 
-    ~rpcbasic_register_handler()
+    ~rpcbasic_register_handler() override
     {
 #ifdef GR_RPCSERVER_ENABLED
         rpcmanager::get()->i()->unregisterHandlerCallback(d_id);

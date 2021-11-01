@@ -1,19 +1,8 @@
 # Copyright 2016 Free Software Foundation, Inc.
 # This file is part of GNU Radio
 #
-# GNU Radio Companion is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by the
-# Free Software Foundation; either version 2 of the License, or (at your
-# option) any later version.
+# SPDX-License-Identifier: GPL-2.0-or-later
 #
-# GNU Radio Companion is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
-# details.
-#
-# You should have received a copy of the GNU General Public License along with
-# this program; if not, write to the Free Software Foundation, Inc.,
-# 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 """
 Converter for legacy block definitions in XML format
 
@@ -23,7 +12,6 @@ Converter for legacy block definitions in XML format
   how a converted definition would look like
 """
 
-from __future__ import absolute_import, division, print_function
 
 from collections import OrderedDict, defaultdict
 from itertools import chain
@@ -157,7 +145,7 @@ def convert_templates(node, convert, block_id=''):
     templates['make'] = make or no_value
 
     templates['callbacks'] = [
-         convert(cb_node.text) for cb_node in node.iterfind('callback')
+        convert(cb_node.text) for cb_node in node.iterfind('callback')
     ] or no_value
 
     return OrderedDict((key, value) for key, value in templates.items() if value is not no_value)

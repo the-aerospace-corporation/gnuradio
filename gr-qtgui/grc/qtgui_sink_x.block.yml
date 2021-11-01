@@ -1,6 +1,6 @@
 id: qtgui_sink_x
 label: QT GUI Sink
-flags: [ python ]
+flags: [ python, cpp ]
 
 parameters:
 -   id: type
@@ -21,11 +21,14 @@ parameters:
     default: '1024'
 -   id: wintype
     label: Window Type
-    dtype: int
-    default: firdes.WIN_BLACKMAN_hARRIS
-    options: [firdes.WIN_BLACKMAN_hARRIS, firdes.WIN_HAMMING, firdes.WIN_HANN, firdes.WIN_BLACKMAN,
-        firdes.WIN_RECTANGULAR, firdes.WIN_KAISER]
+    dtype: enum
+    default: window.WIN_BLACKMAN_hARRIS
+    options: [window.WIN_BLACKMAN_hARRIS, window.WIN_HAMMING, window.WIN_HANN, window.WIN_BLACKMAN,
+        window.WIN_RECTANGULAR, window.WIN_KAISER]
     option_labels: [Blackman-harris, Hamming, Hann, Blackman, Rectangular, Kaiser]
+    option_attributes:
+        cpp_opts: ["fft::window::WIN_BLACKMAN_hARRIS", "fft::window::WIN_HAMMING", "fft::window::WIN_HANN", "fft::window::WIN_BLACKMAN",
+        "fft::window::WIN_RECTANGULAR", "fft::window::WIN_KAISER"]
     hide: part
 -   id: fc
     label: Center Frequency (Hz)
@@ -120,14 +123,45 @@ templates:
             ${plotfreq}, #plotfreq
             ${plotwaterfall}, #plotwaterfall
             ${plottime}, #plottime
-            ${plotconst} #plotconst
+            ${plotconst}, #plotconst
+            None # parent
         )
         self.${id}.set_update_time(1.0/${rate})
-        ${win} = sip.wrapinstance(self.${id}.pyqwidget(), Qt.QWidget)
+        ${win} = sip.wrapinstance(self.${id}.qwidget(), Qt.QWidget)
 
         self.${id}.enable_rf_freq(${showrf})
 
         ${gui_hint() % win}
+
+
+cpp_templates:
+  includes: ['#include <gnuradio/qtgui/${type.fcn}.h>', '#include <gnuradio/filter/firdes.h>']
+  declarations: gr::qtgui::${type.fcn}::sptr ${id};
+  make: |-
+    <%
+        win = '_%s_win'%id
+    %>\
+    ${id} = gr::qtgui::${type.fcn}::make(
+            ${fftsize}, //fftsize
+            ${wintype.cpp_opts}, // wintype
+            ${fc}, //fc
+            ${bw}, //bw
+            "${name.strip("'").strip('"')}", //name
+            ${plotfreq}, //plotfreq
+            ${plotwaterfall}, //plotwaterfall
+            ${plottime}, //plottime
+            ${plotconst} //plotconst
+        );
+    ${id}->set_update_time(1.0/${rate});   
+    ${id}->enable_rf_freq(${showrf});
+    QWidget* _${id}_win;
+    _${id}_win = this->${id}->qwidget();
+    ${gui_hint() % win}
+    
+  link: ['gnuradio::gnuradio-qtgui']
+  translations:
+    'True': 'true'
+    'False': 'false'
 
 documentation: |-
     The GUI hint can be used to position the widget within the application. The hint is of the form [tab_id@tab_index]: [row, col, row_span, col_span]. Both the tab specification and the grid position are optional.

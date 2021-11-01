@@ -4,26 +4,16 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 #ifndef INCLUDED_AUDIO_PORTAUDIO_SINK_H
 #define INCLUDED_AUDIO_PORTAUDIO_SINK_H
 
 #include <gnuradio/audio/sink.h>
 #include <gnuradio/buffer.h>
+#include <gnuradio/buffer_reader.h>
+#include <gnuradio/logger.h>
 #include <gnuradio/thread/thread.h>
 #include <portaudio.h>
 #include <stdexcept>
@@ -62,9 +52,6 @@ class portaudio_sink : public sink
     gr::thread::condition_variable d_ringbuffer_cond;
     bool d_ringbuffer_ready;
 
-    // random stats
-    int d_nunderuns; // count of underruns
-    // gri_logger_sptr d_log;  // handle to non-blocking logging instance
 
     void output_error_msg(const char* msg, int err);
     void bail(const char* msg, int err);
@@ -73,13 +60,13 @@ class portaudio_sink : public sink
 public:
     portaudio_sink(int sampling_rate, const std::string device_name, bool ok_to_block);
 
-    ~portaudio_sink();
+    ~portaudio_sink() override;
 
-    bool check_topology(int ninputs, int noutputs);
+    bool check_topology(int ninputs, int noutputs) override;
 
     int work(int noutput_items,
              gr_vector_const_void_star& input_items,
-             gr_vector_void_star& output_items);
+             gr_vector_void_star& output_items) override;
 };
 
 } /* namespace audio */

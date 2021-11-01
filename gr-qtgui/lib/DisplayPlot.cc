@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #include <gnuradio/qtgui/DisplayPlot.h>
@@ -27,7 +15,6 @@
 #include <QColor>
 #include <QDebug>
 #include <cmath>
-#include <iostream>
 #include <stdexcept>
 
 DisplayPlot::DisplayPlot(int nplots, QWidget* parent)
@@ -56,7 +43,7 @@ DisplayPlot::DisplayPlot(int nplots, QWidget* parent)
 
     d_panner = new QwtPlotPanner(canvas());
     d_panner->setAxisEnabled(QwtPlot::yRight, false);
-    d_panner->setMouseButton(Qt::MidButton, Qt::ControlModifier);
+    d_panner->setMouseButton(Qt::MiddleButton, Qt::ControlModifier);
 
     // emit the position of clicks on widget
     d_picker = new QwtDblClickPlotPicker(canvas());
@@ -83,7 +70,12 @@ DisplayPlot::DisplayPlot(int nplots, QWidget* parent)
 
     const QFontMetrics fm(axisWidget(QwtPlot::yLeft)->font());
     QwtScaleDraw* sd = axisScaleDraw(QwtPlot::yLeft);
-    sd->setMinimumExtent(fm.width("100.00"));
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 11, 0))
+    int min_ext = fm.horizontalAdvance("100.00");
+#else
+    int min_ext = fm.width("100.00");
+#endif
+    sd->setMinimumExtent(min_ext);
 
     QwtLegend* legendDisplay = new QwtLegend(this);
 
@@ -414,7 +406,7 @@ void DisplayPlot::legendEntryChecked(const QVariant& plotItem, bool on, int inde
 {
 #if QWT_VERSION < 0x060100
     std::runtime_error("DisplayPlot::legendEntryChecked with QVariant not enabled in "
-                       "this version of QWT.\n");
+                       "this version of QWT.");
 #else
     QwtPlotItem* p = infoToItem(plotItem);
     legendEntryChecked(p, on);

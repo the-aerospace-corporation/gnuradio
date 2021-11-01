@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -26,14 +14,14 @@
 
 #include "skiphead_impl.h"
 #include <gnuradio/io_signature.h>
-#include <string.h>
+#include <cstring>
 
 namespace gr {
 namespace blocks {
 
 skiphead::sptr skiphead::make(size_t itemsize, uint64_t nitems_to_skip)
 {
-    return gnuradio::get_initial_sptr(new skiphead_impl(itemsize, nitems_to_skip));
+    return gnuradio::make_block_sptr<skiphead_impl>(itemsize, nitems_to_skip);
 }
 
 skiphead_impl::skiphead_impl(size_t itemsize, uint64_t nitems_to_skip)
@@ -76,10 +64,9 @@ int skiphead_impl::general_work(int noutput_items,
         else { // nothing left to skip. copy away
             // Grab all tags in the window and shift their offsets appropriately
             get_tags_in_window(d_tags, 0, ii, ninput_items);
-            for (std::vector<tag_t>::iterator it = d_tags.begin(); it != d_tags.end();
-                 it++) {
-                (*it).offset -= d_nitems_to_skip;
-                add_item_tag(0, *it);
+            for (auto& tag : d_tags) {
+                tag.offset -= d_nitems_to_skip;
+                add_item_tag(0, tag);
             }
             int n_to_copy = ninput_items - ii;
             if (n_to_copy > 0) {

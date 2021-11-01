@@ -3,20 +3,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #include "tag_sink_demo.h"
@@ -25,13 +13,15 @@
 #include <gnuradio/uhd/usrp_sink.h>
 #include <gnuradio/uhd/usrp_source.h>
 #include <uhd/utils/safe_main.hpp>
-#include <boost/make_shared.hpp>
+#include <boost/format.hpp>
 #include <boost/program_options.hpp>
-#include <boost/thread/thread.hpp> //sleep
+#include <chrono>
 #include <csignal>
 #include <iostream>
+#include <thread>
 
 namespace po = boost::program_options;
+using namespace std::chrono_literals;
 
 /***********************************************************************
  * Signal handlers
@@ -98,7 +88,7 @@ int UHD_SAFE_MAIN(int argc, char* argv[])
     usrp_source->set_samp_rate(samp_rate);
     usrp_source->set_center_freq(center_freq);
 
-    boost::shared_ptr<tag_sink_demo> tag_sink = boost::make_shared<tag_sink_demo>();
+    std::shared_ptr<tag_sink_demo> tag_sink = std::make_shared<tag_sink_demo>();
 
     //------------------------------------------------------------------
     //-- connect the usrp source test blocks
@@ -115,13 +105,13 @@ int UHD_SAFE_MAIN(int argc, char* argv[])
     const uhd::time_spec_t time_now = usrp_sink->get_time_now();
     const double actual_samp_rate = usrp_sink->get_samp_rate();
 
-    boost::shared_ptr<tag_source_demo> tag_source = boost::make_shared<tag_source_demo>(
-        time_now.get_full_secs() + 1,
-        time_now.get_frac_secs(), // time now + 1 second
-        actual_samp_rate,
-        idle_dur,
-        burst_dur,
-        length_tag);
+    std::shared_ptr<tag_source_demo> tag_source =
+        std::make_shared<tag_source_demo>(time_now.get_full_secs() + 1,
+                                          time_now.get_frac_secs(), // time now + 1 second
+                                          actual_samp_rate,
+                                          idle_dur,
+                                          burst_dur,
+                                          length_tag);
 
     //------------------------------------------------------------------
     //-- connect the usrp sink test blocks
@@ -139,8 +129,8 @@ int UHD_SAFE_MAIN(int argc, char* argv[])
     //------------------------------------------------------------------
     std::signal(SIGINT, &sig_int_handler);
     std::cout << "press ctrl + c to exit" << std::endl;
-    while (not stop_signal_called) {
-        boost::this_thread::sleep(boost::posix_time::milliseconds(100));
+    while (!stop_signal_called) {
+        std::this_thread::sleep_for(100ms);
     }
 
     //------------------------------------------------------------------

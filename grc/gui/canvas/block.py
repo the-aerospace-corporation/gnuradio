@@ -1,36 +1,20 @@
 """
 Copyright 2007, 2008, 2009 Free Software Foundation, Inc.
+Copyright 2020-2021 GNU Radio Contributors
 This file is part of GNU Radio
 
-GNU Radio Companion is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
+SPDX-License-Identifier: GPL-2.0-or-later
 
-GNU Radio Companion is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 """
 
-from __future__ import absolute_import, division
 
 import math
 
-import six
 from gi.repository import Gtk, Pango, PangoCairo
 
 from . import colors
 from .drawable import Drawable
 from .. import Actions, Utils, Constants
-from ..Constants import (
-    BLOCK_LABEL_PADDING, PORT_SPACING, PORT_SEPARATION, LABEL_SEPARATION,
-    PORT_BORDER_SEPARATION, BLOCK_FONT, PARAM_FONT
-)
 from ...core import utils
 from ...core.blocks import Block as CoreBlock
 
@@ -108,17 +92,38 @@ class Block(CoreBlock, Drawable):
         self.states['rotation'] = rot
 
     def _update_colors(self):
-        self._bg_color = (
-            colors.MISSING_BLOCK_BACKGROUND_COLOR if self.is_dummy_block else
-            colors.BLOCK_BYPASSED_COLOR if self.state == 'bypassed' else
-            colors.BLOCK_ENABLED_COLOR if self.state == 'enabled' else
-            colors.BLOCK_DISABLED_COLOR
-        )
+        def get_bg():
+            """
+            Get the background color for this block
+
+            Explicit is better than a chain of if/else expressions,
+            so this was extracted into a nested function.
+            """
+            if self.is_dummy_block:
+                return colors.MISSING_BLOCK_BACKGROUND_COLOR
+            if self.state == 'bypassed':
+                return colors.BLOCK_BYPASSED_COLOR
+            if self.state == 'enabled':
+                if self.deprecated:
+                    return colors.BLOCK_DEPRECATED_BACKGROUND_COLOR
+                return colors.BLOCK_ENABLED_COLOR
+            return colors.BLOCK_DISABLED_COLOR
+
+        def get_border():
+            """
+            Get the border color for this block
+            """
+            if self.is_dummy_block:
+                return colors.MISSING_BLOCK_BORDER_COLOR
+            if self.deprecated:
+                return colors.BLOCK_DEPRECATED_BORDER_COLOR
+            if self.state == 'enabled':
+                return colors.BORDER_COLOR
+            return colors.BORDER_COLOR_DISABLED
+
+        self._bg_color = get_bg()
         self._font_color[-1] = 1.0 if self.state == 'enabled' else 0.4
-        self._border_color = (
-            colors.MISSING_BLOCK_BORDER_COLOR if self.is_dummy_block else
-            colors.BORDER_COLOR_DISABLED if not self.state == 'enabled' else colors.BORDER_COLOR
-        )
+        self._border_color = get_border()
 
     def create_shapes(self):
         """Update the block, parameters, and ports when a change occurs."""
@@ -132,10 +137,10 @@ class Block(CoreBlock, Drawable):
         for ports, has_busses in zip((self.active_sources, self.active_sinks), bussified):
             if not ports:
                 continue
-            port_separation = PORT_SEPARATION if not has_busses else ports[0].height + PORT_SPACING
+            port_separation = Constants.PORT_SEPARATION if not has_busses else ports[0].height + Constants.PORT_SPACING
             offset = (self.height - (len(ports) - 1) * port_separation - ports[0].height) / 2
             for port in ports:
-                port.create_shapes()            
+                port.create_shapes()
                 port.coordinate = {
                     0: (+self.width, offset),
                     90: (offset, -port.width),
@@ -143,7 +148,7 @@ class Block(CoreBlock, Drawable):
                     270: (offset, +self.width),
                 }[port.connector_direction]
 
-                offset += PORT_SEPARATION if not has_busses else port.height + PORT_SPACING
+                offset += Constants.PORT_SEPARATION if not has_busses else port.height + Constants.PORT_SPACING
 
     def create_labels(self, cr=None):
         """Create the labels for the signal block."""
@@ -160,45 +165,45 @@ class Block(CoreBlock, Drawable):
 
         title_layout.set_markup(
             '<span {foreground} font_desc="{font}"><b>{label}</b></span>'.format(
-                foreground='foreground="red"' if not self.is_valid() else '', font=BLOCK_FONT,
+                foreground='foreground="red"' if not self.is_valid() else '', font=Constants.BLOCK_FONT,
                 label=Utils.encode(self.label)
             )
         )
         title_width, title_height = title_layout.get_size()
- 
+
         force_show_id = Actions.TOGGLE_SHOW_BLOCK_IDS.get_active()
 
         # update the params layout
         if not self.is_dummy_block:
             markups = [param.format_block_surface_markup()
-                for param in self.params.values() if (param.hide not in ('all', 'part') or (param.dtype == 'id' and force_show_id))]
+                       for param in self.params.values() if (param.hide not in ('all', 'part') or (param.dtype == 'id' and force_show_id))]
         else:
-            markups = ['<span font_desc="{font}"><b>key: </b>{key}</span>'.format(font=PARAM_FONT, key=self.key)]
+            markups = ['<span font_desc="{font}"><b>key: </b>{key}</span>'.format(font=Constants.PARAM_FONT, key=self.key)]
 
-        params_layout.set_spacing(LABEL_SEPARATION * Pango.SCALE)
+        params_layout.set_spacing(Constants.LABEL_SEPARATION * Pango.SCALE)
         params_layout.set_markup('\n'.join(markups))
         params_width, params_height = params_layout.get_size() if markups else (0, 0)
 
         label_width = max(title_width, params_width) / Pango.SCALE
         label_height = title_height / Pango.SCALE
         if markups:
-            label_height += LABEL_SEPARATION + params_height / Pango.SCALE
+            label_height += Constants.LABEL_SEPARATION + params_height / Pango.SCALE
 
         # calculate width and height needed
-        width = label_width + 2 * BLOCK_LABEL_PADDING
-        height = label_height + 2 * BLOCK_LABEL_PADDING
+        width = label_width + 2 * Constants.BLOCK_LABEL_PADDING
+        height = label_height + 2 * Constants.BLOCK_LABEL_PADDING
 
         self._update_colors()
         self.create_port_labels()
 
         def get_min_height_for_ports(ports):
-            min_height = 2 * PORT_BORDER_SEPARATION + len(ports) * PORT_SEPARATION
+            min_height = 2 * Constants.PORT_BORDER_SEPARATION + len(ports) * Constants.PORT_SEPARATION
             # If any of the ports are bus ports - make the min height larger
             if any([p.dtype == 'bus' for p in ports]):
-                min_height = 2 * PORT_BORDER_SEPARATION + sum(
-                    port.height + PORT_SPACING for port in ports if port.dtype == 'bus'
-                    ) - PORT_SPACING
-            
+                min_height = 2 * Constants.PORT_BORDER_SEPARATION + sum(
+                    port.height + Constants.PORT_SPACING for port in ports if port.dtype == 'bus'
+                    ) - Constants.PORT_SPACING
+
             else:
                 if ports:
                     min_height -= ports[-1].height
@@ -212,7 +217,7 @@ class Block(CoreBlock, Drawable):
 
         self._surface_layouts_offsets = [
             (0, (height - label_height) / 2.0),
-            (0, (height - label_height) / 2.0 + LABEL_SEPARATION + title_height / Pango.SCALE)
+            (0, (height - label_height) / 2.0 + Constants.LABEL_SEPARATION + title_height / Pango.SCALE)
         ]
 
         title_layout.set_width(width * Pango.SCALE)
@@ -238,7 +243,7 @@ class Block(CoreBlock, Drawable):
             complexity = utils.flow_graph_complexity.calculate(self.parent)
             markups.append(
                 '<span foreground="#444" size="medium" font_desc="{font}">'
-                '<b>Complexity: {num}bal</b></span>'.format(num=Utils.num_to_str(complexity), font=BLOCK_FONT)
+                '<b>Complexity: {num}bal</b></span>'.format(num=Utils.num_to_str(complexity), font=Constants.BLOCK_FONT)
             )
         comment = self.comment  # Returns None if there are no comments
         if comment:
@@ -246,7 +251,7 @@ class Block(CoreBlock, Drawable):
                 markups.append('<span></span>')
 
             markups.append('<span foreground="{foreground}" font_desc="{font}">{comment}</span>'.format(
-                foreground='#444' if self.enabled else '#888', font=BLOCK_FONT, comment=Utils.encode(comment)
+                foreground='#444' if self.enabled else '#888', font=Constants.BLOCK_FONT, comment=Utils.encode(comment)
             ))
         if markups:
             layout = self._comment_layout = Gtk.DrawingArea().create_pango_layout('')
@@ -310,9 +315,9 @@ class Block(CoreBlock, Drawable):
         x, y = self.coordinate
 
         if self.is_horizontal():
-            y += self.height + BLOCK_LABEL_PADDING
+            y += self.height + Constants.BLOCK_LABEL_PADDING
         else:
-            x += self.height + BLOCK_LABEL_PADDING
+            x += self.height + Constants.BLOCK_LABEL_PADDING
 
         cr.save()
         cr.translate(x, y)
@@ -334,9 +339,9 @@ class Block(CoreBlock, Drawable):
         if not self._comment_layout:
             return x, y, x, y
         if self.is_horizontal():
-            y += self.height + BLOCK_LABEL_PADDING
+            y += self.height + Constants.BLOCK_LABEL_PADDING
         else:
-            x += self.height + BLOCK_LABEL_PADDING
+            x += self.height + Constants.BLOCK_LABEL_PADDING
         w, h = self._comment_layout.get_pixel_size()
         return x, y, x + w, y + h
 
@@ -356,7 +361,7 @@ class Block(CoreBlock, Drawable):
         type_templates = ' '.join(p.dtype for p in self.params.values()) + ' '
         type_templates += ' '.join(p.get_raw('dtype') for p in (self.sinks + self.sources))
         type_param = None
-        for key, param in six.iteritems(self.params):
+        for key, param in self.params.items():
             if not param.is_enum():
                 continue
             # Priority to the type controller
@@ -393,7 +398,7 @@ class Block(CoreBlock, Drawable):
         # Concat the nports string from the private nports settings of all ports
         nports_str = ' '.join(str(port.get_raw('multiplicity')) for port in self.ports())
         # Modify all params whose keys appear in the nports string
-        for key, param in six.iteritems(self.params):
+        for key, param in self.params.items():
             if param.is_enum() or param.key not in nports_str:
                 continue
             # Try to increment the port controller by direction
@@ -406,4 +411,3 @@ class Block(CoreBlock, Drawable):
                 # Should we be logging something here
                 pass
         return changed
-

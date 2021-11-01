@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -28,8 +16,9 @@
 #include <gnuradio/messages/msg_accepter.h>
 #include <pmt/pmt.h>
 #include <pmt/pmt_pool.h>
-#include <stdio.h>
-#include <string.h>
+#include <any>
+#include <cstdio>
+#include <cstring>
 #include <vector>
 
 namespace pmt {
@@ -49,7 +38,7 @@ exception::exception(const std::string& msg, pmt_t obj)
 }
 
 wrong_type::wrong_type(const std::string& msg, pmt_t obj)
-    : exception(msg + ": wrong_type ", obj)
+    : invalid_argument(msg + ": wrong_type " + write_string(obj))
 {
 }
 
@@ -93,6 +82,8 @@ static pmt_any* _any(pmt_t x) { return dynamic_cast<pmt_any*>(x.get()); }
 ////////////////////////////////////////////////////////////////////////////
 //                           Globals
 ////////////////////////////////////////////////////////////////////////////
+
+pmt_null::pmt_null() {}
 
 pmt_t get_PMT_NIL()
 {
@@ -147,7 +138,7 @@ bool to_bool(pmt_t val)
 
 static const unsigned int get_symbol_hash_table_size()
 {
-    static const unsigned int SYMBOL_HASH_TABLE_SIZE = 701;
+    static const unsigned int SYMBOL_HASH_TABLE_SIZE = 8192;
     return SYMBOL_HASH_TABLE_SIZE;
 }
 
@@ -160,27 +151,11 @@ static std::vector<pmt_t>* get_symbol_hash_table()
 pmt_symbol::pmt_symbol(const std::string& name) : d_name(name) {}
 
 
-static unsigned int hash_string(const std::string& s)
-{
-    unsigned int h = 0;
-    unsigned int g = 0;
-
-    for (std::string::const_iterator p = s.begin(); p != s.end(); ++p) {
-        h = (h << 4) + (*p & 0xff);
-        g = h & 0xf0000000;
-        if (g) {
-            h = h ^ (g >> 24);
-            h = h ^ g;
-        }
-    }
-    return h;
-}
-
 bool is_symbol(const pmt_t& obj) { return obj->is_symbol(); }
 
 pmt_t string_to_symbol(const std::string& name)
 {
-    unsigned hash = hash_string(name) % get_symbol_hash_table_size();
+    unsigned hash = std::hash<std::string>()(name) % get_symbol_hash_table_size();
 
     // Does a symbol with this name already exist?
     for (pmt_t sym = (*get_symbol_hash_table())[hash]; sym; sym = _symbol(sym)->next()) {
@@ -308,6 +283,11 @@ pmt_t pmt_from_complex(double re, double im)
     return pmt_t(new pmt_complex(std::complex<double>(re, im)));
 }
 
+pmt_t pmt_from_complex(const std::complex<double>& z)
+{
+    return pmt_t(new pmt_complex(z));
+}
+
 pmt_t from_complex(const std::complex<double>& z) { return pmt_t(new pmt_complex(z)); }
 
 std::complex<double> to_complex(pmt_t x)
@@ -326,7 +306,6 @@ std::complex<double> to_complex(pmt_t x)
 //                              Pairs
 ////////////////////////////////////////////////////////////////////////////
 
-pmt_null::pmt_null() {}
 pmt_pair::pmt_pair(const pmt_t& car, const pmt_t& cdr) : d_car(car), d_cdr(cdr) {}
 
 bool is_null(const pmt_t& x) { return x == PMT_NIL; }
@@ -670,9 +649,22 @@ void* uniform_vector_writable_elements(pmt_t vector, size_t& len)
  * Chris Okasaki, 1998, section 3.3.
  */
 
-bool is_dict(const pmt_t& obj) { return is_null(obj) || is_pair(obj); }
+pmt_dict::pmt_dict(const pmt_t& car, const pmt_t& cdr) : pmt_pair::pmt_pair(car, cdr) {}
+
+bool is_dict(const pmt_t& obj) { return is_null(obj) || obj->is_dict(); }
 
 pmt_t make_dict() { return PMT_NIL; }
+
+pmt_t dcons(const pmt_t& x, const pmt_t& y)
+{
+    // require arguments to be a PMT pair and PMT dictionary respectively
+    if (!is_pair(x))
+        throw wrong_type("pmt_dcons: not a pair", x);
+    if (!is_dict(y))
+        throw wrong_type("pmt_dcons: not a dict", y);
+
+    return pmt_t(new pmt_dict(x, y));
+}
 
 pmt_t dict_add(const pmt_t& dict, const pmt_t& key, const pmt_t& value)
 {
@@ -705,7 +697,7 @@ pmt_t dict_delete(const pmt_t& dict, const pmt_t& key)
     if (eqv(caar(dict), key))
         return cdr(dict);
 
-    return cons(car(dict), dict_delete(cdr(dict), key));
+    return dcons(car(dict), dict_delete(cdr(dict), key));
 }
 
 pmt_t dict_ref(const pmt_t& dict, const pmt_t& key, const pmt_t& not_found)
@@ -750,20 +742,20 @@ pmt_t dict_values(pmt_t dict)
 //                                 Any
 ////////////////////////////////////////////////////////////////////////////
 
-pmt_any::pmt_any(const boost::any& any) : d_any(any) {}
+pmt_any::pmt_any(const std::any& any) : d_any(any) {}
 
 bool is_any(pmt_t obj) { return obj->is_any(); }
 
-pmt_t make_any(const boost::any& any) { return pmt_t(new pmt_any(any)); }
+pmt_t make_any(const std::any& any) { return pmt_t(new pmt_any(any)); }
 
-boost::any any_ref(pmt_t obj)
+std::any any_ref(pmt_t obj)
 {
     if (!obj->is_any())
         throw wrong_type("pmt_any_ref", obj);
     return _any(obj)->ref();
 }
 
-void any_set(pmt_t obj, const boost::any& any)
+void any_set(pmt_t obj, const std::any& any)
 {
     if (!obj->is_any())
         throw wrong_type("pmt_any_set", obj);
@@ -779,8 +771,8 @@ bool is_msg_accepter(const pmt_t& obj)
     if (!is_any(obj))
         return false;
 
-    boost::any r = any_ref(obj);
-    return boost::any_cast<gr::messages::msg_accepter_sptr>(&r) != 0;
+    std::any r = any_ref(obj);
+    return std::any_cast<gr::messages::msg_accepter_sptr>(&r) != 0;
 }
 
 //! make a msg_accepter
@@ -790,8 +782,8 @@ pmt_t make_msg_accepter(gr::messages::msg_accepter_sptr ma) { return make_any(ma
 gr::messages::msg_accepter_sptr msg_accepter_ref(const pmt_t& obj)
 {
     try {
-        return boost::any_cast<gr::messages::msg_accepter_sptr>(any_ref(obj));
-    } catch (boost::bad_any_cast& e) {
+        return std::any_cast<gr::messages::msg_accepter_sptr>(any_ref(obj));
+    } catch (std::bad_any_cast& e) {
         throw wrong_type("pmt_msg_accepter_ref", obj);
     }
 }
@@ -825,6 +817,11 @@ size_t blob_length(pmt_t blob)
 ////////////////////////////////////////////////////////////////////////////
 //                          General Functions
 ////////////////////////////////////////////////////////////////////////////
+
+bool is_pdu(const pmt_t& obj)
+{
+    return is_pair(obj) && is_dict(car(obj)) && is_uniform_vector(cdr(obj));
+}
 
 bool eq(const pmt_t& x, const pmt_t& y) { return x == y; }
 
@@ -916,6 +913,7 @@ size_t length(const pmt_t& x)
     if (x->is_null())
         return 0;
 
+    // also returns correct result for dictionaries
     if (x->is_pair()) {
         size_t length = 1;
         pmt_t it = cdr(x);
@@ -929,8 +927,6 @@ size_t length(const pmt_t& x)
         // not a proper list
         throw wrong_type("pmt_length", x);
     }
-
-    // FIXME dictionary length (number of entries)
 
     throw wrong_type("pmt_length", x);
 }
@@ -998,9 +994,16 @@ pmt_t reverse(pmt_t listx)
     pmt_t list = listx;
     pmt_t r = PMT_NIL;
 
-    while (is_pair(list)) {
-        r = cons(car(list), r);
-        list = cdr(list);
+    if (is_dict(listx)) {
+        while (is_pair(list)) {
+            r = dcons(car(list), r);
+            list = cdr(list);
+        }
+    } else {
+        while (is_pair(list)) {
+            r = cons(car(list), r);
+            list = cdr(list);
+        }
     }
     if (is_null(list))
         return r;

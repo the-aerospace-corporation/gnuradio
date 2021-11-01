@@ -2,25 +2,9 @@
 #
 # Copyright 2015 Free Software Foundation
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
 
 import sys
 import matplotlib
@@ -31,7 +15,6 @@ from gnuradio.ctrlport.GNURadioControlPortClient import (
     GNURadioControlPortClient, TTransportException,
 )
 import numpy
-from numpy.fft import fftpack
 
 """
 If a host is running the ATSC receiver chain with ControlPort
@@ -120,7 +103,7 @@ class atsc_ctrlport_monitor(object):
 
         fs = 6.25e6
         freq = numpy.linspace(-fs / 2, fs / 2, 10000)
-        H = numpy.fft.fftshift(fftpack.fft(eqdata.value, 10000))
+        H = numpy.fft.fftshift(numpy.fft.fft(eqdata.value, 10000))
         HdB = 20.0*numpy.log10(abs(H))
         psd.set_ydata(HdB)
         psd.set_xdata(freq)

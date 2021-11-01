@@ -4,26 +4,14 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef FREQ_DISPLAY_FORM_H
 #define FREQ_DISPLAY_FORM_H
 
-#include <gnuradio/filter/firdes.h>
+#include <gnuradio/fft/window.h>
 #include <gnuradio/qtgui/FrequencyDisplayPlot.h>
 #include <gnuradio/qtgui/spectrumUpdateEvents.h>
 #include <QtGui/QtGui>
@@ -43,13 +31,13 @@ class FreqDisplayForm : public DisplayForm
 
 public:
     FreqDisplayForm(int nplots = 1, QWidget* parent = 0);
-    ~FreqDisplayForm();
+    ~FreqDisplayForm() override;
 
-    FrequencyDisplayPlot* getPlot();
+    FrequencyDisplayPlot* getPlot() override;
 
     int getFFTSize() const;
     float getFFTAverage() const;
-    gr::filter::firdes::win_type getFFTWindowType() const;
+    gr::fft::window::win_type getFFTWindowType() const;
 
     // Trigger methods
     gr::qtgui::trigger_mode getTriggerMode() const;
@@ -65,19 +53,19 @@ public:
     bool checkClicked();
 
 public slots:
-    void customEvent(QEvent* e);
+    void customEvent(QEvent* e) override;
 
-    void setSampleRate(const QString& samprate);
+    void setSampleRate(const QString& samprate) override;
     void setFFTSize(const int);
     void setFFTAverage(const float);
-    void setFFTWindowType(const gr::filter::firdes::win_type);
+    void setFFTWindowType(const gr::fft::window::win_type);
 
     void setFrequencyRange(const double centerfreq, const double bandwidth);
     void setYaxis(double min, double max);
     void setYLabel(const std::string& label, const std::string& unit = "");
     void setYMax(const QString& m);
     void setYMin(const QString& m);
-    void autoScale(bool en);
+    void autoScale(bool en) override;
     void autoScaleShot();
     void setPlotPosHalf(bool half);
     void clearMaxHold();
@@ -110,7 +98,7 @@ public slots:
 
 signals:
     void signalFFTSize(int size);
-    void signalFFTWindow(gr::filter::firdes::win_type win);
+    void signalFFTWindow(gr::fft::window::win_type win);
     void signalClearMaxData();
     void signalClearMinData();
     void signalSetMaxFFTVisible(bool en);
@@ -121,8 +109,8 @@ signals:
 
 
 private slots:
-    void newData(const QEvent* updateEvent);
-    void onPlotPointSelected(const QPointF p);
+    void newData(const QEvent* updateEvent) override;
+    void onPlotPointSelected(const QPointF p) override;
 
 private:
     uint64_t d_num_real_data_points;
@@ -131,7 +119,7 @@ private:
     double d_samp_rate, d_center_freq;
     int d_fftsize;
     float d_fftavg;
-    gr::filter::firdes::win_type d_fftwintype;
+    gr::fft::window::win_type d_fftwintype;
     double d_units;
 
     bool d_clicked;

@@ -4,30 +4,21 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef INCLUDED_QTGUI_FREQ_SINK_C_H
 #define INCLUDED_QTGUI_FREQ_SINK_C_H
 
 #ifdef ENABLE_PYTHON
-#include <Python.h>
+#pragma push_macro("slots")
+#undef slots
+#include "Python.h"
+#pragma pop_macro("slots")
 #endif
 
-#include <gnuradio/filter/firdes.h>
+#include <gnuradio/fft/window.h>
 #include <gnuradio/qtgui/api.h>
 #include <gnuradio/qtgui/trigger_mode.h>
 #include <gnuradio/sync_block.h>
@@ -87,7 +78,7 @@ class QTGUI_API freq_sink_c : virtual public sync_block
 {
 public:
     // gr::qtgui::freq_sink_c::sptr
-    typedef boost::shared_ptr<freq_sink_c> sptr;
+    typedef std::shared_ptr<freq_sink_c> sptr;
 
     /*!
      * \brief Build a complex PSD sink.
@@ -95,7 +86,11 @@ public:
      * \param fftsize size of the FFT to compute and display. If using
      *        the PDU message port to plot samples, the length of
      *        each PDU must be a multiple of the FFT size.
-     * \param wintype type of window to apply (see gr::fft::window::win_type)
+     * \param wintype type of window to apply (see gr::fft::window::win_type).
+     *        By setting bit 16 to one, this block will normalize the window
+     *        before applying it. This allows switching between windows without
+     *        sacrificing signal power due to tapering, but it will also
+     *        amplify some samples. See also set_fft_window_normalized().
      * \param fc center frequency of signal (use for x-axis labels)
      * \param bw bandwidth of signal (used to set x-axis labels)
      * \param name title for the plot
@@ -116,18 +111,14 @@ public:
     virtual void exec_() = 0;
     virtual QWidget* qwidget() = 0;
 
-#ifdef ENABLE_PYTHON
-    virtual PyObject* pyqwidget() = 0;
-#else
-    virtual void* pyqwidget() = 0;
-#endif
-
     virtual void set_fft_size(const int fftsize) = 0;
     virtual int fft_size() const = 0;
     virtual void set_fft_average(const float fftavg) = 0;
     virtual float fft_average() const = 0;
-    virtual void set_fft_window(const gr::filter::firdes::win_type win) = 0;
-    virtual gr::filter::firdes::win_type fft_window() = 0;
+    virtual void set_fft_window(const gr::fft::window::win_type win) = 0;
+    virtual gr::fft::window::win_type fft_window() = 0;
+    //! If true, normalize window to unit power
+    virtual void set_fft_window_normalized(const bool enable) = 0;
 
     virtual void set_frequency_range(const double centerfreq, const double bandwidth) = 0;
     virtual void set_y_axis(double min, double max) = 0;

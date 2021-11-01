@@ -1,23 +1,12 @@
 """
 Copyright 2008-2016 Free Software Foundation, Inc.
+Copyright 2021 GNU Radio contributors
 This file is part of GNU Radio
 
-GNU Radio Companion is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
+SPDX-License-Identifier: GPL-2.0-or-later
 
-GNU Radio Companion is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 """
 
-from __future__ import absolute_import
 
 import os
 import numbers
@@ -32,7 +21,7 @@ BLOCK_DTD = os.path.join(DATA_DIR, 'block.dtd')
 DEFAULT_FLOW_GRAPH = os.path.join(DATA_DIR, 'default_flow_graph.grc')
 DEFAULT_HIER_BLOCK_LIB_DIR = os.path.expanduser('~/.grc_gnuradio')
 
-CACHE_FILE = os.path.expanduser('~/.cache/grc_gnuradio/cache.json')
+CACHE_FILE = os.path.expanduser('~/.cache/grc_gnuradio/cache_v2.json')
 
 BLOCK_DESCRIPTION_FILE_FORMAT_VERSION = 1
 # File format versions:
@@ -57,10 +46,10 @@ HIER_BLOCK_FILE_MODE = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IWGRP
 
 PARAM_TYPE_NAMES = {
     'raw', 'enum',
-    'complex', 'real', 'float', 'int',
+    'complex', 'real', 'float', 'int', 'short', 'byte',
     'complex_vector', 'real_vector', 'float_vector', 'int_vector',
     'hex', 'string', 'bool',
-    'file_open', 'file_save', '_multiline', '_multiline_python_external',
+    'file_open', 'file_save', 'dir_select', '_multiline', '_multiline_python_external',
     'id', 'stream_id','name',
     'gui_hint',
     'import',
@@ -125,6 +114,24 @@ ALIAS_TYPES = {
     'short':   (2, GRC_COLOR_YELLOW),
     'byte':    (1, GRC_COLOR_PURPLE_A400),
     'bits':    (1, GRC_COLOR_PURPLE_A100),
+}
+
+ALIASES_OF = {
+    'complex': {'fc32'},
+    'float': {'f32'},
+    'int': {'s32'},
+    'short': {'s16', 'sc16'},
+    'byte': {'s8', 'sc8'},
+    'bits': {'bit'},
+
+    'fc32': {'complex'},
+    'f32': {'float'},
+    's32': {'int'},
+    's16': {'short'},
+    'sc16': {'short'},
+    's8': {'byte'},
+    'sc8': {'byte'},
+    'bit': {'bits'},
 }
 
 TYPE_TO_SIZEOF = {key: sizeof for name, key, sizeof, color in CORE_TYPES}

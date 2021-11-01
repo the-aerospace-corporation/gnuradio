@@ -4,25 +4,14 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef FREQ_CONTROL_PANEL_H
 #define FREQ_CONTROL_PANEL_H
 
+#include <gnuradio/fft/window.h>
 #include <gnuradio/qtgui/displayform.h>
 #include <gnuradio/qtgui/freqdisplayform.h>
 #include <QtGui/QtGui>
@@ -40,7 +29,7 @@ class FreqControlPanel : public QVBoxLayout
 
 public:
     FreqControlPanel(FreqDisplayForm* form);
-    ~FreqControlPanel();
+    ~FreqControlPanel() override;
 
 public slots:
     void notifyAvgSlider(int val);
@@ -51,11 +40,12 @@ public slots:
     void toggleMinHold(bool en);
 
     void toggleFFTSize(int val);
-    void toggleFFTWindow(const gr::filter::firdes::win_type win);
+    void toggleFFTWindow(const gr::fft::window::win_type win);
 
     void toggleTriggerMode(gr::qtgui::trigger_mode mode);
 
     void toggleStopButton();
+    void updateStopLabel(bool on);
 
 signals:
     void signalAvgSlider(float val);

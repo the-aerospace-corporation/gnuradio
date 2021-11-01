@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef RPCSERVER_THRIFT_H
@@ -25,11 +13,11 @@
 
 #include "thrift/ControlPort.h"
 #include "thrift/gnuradio_types.h"
+#include <gnuradio/logger.h>
 #include <gnuradio/rpcpmtconverters_thrift.h>
 #include <gnuradio/rpcserver_base.h>
 #include <boost/format.hpp>
 #include <boost/thread/mutex.hpp>
-#include <iostream>
 #include <map>
 #include <sstream>
 #include <string>
@@ -90,6 +78,9 @@ public:
     virtual void shutdown();
 
 private:
+    static gr::logger_ptr d_logger;
+    static gr::logger_ptr d_debug_logger;
+
     boost::mutex d_callback_map_lock;
 
     typedef std::map<std::string, configureCallback_t> ConfigureCallbackMap_t;
@@ -112,9 +103,11 @@ private:
         if (cur_priv <= _handlerCallback.priv) {
             _handlerCallback.callback->post(port, msg);
         } else {
-            std::cerr << "Message " << _handlerCallback.description
-                      << " requires PRIVLVL <= " << _handlerCallback.priv
-                      << " to set, currently at: " << cur_priv << std::endl;
+            std::ostringstream msg;
+            msg << _handlerCallback.description
+                << " requires PRIVLVL <= " << _handlerCallback.priv
+                << " to set, currently at: " << cur_priv;
+            GR_LOG_ERROR(d_logger, msg.str());
         }
     }
 
@@ -135,9 +128,11 @@ private:
                     (*iter->second.callback)
                         .post(pmt::PMT_NIL, rpcpmtconverter::To_PMT::instance(p.second));
                 } else {
-                    std::cerr << "Key " << p.first
-                              << " requires PRIVLVL <= " << iter->second.priv
-                              << " to set, currently at: " << cur_priv << std::endl;
+                    std::ostringstream msg;
+                    msg << "Key " << p.first
+                        << " requires PRIVLVL <= " << iter->second.priv
+                        << " to set, currently at: " << cur_priv;
+                    GR_LOG_ERROR(d_logger, msg.str());
                 }
             } else {
                 throw apache::thrift::TApplicationException(__FILE__ " " S__LINE__);
@@ -165,14 +160,16 @@ private:
                     outknobs[p] =
                         rpcpmtconverter::from_pmt((*iter->second.callback).retrieve());
                 } else {
-                    std::cerr << "Key " << iter->first
-                              << " requires PRIVLVL: <= " << iter->second.priv
-                              << " to get, currently at: " << cur_priv << std::endl;
+                    std::ostringstream msg;
+                    msg << "Key " << iter->first
+                        << " requires PRIVLVL: <= " << iter->second.priv
+                        << " to get, currently at: " << cur_priv;
+                    GR_LOG_ERROR(d_logger, msg.str());
                 }
             } else {
-                std::stringstream ss;
-                ss << "Ctrlport Key called with unregistered key (" << p << ")\n";
-                std::cerr << ss.str();
+                std::ostringstream smsgs;
+                smsgs << "Ctrlport Key called with unregistered key (" << p << ")\n";
+                GR_LOG_ERROR(d_logger, smsgs.str());
                 throw apache::thrift::TApplicationException(__FILE__ " " S__LINE__);
             }
         }
@@ -196,8 +193,10 @@ private:
                 outknobs[p.first] =
                     rpcpmtconverter::from_pmt(p.second.callback->retrieve());
             } else {
-                std::cerr << "Key " << p.first << " requires PRIVLVL <= " << p.second.priv
-                          << " to get, currently at: " << cur_priv << std::endl;
+                std::ostringstream msg;
+                msg << "Key " << p.first << " requires PRIVLVL: <= " << p.second.priv
+                    << " to get, currently at: " << cur_priv;
+                GR_LOG_ERROR(d_logger, msg.str());
             }
         }
 
@@ -228,8 +227,10 @@ private:
                 prop.display = static_cast<uint32_t>(p.second.display);
                 outknobs[p.first] = prop;
             } else {
-                std::cerr << "Key " << p.first << " requires PRIVLVL <= " << p.second.priv
-                          << " to get, currently at: " << cur_priv << std::endl;
+                std::ostringstream msg;
+                msg << "Key " << p.first << " requires PRIVLVL: <= " << p.second.priv
+                    << " to get, currently at: " << cur_priv;
+                GR_LOG_ERROR(d_logger, msg.str());
             }
         }
 
@@ -262,9 +263,11 @@ private:
                     prop.display = static_cast<uint32_t>(iter->second.display);
                     outknobs[p] = prop;
                 } else {
-                    std::cerr << "Key " << iter->first
-                              << " requires PRIVLVL: <= " << iter->second.priv
-                              << " to get, currently at: " << cur_priv << std::endl;
+                    std::ostringstream msg;
+                    msg << "Key " << iter->first
+                        << " requires PRIVLVL: <= " << iter->second.priv
+                        << " to get, currently at: " << cur_priv;
+                    GR_LOG_ERROR(d_logger, msg.str());
                 }
             } else {
                 throw apache::thrift::TApplicationException(__FILE__ " " S__LINE__);

@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef INCLUDED_DIGITAL_CORR_EST_CC_CC_H
@@ -90,7 +78,7 @@ typedef enum {
 class DIGITAL_API corr_est_cc : virtual public sync_block
 {
 public:
-    typedef boost::shared_ptr<corr_est_cc> sptr;
+    typedef std::shared_ptr<corr_est_cc> sptr;
 
     /*!
      * Make a block that correlates against the \p symbols vector
@@ -101,10 +89,22 @@ public:
      * \param sps               Samples per symbol
      * \param mark_delay        tag marking delay in samples after the
      *                          corr_start tag
-     * \param threshold         Threshold of correlator, relative to a 100%
-     *                          correlation (1.0). Default is 0.9.
+     * \param threshold         Threshold of correlator.
+     *                          The meaning of this parameter depends on the threshold
+     *                          method used. For DYNAMIC threshold method, this
+     *                          parameter is actually 1 - Probability of False
+     *                          Alarm (under some inaccurate assumptions). The
+     *                          code performs the check
+     *                          |r[k]|^2 + |r[k+1]|^2 <> -log(1-threshold)*2*E,
+     *                          where r[k] is the correlated incoming signal,
+     *                          and E is the average sample energy of the
+     *                          correlated signal. For ABSOLUTE threshold method,
+     *                          this parameter sets the threshold to a fraction
+     *                          of the maximum squared autocorrelation.  The code
+     *                          performs the check |r[k]|^2 <> threshold * R^2,
+     *                          where R is the precomputed max autocorrelation
+     *                          of the given sync word. Default is 0.9
      * \param threshold_method  Method for computing threshold.
-     *
      */
     static sptr make(const std::vector<gr_complex>& symbols,
                      float sps,

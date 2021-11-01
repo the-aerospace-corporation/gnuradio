@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -26,11 +14,9 @@
 
 #include <gnuradio/fxpt_nco.h>
 #include <gnuradio/nco.h>
-#include <math.h>
-#include <stdio.h>
 #include <unistd.h>
 #include <boost/test/unit_test.hpp>
-#include <iostream>
+#include <cmath>
 
 static const float SIN_COS_TOLERANCE = 1e-5;
 
@@ -76,16 +62,14 @@ BOOST_AUTO_TEST_CASE(t0)
         max_phase_error =
             max_d(max_phase_error, ref_nco.get_phase() - new_nco.get_phase());
     }
-    // printf ("Fxpt  max error %.9f, max phase error %.9f\n", max_error,
-    // max_phase_error);
 }
 
 BOOST_AUTO_TEST_CASE(t1)
 {
     gr::nco<float, float> ref_nco;
     gr::fxpt_nco new_nco;
-    gr_complex* ref_block = new gr_complex[SIN_COS_BLOCK_SIZE];
-    gr_complex* new_block = new gr_complex[SIN_COS_BLOCK_SIZE];
+    std::vector<gr_complex> ref_block(SIN_COS_BLOCK_SIZE);
+    std::vector<gr_complex> new_block(SIN_COS_BLOCK_SIZE);
     double max_error = 0;
 
     ref_nco.set_freq((float)(2 * GR_M_PI / SIN_COS_FREQ));
@@ -93,8 +77,8 @@ BOOST_AUTO_TEST_CASE(t1)
 
     BOOST_CHECK(std::abs(ref_nco.get_freq() - new_nco.get_freq()) <= SIN_COS_TOLERANCE);
 
-    ref_nco.sincos((gr_complex*)ref_block, SIN_COS_BLOCK_SIZE);
-    new_nco.sincos((gr_complex*)new_block, SIN_COS_BLOCK_SIZE);
+    ref_nco.sincos((gr_complex*)ref_block.data(), SIN_COS_BLOCK_SIZE);
+    new_nco.sincos((gr_complex*)new_block.data(), SIN_COS_BLOCK_SIZE);
 
     for (int i = 0; i < SIN_COS_BLOCK_SIZE; i++) {
         BOOST_CHECK(std::abs(ref_block[i].real() - new_block[i].real()) <=
@@ -106,8 +90,4 @@ BOOST_AUTO_TEST_CASE(t1)
         max_error = max_d(max_error, ref_block[i].imag() - new_block[i].imag());
     }
     BOOST_CHECK(std::abs(ref_nco.get_phase() - new_nco.get_phase()) <= SIN_COS_TOLERANCE);
-    // printf ("Fxpt  max error %.9f, max phase error %.9f\n", max_error,
-    // max_phase_error);
-    delete[] ref_block;
-    delete[] new_block;
 }

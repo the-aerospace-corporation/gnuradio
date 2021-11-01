@@ -2,20 +2,8 @@
 /*
  * Copyright 2015-2017,2019 Free Software Foundation, Inc.
  *
- * This is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -51,26 +39,26 @@ dvbt2_framemapper_cc::make(dvb_framesize_t framesize,
                            dvbt2_l1scrambled_t l1scrambled,
                            dvbt2_inband_t inband)
 {
-    return gnuradio::get_initial_sptr(new dvbt2_framemapper_cc_impl(framesize,
-                                                                    rate,
-                                                                    constellation,
-                                                                    rotation,
-                                                                    fecblocks,
-                                                                    tiblocks,
-                                                                    carriermode,
-                                                                    fftsize,
-                                                                    guardinterval,
-                                                                    l1constellation,
-                                                                    pilotpattern,
-                                                                    t2frames,
-                                                                    numdatasyms,
-                                                                    paprmode,
-                                                                    version,
-                                                                    preamble,
-                                                                    inputmode,
-                                                                    reservedbiasbits,
-                                                                    l1scrambled,
-                                                                    inband));
+    return gnuradio::make_block_sptr<dvbt2_framemapper_cc_impl>(framesize,
+                                                                rate,
+                                                                constellation,
+                                                                rotation,
+                                                                fecblocks,
+                                                                tiblocks,
+                                                                carriermode,
+                                                                fftsize,
+                                                                guardinterval,
+                                                                l1constellation,
+                                                                pilotpattern,
+                                                                t2frames,
+                                                                numdatasyms,
+                                                                paprmode,
+                                                                version,
+                                                                preamble,
+                                                                inputmode,
+                                                                reservedbiasbits,
+                                                                l1scrambled,
+                                                                inband);
 }
 
 /*

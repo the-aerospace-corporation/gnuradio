@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -25,9 +13,10 @@
 #endif
 
 #include <gnuradio/filter/fft_filter.h>
+#include <gnuradio/logger.h>
 #include <volk/volk.h>
 #include <cstring>
-#include <iostream>
+#include <memory>
 
 namespace gr {
 namespace filter {
@@ -38,22 +27,10 @@ namespace kernel {
 fft_filter_fff::fft_filter_fff(int decimation,
                                const std::vector<float>& taps,
                                int nthreads)
-    : d_fftsize(-1),
-      d_decimation(decimation),
-      d_fwdfft(NULL),
-      d_invfft(NULL),
-      d_nthreads(nthreads),
-      d_xformed_taps(NULL)
+    : d_fftsize(-1), d_decimation(decimation), d_nthreads(nthreads)
 {
+    gr::configure_default_loggers(d_logger, d_debug_logger, "fft_filter_fff");
     set_taps(taps);
-}
-
-fft_filter_fff::~fft_filter_fff()
-{
-    delete d_fwdfft;
-    delete d_invfft;
-    if (d_xformed_taps != NULL)
-        volk_free(d_xformed_taps);
 }
 
 /*
@@ -100,20 +77,17 @@ void fft_filter_fff::compute_sizes(int ntaps)
     d_nsamples = d_fftsize - d_ntaps + 1;
 
     if (VERBOSE) {
-        std::cerr << "fft_filter_fff: ntaps = " << d_ntaps << " fftsize = " << d_fftsize
-                  << " nsamples = " << d_nsamples << std::endl;
+        std::ostringstream msg;
+        msg << "fft_filter_fff: ntaps = " << d_ntaps << " fftsize = " << d_fftsize
+            << " nsamples = " << d_nsamples;
+        GR_LOG_ALERT(d_logger, msg.str());
     }
 
     // compute new plans
     if (d_fftsize != old_fftsize) {
-        delete d_fwdfft;
-        delete d_invfft;
-        if (d_xformed_taps != NULL)
-            volk_free(d_xformed_taps);
-        d_fwdfft = new fft::fft_real_fwd(d_fftsize);
-        d_invfft = new fft::fft_real_rev(d_fftsize);
-        d_xformed_taps = (gr_complex*)volk_malloc(
-            sizeof(gr_complex) * (d_fftsize / 2 + 1), volk_get_alignment());
+        d_fwdfft = std::make_unique<fft::fft_real_fwd>(d_fftsize);
+        d_invfft = std::make_unique<fft::fft_real_rev>(d_fftsize);
+        d_xformed_taps.resize(d_fftsize / 2 + 1);
     }
 }
 
@@ -148,10 +122,9 @@ int fft_filter_fff::filter(int nitems, const float* input, float* output)
         d_fwdfft->execute(); // compute fwd xform
 
         gr_complex* a = d_fwdfft->get_outbuf();
-        gr_complex* b = d_xformed_taps;
         gr_complex* c = d_invfft->get_inbuf();
 
-        volk_32fc_x2_multiply_32fc_a(c, a, b, d_fftsize / 2 + 1);
+        volk_32fc_x2_multiply_32fc_a(c, a, d_xformed_taps.data(), d_xformed_taps.size());
 
         d_invfft->execute(); // compute inv xform
 
@@ -185,22 +158,10 @@ int fft_filter_fff::filter(int nitems, const float* input, float* output)
 fft_filter_ccc::fft_filter_ccc(int decimation,
                                const std::vector<gr_complex>& taps,
                                int nthreads)
-    : d_fftsize(-1),
-      d_decimation(decimation),
-      d_fwdfft(NULL),
-      d_invfft(NULL),
-      d_nthreads(nthreads),
-      d_xformed_taps(NULL)
+    : d_fftsize(-1), d_decimation(decimation), d_nthreads(nthreads)
 {
+    gr::configure_default_loggers(d_logger, d_debug_logger, "fft_filter_ccc");
     set_taps(taps);
-}
-
-fft_filter_ccc::~fft_filter_ccc()
-{
-    delete d_fwdfft;
-    delete d_invfft;
-    if (d_xformed_taps != NULL)
-        volk_free(d_xformed_taps);
 }
 
 /*
@@ -247,20 +208,17 @@ void fft_filter_ccc::compute_sizes(int ntaps)
     d_nsamples = d_fftsize - d_ntaps + 1;
 
     if (VERBOSE) {
-        std::cerr << "fft_filter_ccc: ntaps = " << d_ntaps << " fftsize = " << d_fftsize
-                  << " nsamples = " << d_nsamples << std::endl;
+        std::ostringstream msg;
+        msg << "fft_filter_ccc: ntaps = " << d_ntaps << " fftsize = " << d_fftsize
+            << " nsamples = " << d_nsamples;
+        GR_LOG_ALERT(d_logger, msg.str());
     }
 
     // compute new plans
     if (d_fftsize != old_fftsize) {
-        delete d_fwdfft;
-        delete d_invfft;
-        if (d_xformed_taps != NULL)
-            volk_free(d_xformed_taps);
-        d_fwdfft = new fft::fft_complex(d_fftsize, true, d_nthreads);
-        d_invfft = new fft::fft_complex(d_fftsize, false, d_nthreads);
-        d_xformed_taps = (gr_complex*)volk_malloc(sizeof(gr_complex) * d_fftsize,
-                                                  volk_get_alignment());
+        d_fwdfft = std::make_unique<fft::fft_complex_fwd>(d_fftsize, d_nthreads);
+        d_invfft = std::make_unique<fft::fft_complex_rev>(d_fftsize, d_nthreads);
+        d_xformed_taps.resize(d_fftsize);
     }
 }
 
@@ -294,7 +252,7 @@ int fft_filter_ccc::filter(int nitems, const gr_complex* input, gr_complex* outp
         d_fwdfft->execute(); // compute fwd xform
 
         gr_complex* a = d_fwdfft->get_outbuf();
-        gr_complex* b = d_xformed_taps;
+        gr_complex* b = d_xformed_taps.data();
         gr_complex* c = d_invfft->get_inbuf();
 
         volk_32fc_x2_multiply_32fc_a(c, a, b, d_fftsize);
@@ -332,22 +290,10 @@ int fft_filter_ccc::filter(int nitems, const gr_complex* input, gr_complex* outp
 fft_filter_ccf::fft_filter_ccf(int decimation,
                                const std::vector<float>& taps,
                                int nthreads)
-    : d_fftsize(-1),
-      d_decimation(decimation),
-      d_fwdfft(NULL),
-      d_invfft(NULL),
-      d_nthreads(nthreads),
-      d_xformed_taps(NULL)
+    : d_fftsize(-1), d_decimation(decimation), d_nthreads(nthreads)
 {
+    gr::configure_default_loggers(d_logger, d_debug_logger, "fft_filter_ccf");
     set_taps(taps);
-}
-
-fft_filter_ccf::~fft_filter_ccf()
-{
-    delete d_fwdfft;
-    delete d_invfft;
-    if (d_xformed_taps != NULL)
-        volk_free(d_xformed_taps);
 }
 
 /*
@@ -394,20 +340,17 @@ void fft_filter_ccf::compute_sizes(int ntaps)
     d_nsamples = d_fftsize - d_ntaps + 1;
 
     if (VERBOSE) {
-        std::cerr << "fft_filter_ccf: ntaps = " << d_ntaps << " fftsize = " << d_fftsize
-                  << " nsamples = " << d_nsamples << std::endl;
+        std::ostringstream msg;
+        msg << "fft_filter_ccf: ntaps = " << d_ntaps << " fftsize = " << d_fftsize
+            << " nsamples = " << d_nsamples;
+        GR_LOG_ALERT(d_logger, msg.str());
     }
 
     // compute new plans
     if (d_fftsize != old_fftsize) {
-        delete d_fwdfft;
-        delete d_invfft;
-        if (d_xformed_taps != NULL)
-            volk_free(d_xformed_taps);
-        d_fwdfft = new fft::fft_complex(d_fftsize, true, d_nthreads);
-        d_invfft = new fft::fft_complex(d_fftsize, false, d_nthreads);
-        d_xformed_taps = (gr_complex*)volk_malloc(sizeof(gr_complex) * d_fftsize,
-                                                  volk_get_alignment());
+        d_fwdfft = std::make_unique<fft::fft_complex_fwd>(d_fftsize, d_nthreads);
+        d_invfft = std::make_unique<fft::fft_complex_rev>(d_fftsize, d_nthreads);
+        d_xformed_taps.resize(d_fftsize);
     }
 }
 
@@ -443,7 +386,7 @@ int fft_filter_ccf::filter(int nitems, const gr_complex* input, gr_complex* outp
         d_fwdfft->execute(); // compute fwd xform
 
         gr_complex* a = d_fwdfft->get_outbuf();
-        gr_complex* b = d_xformed_taps;
+        gr_complex* b = d_xformed_taps.data();
         gr_complex* c = d_invfft->get_inbuf();
 
         volk_32fc_x2_multiply_32fc_a(c, a, b, d_fftsize);

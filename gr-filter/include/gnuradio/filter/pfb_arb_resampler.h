@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 
@@ -83,7 +71,7 @@ namespace kernel {
  * interpolation rate (<EM>32</EM>).
  *
  *   <B><EM>self._taps = filter.firdes.low_pass_2(32, 32*fs, BW, TB,
- *      attenuation_dB=ATT, window=filter.firdes.WIN_BLACKMAN_hARRIS)</EM></B>
+ *      attenuation_dB=ATT, window=fft.window.WIN_BLACKMAN_hARRIS)</EM></B>
  *
  * The theory behind this block can be found in Chapter 7.5 of
  * the following book:
@@ -94,8 +82,8 @@ namespace kernel {
 class FILTER_API pfb_arb_resampler_ccf
 {
 private:
-    std::vector<fir_filter_ccf*> d_filters;
-    std::vector<fir_filter_ccf*> d_diff_filters;
+    std::vector<fir_filter_ccf> d_filters;
+    std::vector<fir_filter_ccf> d_diff_filters;
     std::vector<std::vector<float>> d_taps;
     std::vector<std::vector<float>> d_dtaps;
     unsigned int d_int_rate;        // the number of filters (interpolation rate)
@@ -127,7 +115,7 @@ private:
      */
     void create_taps(const std::vector<float>& newtaps,
                      std::vector<std::vector<float>>& ourtaps,
-                     std::vector<kernel::fir_filter_ccf*>& ourfilter);
+                     std::vector<kernel::fir_filter_ccf>& ourfilter);
 
 public:
     /*!
@@ -143,7 +131,9 @@ public:
                           const std::vector<float>& taps,
                           unsigned int filter_size);
 
-    ~pfb_arb_resampler_ccf();
+    // Don't allow copy.
+    pfb_arb_resampler_ccf(const pfb_arb_resampler_ccf&) = delete;
+    pfb_arb_resampler_ccf& operator=(const pfb_arb_resampler_ccf&) = delete;
 
     /*!
      * Resets the filterbank's filter taps with the new prototype filter
@@ -222,8 +212,8 @@ public:
 class FILTER_API pfb_arb_resampler_ccc
 {
 private:
-    std::vector<fir_filter_ccc*> d_filters;
-    std::vector<fir_filter_ccc*> d_diff_filters;
+    std::vector<fir_filter_ccc> d_filters;
+    std::vector<fir_filter_ccc> d_diff_filters;
     std::vector<std::vector<gr_complex>> d_taps;
     std::vector<std::vector<gr_complex>> d_dtaps;
     unsigned int d_int_rate;        // the number of filters (interpolation rate)
@@ -255,7 +245,7 @@ private:
      */
     void create_taps(const std::vector<gr_complex>& newtaps,
                      std::vector<std::vector<gr_complex>>& ourtaps,
-                     std::vector<kernel::fir_filter_ccc*>& ourfilter);
+                     std::vector<kernel::fir_filter_ccc>& ourfilter);
 
 public:
     /*!
@@ -271,7 +261,9 @@ public:
                           const std::vector<gr_complex>& taps,
                           unsigned int filter_size);
 
-    ~pfb_arb_resampler_ccc();
+    // Don't allow copy.
+    pfb_arb_resampler_ccc(const pfb_arb_resampler_ccc&) = delete;
+    pfb_arb_resampler_ccc& operator=(const pfb_arb_resampler_ccc&) = delete;
 
     /*!
      * Resets the filterbank's filter taps with the new prototype filter
@@ -400,7 +392,7 @@ public:
  * interpolation rate (<EM>32</EM>).
  *
  *   <B><EM>self._taps = filter.firdes.low_pass_2(32, 32*fs, BW, TB,
- *      attenuation_dB=ATT, window=filter.firdes.WIN_BLACKMAN_hARRIS)</EM></B>
+ *      attenuation_dB=ATT, window=fft.window.WIN_BLACKMAN_hARRIS)</EM></B>
  *
  * The theory behind this block can be found in Chapter 7.5 of
  * the following book:
@@ -411,8 +403,8 @@ public:
 class FILTER_API pfb_arb_resampler_fff
 {
 private:
-    std::vector<fir_filter_fff*> d_filters;
-    std::vector<fir_filter_fff*> d_diff_filters;
+    std::vector<fir_filter_fff> d_filters;
+    std::vector<fir_filter_fff> d_diff_filters;
     std::vector<std::vector<float>> d_taps;
     std::vector<std::vector<float>> d_dtaps;
     unsigned int d_int_rate;        // the number of filters (interpolation rate)
@@ -444,7 +436,7 @@ private:
      */
     void create_taps(const std::vector<float>& newtaps,
                      std::vector<std::vector<float>>& ourtaps,
-                     std::vector<kernel::fir_filter_fff*>& ourfilter);
+                     std::vector<kernel::fir_filter_fff>& ourfilter);
 
 public:
     /*!
@@ -460,7 +452,10 @@ public:
                           const std::vector<float>& taps,
                           unsigned int filter_size);
 
-    ~pfb_arb_resampler_fff();
+    // Don't allow copy.
+    pfb_arb_resampler_fff(const pfb_arb_resampler_fff&) = delete;
+    pfb_arb_resampler_fff& operator=(const pfb_arb_resampler_fff&) = delete;
+
 
     /*!
      * Resets the filterbank's filter taps with the new prototype filter

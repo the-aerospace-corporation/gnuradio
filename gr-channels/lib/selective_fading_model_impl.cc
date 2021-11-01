@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #include "selective_fading_model_impl.h"
@@ -26,12 +14,6 @@
 #include <gnuradio/fxpt.h>
 #include <gnuradio/io_signature.h>
 #include <gnuradio/math.h>
-
-#include <boost/format.hpp>
-#include <boost/random.hpp>
-
-#include <iostream>
-
 
 // FASTSINCOS:  0 = slow native,  1 = gr::fxpt impl,  2 = sincostable.h
 #define FASTSINCOS 2
@@ -49,8 +31,8 @@ selective_fading_model::sptr selective_fading_model::make(unsigned int N,
                                                           std::vector<float> mags,
                                                           int ntaps)
 {
-    return gnuradio::get_initial_sptr(
-        new selective_fading_model_impl(N, fDTs, LOS, K, seed, delays, mags, ntaps));
+    return gnuradio::make_block_sptr<selective_fading_model_impl>(
+        N, fDTs, LOS, K, seed, delays, mags, ntaps);
 }
 
 // Block constructor
@@ -72,9 +54,9 @@ selective_fading_model_impl::selective_fading_model_impl(unsigned int N,
     if (mags.size() != delays.size())
         throw std::runtime_error("magnitude and delay vectors must be the same length!");
 
+    d_faders.reserve(mags.size());
     for (size_t i = 0; i < mags.size(); i++) {
-        d_faders.push_back(
-            new gr::channels::flat_fader_impl(N, fDTs, (i == 0) && (LOS), K, seed + i));
+        d_faders.emplace_back(N, fDTs, (i == 0) && (LOS), K, seed + i);
     }
 
     // set up tap history
@@ -85,12 +67,7 @@ selective_fading_model_impl::selective_fading_model_impl(unsigned int N,
     d_taps.resize(ntaps, gr_complex(0, 0));
 }
 
-selective_fading_model_impl::~selective_fading_model_impl()
-{
-    for (size_t i = 0; i < d_faders.size(); i++) {
-        delete d_faders[i];
-    }
-}
+selective_fading_model_impl::~selective_fading_model_impl() {}
 
 int selective_fading_model_impl::work(int noutput_items,
                                       gr_vector_const_void_star& input_items,
@@ -100,10 +77,9 @@ int selective_fading_model_impl::work(int noutput_items,
     gr_complex* out = (gr_complex*)output_items[0];
 
     // pregenerate fading components
-    std::vector<std::vector<gr_complex>> fading_taps;
+    std::vector<std::vector<gr_complex>> fading_taps(d_faders.size());
     for (size_t j = 0; j < d_faders.size(); j++) {
-        fading_taps.push_back(std::vector<gr_complex>());
-        d_faders[j]->next_samples(fading_taps[j], noutput_items);
+        d_faders[j].next_samples(fading_taps[j], noutput_items);
     }
 
     // loop over each output sample
@@ -117,7 +93,7 @@ int selective_fading_model_impl::work(int noutput_items,
         // add each flat fading component to the taps
         for (size_t j = 0; j < d_faders.size(); j++) {
             gr_complex ff_H(fading_taps[j][i]);
-            // gr_complex ff_H(d_faders[j]->next_sample());
+            // gr_complex ff_H(d_faders[j].next_sample());
             for (size_t k = 0; k < d_taps.size(); k++) {
                 float dist = k - d_delays[j];
                 float interpmag = d_sintable.sinc(GR_M_PI * dist);

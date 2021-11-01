@@ -1,21 +1,9 @@
 # Copyright 2008-2016 Free Software Foundation, Inc.
 # This file is part of GNU Radio
 #
-# GNU Radio Companion is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
+# SPDX-License-Identifier: GPL-2.0-or-later
 #
-# GNU Radio Companion is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
-from __future__ import absolute_import, print_function
 
 from codecs import open
 from collections import namedtuple
@@ -23,9 +11,6 @@ import os
 import logging
 from itertools import chain
 import re
-
-import six
-from six.moves import range
 
 from . import (
     Messages, Constants,
@@ -41,7 +26,6 @@ from .FlowGraph import FlowGraph
 from .Connection import Connection
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
 
 
 class Platform(Element):
@@ -89,7 +73,7 @@ class Platform(Element):
             if os.path.exists(os.path.normpath(file_path)):
                 return file_path
 
-    def load_and_generate_flow_graph(self, file_path, out_path=None, hier_only=False):
+    def load_and_generate_flow_graph(self, file_path, out_dir=None, hier_only=False):
         """Loads a flow graph from file and generates it"""
         Messages.set_indent(len(self._auto_hier_block_generate_chain))
         Messages.send('>>> Loading: {}\n'.format(file_path))
@@ -110,23 +94,23 @@ class Platform(Element):
                 raise Exception('Not a hier block')
         except Exception as e:
             Messages.send('>>> Load Error: {}: {}\n'.format(file_path, str(e)))
+            Messages.send_flowgraph_error_report(flow_graph)
             return None, None
         finally:
             self._auto_hier_block_generate_chain.discard(file_path)
             Messages.set_indent(len(self._auto_hier_block_generate_chain))
 
         try:
-            generator = self.Generator(flow_graph, out_path or file_path)
+            if flow_graph.get_option('generate_options').startswith('hb'):
+                generator = self.Generator(flow_graph, out_dir)
+            else:
+                generator = self.Generator(flow_graph, out_dir or file_path)
             Messages.send('>>> Generating: {}\n'.format(generator.file_path))
             generator.write()
         except Exception as e:
             Messages.send('>>> Generate Error: {}: {}\n'.format(file_path, str(e)))
             return None, None
 
-        if flow_graph.get_option('generate_options').startswith('hb'):
-            # self.load_block_xml(generator.file_path_xml)
-            # TODO: implement yml output for hier blocks
-            pass
         return flow_graph, generator.file_path
 
     def build_library(self, path=None):
@@ -142,14 +126,8 @@ class Platform(Element):
         self.connection_templates.clear()
         self.cpp_connection_templates.clear()
         self._block_categories.clear()
-
-        # # FIXME: remove this as soon as converter is stable
-        # from ..converter import Converter
-        # converter = Converter(self.config.block_paths, self.config.yml_block_cache)
-        # converter.run()
-        # logging.info('XML converter done.')
-
-        with Cache(Constants.CACHE_FILE) as cache:
+        
+        with Cache(Constants.CACHE_FILE, version = self.config.version) as cache:
             for file_path in self._iter_files_in_block_path(path):
 
                 if file_path.endswith('.block.yml'):
@@ -181,7 +159,7 @@ class Platform(Element):
                     Messages.flowgraph_error_file = file_path
                     continue
 
-        for key, block in six.iteritems(self.blocks):
+        for key, block in self.blocks.items():
             category = self._block_categories.get(key, block.category)
             if not category:
                 continue
@@ -194,7 +172,20 @@ class Platform(Element):
 
         self._docstring_extractor.finish()
         # self._docstring_extractor.wait()
-        utils.hide_bokeh_gui_options_if_not_installed(self.blocks['options'])
+        if 'options' not in self.blocks:
+            # we didn't find one of the built-in blocks ("options")
+            # which probably means the GRC blocks path is bad
+            errstr = (
+                "Failed to find built-in GRC blocks (specifically, the "
+                "'options' block). Ensure your GRC block paths are correct "
+                "and at least one points to your prefix installation:"
+            )
+            errstr = "\n".join([errstr] + (path or self.config.block_paths))
+            raise RuntimeError(errstr)
+        else:
+            # might have some cleanup to do on the options block in particular
+            utils.hide_bokeh_gui_options_if_not_installed(self.blocks['options'])
+
 
     def _iter_files_in_block_path(self, path=None, ext='yml'):
         """Iterator for block descriptions and category trees"""
@@ -210,7 +201,7 @@ class Platform(Element):
 
     def _save_docstring_extraction_result(self, block_id, docstrings):
         docs = {}
-        for match, docstring in six.iteritems(docstrings):
+        for match, docstring in docstrings.items():
             if not docstring or match.endswith('_sptr'):
                 continue
             docs[match] = docstring.replace('\n\n', '\n').strip()
@@ -291,22 +282,22 @@ class Platform(Element):
         path = []
 
         def load_category(name, elements):
-            if not isinstance(name, six.string_types):
+            if not isinstance(name, str):
                 log.debug('Invalid name %r', name)
                 return
             path.append(name)
             for element in utils.to_list(elements):
-                if isinstance(element, six.string_types):
+                if isinstance(element, str):
                     block_id = element
                     self._block_categories[block_id] = list(path)
                 elif isinstance(element, dict):
-                    load_category(*next(six.iteritems(element)))
+                    load_category(*next(iter(element.items())))
                 else:
                     log.debug('Ignoring some elements of %s', name)
             path.pop()
 
         try:
-            module_name, categories = next(six.iteritems(data))
+            module_name, categories = next(iter(data.items()))
         except (AttributeError, StopIteration):
             log.warning('no valid data found')
         else:

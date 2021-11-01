@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef SPECTRUM_GUI_CLASS_CPP
@@ -37,30 +25,13 @@ SpectrumGUIClass::SpectrumGUIClass(const uint64_t maxDataSize,
                                    const double newCenterFrequency,
                                    const double newStartFrequency,
                                    const double newStopFrequency)
+    : _dataPoints(std::max(static_cast<int64_t>(maxDataSize), static_cast<int64_t>(2))),
+      _centerFrequency(newCenterFrequency),
+      _startFrequency(newStartFrequency),
+      _stopFrequency(newStopFrequency),
+      _lastDataPointCount(_dataPoints),
+      _fftSize(fftSize)
 {
-    _dataPoints = maxDataSize;
-    if (_dataPoints < 2) {
-        _dataPoints = 2;
-    }
-    _lastDataPointCount = _dataPoints;
-
-    _fftSize = fftSize;
-
-    _pendingGUIUpdateEventsCount = 0;
-    _droppedEntriesCount = 0;
-
-    _centerFrequency = newCenterFrequency;
-    _startFrequency = newStartFrequency;
-    _stopFrequency = newStopFrequency;
-
-    _windowType = 5;
-
-    _lastGUIUpdateTime = 0;
-
-    _windowOpennedFlag = false;
-    _fftBuffersCreatedFlag = false;
-
-    _powerValue = 1;
 }
 
 SpectrumGUIClass::~SpectrumGUIClass()
@@ -71,12 +42,6 @@ SpectrumGUIClass::~SpectrumGUIClass()
     // if(getWindowOpenFlag()){
     // delete _spectrumDisplayForm;
     //}
-
-    if (_fftBuffersCreatedFlag) {
-        delete[] _fftPoints;
-        delete[] _realTimeDomainPoints;
-        delete[] _imagTimeDomainPoints;
-    }
 }
 
 void SpectrumGUIClass::openSpectrumWindow(QWidget* parent,
@@ -89,15 +54,10 @@ void SpectrumGUIClass::openSpectrumWindow(QWidget* parent,
 
     if (!_windowOpennedFlag) {
 
-        if (!_fftBuffersCreatedFlag) {
-            _fftPoints = new float[_dataPoints];
-            _realTimeDomainPoints = new double[_dataPoints];
-            _imagTimeDomainPoints = new double[_dataPoints];
-            _fftBuffersCreatedFlag = true;
-
-            memset(_fftPoints, 0x0, _dataPoints * sizeof(float));
-            memset(_realTimeDomainPoints, 0x0, _dataPoints * sizeof(double));
-            memset(_imagTimeDomainPoints, 0x0, _dataPoints * sizeof(double));
+        if (_fftPoints.empty()) {
+            _fftPoints.resize(_dataPoints);
+            _realTimeDomainPoints.resize(_dataPoints);
+            _imagTimeDomainPoints.resize(_dataPoints);
         }
 
         // Called from the Event Thread
@@ -166,9 +126,7 @@ void SpectrumGUIClass::setDisplayTitle(const std::string newString)
 bool SpectrumGUIClass::getWindowOpenFlag()
 {
     gr::thread::scoped_lock lock(d_mutex);
-    bool returnFlag = false;
-    returnFlag = _windowOpennedFlag;
-    return returnFlag;
+    return _windowOpennedFlag;
 }
 
 
@@ -237,7 +195,7 @@ void SpectrumGUIClass::updateWindow(const bool updateDisplayFlag,
 
     if (updateDisplayFlag) {
         if ((fftBuffer != NULL) && (bufferSize > 0)) {
-            memcpy(_fftPoints, fftBuffer, bufferSize * sizeof(float));
+            std::copy(fftBuffer, fftBuffer + bufferSize, std::begin(_fftPoints));
         }
 
         // ALL OF THIS SHIT SHOULD BE COMBINED WITH THE FFTSHIFT
@@ -246,18 +204,19 @@ void SpectrumGUIClass::updateWindow(const bool updateDisplayFlag,
         if ((realTimeDomainData != NULL) && (realTimeDomainDataSize > 0)) {
             const float* realTimeDomainDataPtr = realTimeDomainData;
 
-            double* realTimeDomainPointsPtr = _realTimeDomainPoints;
+            double* realTimeDomainPointsPtr = _realTimeDomainPoints.data();
             timeDomainBufferSize = realTimeDomainDataSize;
 
-            memset(_imagTimeDomainPoints, 0x0, realTimeDomainDataSize * sizeof(double));
+            std::fill(
+                std::begin(_imagTimeDomainPoints), std::end(_imagTimeDomainPoints), 0.0);
             for (uint64_t number = 0; number < realTimeDomainDataSize; number++) {
                 *realTimeDomainPointsPtr++ = *realTimeDomainDataPtr++;
             }
         }
 
         if ((complexTimeDomainData != NULL) && (complexTimeDomainDataSize > 0)) {
-            volk_32fc_deinterleave_64f_x2(_realTimeDomainPoints,
-                                          _imagTimeDomainPoints,
+            volk_32fc_deinterleave_64f_x2(_realTimeDomainPoints.data(),
+                                          _imagTimeDomainPoints.data(),
                                           (const lv_32fc_t*)complexTimeDomainData,
                                           complexTimeDomainDataSize);
             timeDomainBufferSize = complexTimeDomainDataSize;
@@ -285,10 +244,10 @@ void SpectrumGUIClass::updateWindow(const bool updateDisplayFlag,
         // Draw the Data
         incrementPendingGUIUpdateEvents();
         qApp->postEvent(_spectrumDisplayForm,
-                        new SpectrumUpdateEvent(_fftPoints,
+                        new SpectrumUpdateEvent(_fftPoints.data(),
                                                 bufferSize,
-                                                _realTimeDomainPoints,
-                                                _imagTimeDomainPoints,
+                                                _realTimeDomainPoints.data(),
+                                                _imagTimeDomainPoints.data(),
                                                 timeDomainBufferSize,
                                                 timestamp,
                                                 repeatDataFlag,

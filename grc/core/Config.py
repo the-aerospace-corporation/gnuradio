@@ -1,25 +1,13 @@
-"""Copyright 2016 Free Software Foundation, Inc.
+"""Copyright 2021 The GNU Radio Contributors
 This file is part of GNU Radio
 
-GNU Radio Companion is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
-
-GNU Radio Companion is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
+SPDX-License-Identifier: GPL-2.0-or-later
 """
 
-from __future__ import absolute_import
 
 import os
 from os.path import expanduser, normpath, expandvars, exists
+from collections import OrderedDict
 
 from . import Constants
 
@@ -35,13 +23,12 @@ class Config(object):
         self._gr_prefs = prefs if prefs else DummyPrefs()
         self.version = version
         self.version_parts = version_parts or version[1:].split('-', 1)[0].split('.')[:3]
+        self.enabled_components = self._gr_prefs.get_string('grc', 'enabled_components', '')
         if name:
             self.name = name
 
     @property
     def block_paths(self):
-        path_list_sep = {'/': ':', '\\': ';'}[os.path.sep]
-
         paths_sources = (
             self.hier_block_lib_dir,
             os.environ.get('GRC_BLOCKS_PATH', ''),
@@ -49,11 +36,14 @@ class Config(object):
             self._gr_prefs.get_string('grc', 'global_blocks_path', ''),
         )
 
-        collected_paths = sum((paths.split(path_list_sep)
+        collected_paths = sum((paths.split(os.pathsep)
                                for paths in paths_sources), [])
 
         valid_paths = [normpath(expanduser(expandvars(path)))
                        for path in collected_paths if exists(path)]
+        # Deduplicate paths to avoid warnings about finding blocks twice, but
+        # preserve order of paths
+        valid_paths = list(OrderedDict.fromkeys(valid_paths))
 
         return valid_paths
 

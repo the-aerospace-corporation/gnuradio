@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -32,8 +20,8 @@
 #include <qwt_symbol.h>
 #include <volk/volk.h>
 
-#include <string.h>
 #include <cmath>
+#include <cstring>
 
 #ifdef _MSC_VER
 #define isfinite _finite
@@ -50,8 +38,8 @@ namespace qtgui {
 number_sink::sptr number_sink::make(
     size_t itemsize, float average, graph_t graph_type, int nconnections, QWidget* parent)
 {
-    return gnuradio::get_initial_sptr(
-        new number_sink_impl(itemsize, average, graph_type, nconnections, parent));
+    return gnuradio::make_block_sptr<number_sink_impl>(
+        itemsize, average, graph_type, nconnections, parent);
 }
 
 number_sink_impl::number_sink_impl(
@@ -72,16 +60,6 @@ number_sink_impl::number_sink_impl(
         d_iir[n].set_taps(d_average);
     }
 
-    // Required now for Qt; argc must be greater than 0 and argv
-    // must have at least one valid character. Must be valid through
-    // life of the qApplication:
-    // http://harmattan-dev.nokia.com/docs/library/html/qt4/qapplication.html
-    d_argc = 1;
-    d_argv = new char;
-    d_argv[0] = '\0';
-
-    d_main_gui = NULL;
-
     // Set alignment properties for VOLK
     const int alignment_multiple = volk_get_alignment() / d_itemsize;
     set_alignment(std::max(1, alignment_multiple));
@@ -89,13 +67,7 @@ number_sink_impl::number_sink_impl(
     initialize();
 }
 
-number_sink_impl::~number_sink_impl()
-{
-    // if(!d_main_gui->isClosed())
-    //  d_main_gui->close();
-
-    delete d_argv;
-}
+number_sink_impl::~number_sink_impl() {}
 
 bool number_sink_impl::check_topology(int ninputs, int noutputs)
 {
@@ -111,6 +83,7 @@ void number_sink_impl::initialize()
     }
 
     d_main_gui = new NumberDisplayForm(d_nconnections, d_type, d_parent);
+    d_main_gui->setAverage(d_average);
 
     // initialize update time to 10 times a second
     set_update_time(0.1);
@@ -119,17 +92,6 @@ void number_sink_impl::initialize()
 void number_sink_impl::exec_() { d_qApplication->exec(); }
 
 QWidget* number_sink_impl::qwidget() { return d_main_gui; }
-
-#ifdef ENABLE_PYTHON
-PyObject* number_sink_impl::pyqwidget()
-{
-    PyObject* w = PyLong_FromVoidPtr((void*)d_main_gui);
-    PyObject* retarg = Py_BuildValue("N", w);
-    return retarg;
-}
-#else
-void* number_sink_impl::pyqwidget() { return NULL; }
-#endif
 
 void number_sink_impl::set_update_time(double t)
 {
@@ -147,6 +109,7 @@ void number_sink_impl::set_average(const float avg)
         d_avg_value[n] = 0;
         d_iir[n].set_taps(d_average);
     }
+    d_main_gui->setAverage(avg);
 }
 
 void number_sink_impl::set_graph_type(const graph_t type)

@@ -6,7 +6,6 @@
 # Generated: Thu Aug  1 12:30:23 2013
 ##################################################
 
-from __future__ import unicode_literals
 from gnuradio import blocks
 from gnuradio import gr
 from gnuradio.filter import firdes
@@ -60,5 +59,3 @@ class distortion_2_gen(gr.hier_block2):
     def set_beta(self, beta):
         self.beta = beta
         self.blocks_multiply_const_vxx_0.set_k((self.beta, ))
-
-

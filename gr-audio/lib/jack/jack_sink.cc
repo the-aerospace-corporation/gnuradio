@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -29,8 +17,8 @@
 #include "jack_sink.h"
 #include <gnuradio/io_signature.h>
 #include <gnuradio/prefs.h>
-#include <stdio.h>
-#include <iostream>
+#include <boost/format.hpp>
+#include <cstdio>
 #include <stdexcept>
 
 #ifndef NO_PTHREAD
@@ -161,7 +149,7 @@ bool jack_sink::check_topology(int ninputs, int noutputs)
 
     // Create ports and ringbuffers
     for (int i = 0; i < d_portcount; i++) {
-        std::string portname("out" + boost::to_string(i));
+        std::string portname("out" + std::to_string(i));
 
         d_jack_output_port[i] = jack_port_register(d_jack_client,
                                                    portname.c_str(),

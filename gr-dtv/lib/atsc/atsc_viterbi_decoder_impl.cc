@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -34,13 +22,16 @@ namespace dtv {
 
 atsc_viterbi_decoder::sptr atsc_viterbi_decoder::make()
 {
-    return gnuradio::get_initial_sptr(new atsc_viterbi_decoder_impl());
+    return gnuradio::make_block_sptr<atsc_viterbi_decoder_impl>();
 }
 
 atsc_viterbi_decoder_impl::atsc_viterbi_decoder_impl()
-    : sync_block("dtv_atsc_viterbi_decoder",
-                 io_signature::make(1, 1, sizeof(atsc_soft_data_segment)),
-                 io_signature::make(1, 1, sizeof(atsc_mpeg_packet_rs_encoded)))
+    : sync_block(
+          "dtv_atsc_viterbi_decoder",
+          io_signature::make2(
+              2, 2, sizeof(float) * ATSC_DATA_SEGMENT_LENGTH, sizeof(plinfo)),
+          io_signature::make2(
+              2, 2, sizeof(unsigned char) * ATSC_MPEG_RS_ENCODED_LENGTH, sizeof(plinfo)))
 {
     set_output_multiple(NCODERS);
 
@@ -55,23 +46,20 @@ atsc_viterbi_decoder_impl::atsc_viterbi_decoder_impl()
      */
 
     // the -4 is for the 4 sync symbols
-    int fifo_size = ATSC_DATA_SEGMENT_LENGTH - 4 - viterbi[0].delay();
+    const int fifo_size = ATSC_DATA_SEGMENT_LENGTH - 4 - viterbi[0].delay();
+    fifo.reserve(NCODERS);
     for (int i = 0; i < NCODERS; i++)
-        fifo[i] = new fifo_t(fifo_size);
+        fifo.emplace_back(fifo_size);
 
     reset();
 }
 
-atsc_viterbi_decoder_impl::~atsc_viterbi_decoder_impl()
-{
-    for (int i = 0; i < NCODERS; i++)
-        delete fifo[i];
-}
+atsc_viterbi_decoder_impl::~atsc_viterbi_decoder_impl() {}
 
 void atsc_viterbi_decoder_impl::reset()
 {
     for (int i = 0; i < NCODERS; i++)
-        fifo[i]->reset();
+        fifo[i].reset();
 }
 
 std::vector<float> atsc_viterbi_decoder_impl::decoder_metrics() const
@@ -86,8 +74,10 @@ int atsc_viterbi_decoder_impl::work(int noutput_items,
                                     gr_vector_const_void_star& input_items,
                                     gr_vector_void_star& output_items)
 {
-    const atsc_soft_data_segment* in = (const atsc_soft_data_segment*)input_items[0];
-    atsc_mpeg_packet_rs_encoded* out = (atsc_mpeg_packet_rs_encoded*)output_items[0];
+    auto in = static_cast<const float*>(input_items[0]);
+    auto out = static_cast<unsigned char*>(output_items[0]);
+    auto plin = static_cast<const plinfo*>(input_items[1]);
+    auto plout = static_cast<plinfo*>(output_items[1]);
 
     // The way the fs_checker works ensures we start getting packets
     // starting with a field sync, and out input multiple is set to
@@ -102,12 +92,15 @@ int atsc_viterbi_decoder_impl::work(int noutput_items,
 
     unsigned char out_copy[OUTPUT_SIZE];
 
+    std::vector<tag_t> tags;
     for (int i = 0; i < noutput_items; i += NCODERS) {
         /* Build a continuous symbol buffer for each encoder */
         for (unsigned int encoder = 0; encoder < NCODERS; encoder++)
             for (unsigned int k = 0; k < enco_which_max; k++)
-                symbols[encoder][k] = in[i + (enco_which_syms[encoder][k] / 832)]
-                                          .data[enco_which_syms[encoder][k] % 832];
+                symbols[encoder][k] =
+                    in[(i + (enco_which_syms[encoder][k] / ATSC_DATA_SEGMENT_LENGTH)) *
+                           ATSC_DATA_SEGMENT_LENGTH +
+                       enco_which_syms[encoder][k] % ATSC_DATA_SEGMENT_LENGTH];
 
         /* Now run each of the 12 Viterbi decoders over their subset of
            the input symbols */
@@ -123,18 +116,19 @@ int atsc_viterbi_decoder_impl::work(int noutput_items,
                 dbindex = dbwhere >> 3;
                 shift = dbwhere & 0x7;
                 out_copy[dbindex] = (out_copy[dbindex] & ~(0x03 << shift)) |
-                                    (fifo[encoder]->stuff(dibits[encoder][k]) << shift);
+                                    (fifo[encoder].stuff(dibits[encoder][k]) << shift);
             } /* Symbols fed into one encoder */
         }     /* Encoders */
 
         // copy output from contiguous temp buffer into final output
         for (int j = 0; j < NCODERS; j++) {
-            memcpy(&out[i + j].data[0],
-                   &out_copy[j * OUTPUT_SIZE / NCODERS],
+            memcpy(&out[(i + j) * ATSC_MPEG_RS_ENCODED_LENGTH],
+                   &out_copy[j * ATSC_MPEG_RS_ENCODED_LENGTH],
                    ATSC_MPEG_RS_ENCODED_LENGTH * sizeof(out_copy[0]));
 
+            plout[i + j] = plinfo();
             // adjust pipeline info to reflect 12 segment delay
-            plinfo::delay(out[i + j].pli, in[i + j].pli, NCODERS);
+            plinfo::delay(plout[i + j], plin[i + j], NCODERS);
         }
     }
 

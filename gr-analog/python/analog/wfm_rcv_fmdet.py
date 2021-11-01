@@ -1,35 +1,20 @@
 #
-# Copyright 2005,2006,2012-2013 Free Software Foundation, Inc.
+# Copyright 2005,2006,2012-2013,2020 Free Software Foundation, Inc.
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
 
 import math
 
 from gnuradio import gr
 from gnuradio import blocks
-from gnuradio import filter
+from gnuradio import filter, fft
 
-from . import analog_swig as analog
+from . import analog_python as analog
 from .fm_emph import fm_deemph
 
 
@@ -49,6 +34,11 @@ class wfm_rcv_fmdet(gr.hier_block2):
         gr.hier_block2.__init__(self, "wfm_rcv_fmdet",
                                 gr.io_signature(1, 1, gr.sizeof_gr_complex), # Input signature
                                 gr.io_signature(2, 2, gr.sizeof_float))      # Output signature
+        
+        if audio_decimation != int(audio_decimation):
+            raise ValueError("audio_decimation needs to be an integer")
+        audio_decimation = int(audio_decimation)
+
         lowfreq = -125e3 / demod_rate
         highfreq = 125e3 / demod_rate
         audio_rate = demod_rate / audio_decimation
@@ -70,7 +60,7 @@ class wfm_rcv_fmdet(gr.hier_block2):
                                               demod_rate,   # sampling rate
                                               15000 ,
                                               width_of_transition_band,
-                                              filter.firdes.WIN_HAMMING)
+                                              fft.window.WIN_HAMMING)
 
         # input: float; output: float
         self.audio_filter = filter.fir_filter_fff(audio_decimation, audio_coeffs)
@@ -88,7 +78,7 @@ class wfm_rcv_fmdet(gr.hier_block2):
                                                 -19020,
                                                 -18980,
                                                 width_of_transition_band,
-                                                filter.firdes.WIN_HAMMING)
+                                                fft.window.WIN_HAMMING)
 
             #print "len stereo carrier filter = ",len(stereo_carrier_filter_coeffs)
             #print "stereo carrier filter ", stereo_carrier_filter_coeffs
@@ -104,7 +94,7 @@ class wfm_rcv_fmdet(gr.hier_block2):
                                                 38000-15000 / 2,
                                                 38000+15000 / 2,
                                                 width_of_transition_band,
-                                                filter.firdes.WIN_HAMMING)
+                                                fft.window.WIN_HAMMING)
             #print "len stereo dsbsc filter = ",len(stereo_dsbsc_filter_coeffs)
             #print "stereo dsbsc filter ", stereo_dsbsc_filter_coeffs
 
@@ -125,7 +115,7 @@ class wfm_rcv_fmdet(gr.hier_block2):
                                                 57000 - 1500,
                                                 57000 + 1500,
                                                 width_of_transition_band,
-                                                filter.firdes.WIN_HAMMING)
+                                                fft.window.WIN_HAMMING)
             #print "len stereo dsbsc filter = ",len(stereo_dsbsc_filter_coeffs)
             #print "stereo dsbsc filter ", stereo_dsbsc_filter_coeffs
             # construct overlap add filter system from coefficients for stereo carrier

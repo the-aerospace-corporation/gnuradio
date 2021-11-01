@@ -2,28 +2,17 @@
 Copyright 2008-2011,2015 Free Software Foundation, Inc.
 This file is part of GNU Radio
 
-GNU Radio Companion is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
+SPDX-License-Identifier: GPL-2.0-or-later
 
-GNU Radio Companion is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 """
 
-from __future__ import absolute_import
 
+from sys import platform
+import os
 import numbers
 
 from gi.repository import GLib
 import cairo
-import six
 
 from .canvas.colors import FLOWGRAPH_BACKGROUND_COLOR
 from . import Constants
@@ -105,16 +94,7 @@ def num_to_str(num):
 
 
 def encode(value):
-    """Make sure that we pass only valid utf-8 strings into markup_escape_text.
-
-    Older versions of glib seg fault if the last byte starts a multi-byte
-    character.
-    """
-    if six.PY2:
-        valid_utf8 = value.decode('utf-8', errors='replace').encode('utf-8')
-    else:
-        valid_utf8 = value
-    return GLib.markup_escape_text(valid_utf8)
+    return GLib.markup_escape_text(value)
 
 
 def make_screenshot(flow_graph, file_path, transparent_bg=False):
@@ -163,3 +143,42 @@ def scale(coor, reverse=False):
 def scale_scalar(coor, reverse=False):
     factor = Constants.DPI_SCALING if not reverse else 1 / Constants.DPI_SCALING
     return int(coor * factor)
+
+def get_modifier_key(angle_brackets=False):
+    """
+    Get the modifier key based on platform.
+
+    Args:
+        angle_brackets: if return the modifier key with <> or not
+
+    Returns:
+        return the string with the modifier key
+    """
+    if platform == "darwin":
+        if angle_brackets:
+            return "<Meta>"
+        else:
+            return "Meta"
+    else:
+        if angle_brackets:
+            return "<Ctrl>"
+        else:
+            return "Ctrl"
+
+
+_nproc = None
+def get_cmake_nproc():
+    """ Get number of cmake processes for C++ flowgraphs """
+    global _nproc # Cached result
+    if _nproc:
+        return _nproc
+    try:
+        # See https://docs.python.org/3.8/library/os.html#os.cpu_count
+        _nproc = len(os.sched_getaffinity(0))
+    except:
+        _nproc = os.cpu_count()
+    if not _nproc:
+        _nproc = 1
+
+    _nproc = max(_nproc//2 - 1, 1)
+    return _nproc

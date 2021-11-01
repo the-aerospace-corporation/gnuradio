@@ -1,29 +1,19 @@
 /* -*- c++ -*- */
 /*
  * Copyright 2006,2012 Free Software Foundation, Inc.
+ * Copyright 2021 Daniel Estevez <daniel@destevez.net>
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef INCLUDED_GR_DIFF_ENCODER_BB_H
 #define INCLUDED_GR_DIFF_ENCODER_BB_H
 
 #include <gnuradio/digital/api.h>
+#include <gnuradio/digital/diff_coding_type.h>
 #include <gnuradio/sync_block.h>
 
 namespace gr {
@@ -41,14 +31,16 @@ class DIGITAL_API diff_encoder_bb : virtual public sync_block
 {
 public:
     // gr::digital::diff_encoder_bb::sptr
-    typedef boost::shared_ptr<diff_encoder_bb> sptr;
+    typedef std::shared_ptr<diff_encoder_bb> sptr;
 
     /*!
      * Make a differential encoder block.
      *
      * \param modulus Modulus of code's alphabet
+     * \param coding Differential coding type
      */
-    static sptr make(unsigned int modulus);
+    static sptr make(unsigned int modulus,
+                     enum diff_coding_type coding = DIFF_DIFFERENTIAL);
 };
 
 } /* namespace digital */

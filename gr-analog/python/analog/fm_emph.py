@@ -3,25 +3,10 @@
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 #
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
 
 from gnuradio import gr, filter
 import math
@@ -130,12 +115,6 @@ class fm_deemph(gr.hier_block2):
         ataps = [      1.0,      -p1 ]
 
         # Since H(s = 0) = 1.0, then H(z = 1) = 1.0 and has 0 dB gain at DC
-
-        if 0:
-            print("btaps =", btaps)
-            print("ataps =", ataps)
-            global plot1
-            plot1 = gru.gnuplot_freqz(gru.freqz(btaps, ataps), fs, True)
 
         deemph = filter.iir_filter_ffd(btaps, ataps, False)
         self.connect(self, deemph, self)
@@ -294,12 +273,6 @@ class fm_preemph(gr.hier_block2):
 
         btaps = [ g * b0 * 1.0, g * b0 * -z1 ]
         ataps = [          1.0,          -p1 ]
-
-        if 0:
-            print("btaps =", btaps)
-            print("ataps =", ataps)
-            global plot2
-            plot2 = gru.gnuplot_freqz(gru.freqz(btaps, ataps), fs, True)
 
         preemph = filter.iir_filter_ffd(btaps, ataps, False)
         self.connect(self, preemph, self)

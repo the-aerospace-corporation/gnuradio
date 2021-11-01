@@ -4,25 +4,13 @@
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 #
 
-from __future__ import division
 
 from gnuradio import gr, gr_unittest, analog, blocks
+
 
 class test_pwr_squelch(gr_unittest.TestCase):
 
@@ -73,7 +61,7 @@ class test_pwr_squelch(gr_unittest.TestCase):
         self.tb.run()
 
         expected_result = src_data
-        expected_result[0:20] = 20*[0,]
+        expected_result[0:20] = 20 * [0, ]
 
         result_data = dst.data()
         self.assertComplexTuplesAlmostEqual(expected_result, result_data, 4)
@@ -104,7 +92,6 @@ class test_pwr_squelch(gr_unittest.TestCase):
         g = op.gate()
         self.assertEqual(gate2, g)
 
-
     def test_pwr_squelch_004(self):
         alpha = 0.0001
         thr = -25
@@ -119,11 +106,11 @@ class test_pwr_squelch(gr_unittest.TestCase):
         self.tb.run()
 
         expected_result = src_data
-        expected_result[0:20] = 20*[0,]
+        expected_result[0:20] = 20 * [0, ]
 
         result_data = dst.data()
         self.assertFloatTuplesAlmostEqual(expected_result, result_data, 4)
 
-if __name__ == '__main__':
-    gr_unittest.run(test_pwr_squelch, "test_pwr_squelch.xml")
 
+if __name__ == '__main__':
+    gr_unittest.run(test_pwr_squelch)

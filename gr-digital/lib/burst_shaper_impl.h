@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef BURST_SHAPER_IMPL_H
@@ -75,18 +63,18 @@ public:
                       int post_padding,
                       bool insert_phasing,
                       const std::string& length_tag_name);
-    ~burst_shaper_impl();
+    ~burst_shaper_impl() override;
 
-    void forecast(int noutput_items, gr_vector_int& ninput_items_required);
+    void forecast(int noutput_items, gr_vector_int& ninput_items_required) override;
 
     int general_work(int noutput_items,
                      gr_vector_int& ninput_items,
                      gr_vector_const_void_star& input_items,
-                     gr_vector_void_star& output_items);
-    int pre_padding() const { return d_nprepad; }
-    int post_padding() const { return d_npostpad; }
-    int prefix_length() const;
-    int suffix_length() const;
+                     gr_vector_void_star& output_items) override;
+    int pre_padding() const override { return d_nprepad; }
+    int post_padding() const override { return d_npostpad; }
+    int prefix_length() const override;
+    int suffix_length() const override;
 };
 
 } // namespace digital

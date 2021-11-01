@@ -2,20 +2,8 @@
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 
 # These are convenience libraries of 3rd party code.
 # Change to test for distro provided packages
@@ -98,9 +86,16 @@ target_link_libraries(gnuradio-fec PUBLIC
     gnuradio-blocks
 )
 
+if(ENABLE_COMMON_PCH)
+  target_link_libraries(gnuradio-fec PRIVATE common-precompiled-headers)
+endif()
+
+# Address linker issues with std::filesystem on Centos 8 and Debian
+target_link_libraries(gnuradio-fec PRIVATE $<$<AND:$<CXX_COMPILER_ID:GNU>,$<VERSION_LESS:$<CXX_COMPILER_VERSION>,9.0>>:stdc++fs>)
+
 # Only include the LDPC work if we have GSL installed
 if(GSL_FOUND)
-  target_link_libraries(gnuradio-fec PUBLIC gsl::gsl)
+  target_link_libraries(gnuradio-fec PUBLIC GSL::gsl)
   target_sources(gnuradio-fec PRIVATE
     ldpc_bit_flip_decoder_impl.cc
     ldpc_par_mtrx_encoder_impl.cc

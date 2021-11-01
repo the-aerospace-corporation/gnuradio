@@ -4,27 +4,14 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 
-#include <assert.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdexcept>
@@ -36,8 +23,6 @@
 #endif
 #include "pagesize.h"
 #include "vmcircbuf_createfilemapping.h"
-#include <errno.h>
-#include <stdio.h>
 #include <boost/format.hpp>
 
 namespace gr {
@@ -48,6 +33,9 @@ static void werror(char* where, DWORD last_error)
 {
     char buf[1024];
 
+    logger_ptr logger, debug_logger;
+    gr::configure_default_loggers(logger, debug_logger, "werror");
+
     FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM,
                   NULL,
                   last_error,
@@ -55,16 +43,21 @@ static void werror(char* where, DWORD last_error)
                   buf,
                   sizeof(buf) / sizeof(TCHAR), // buffer size
                   NULL);
-    fprintf(stderr, "%s: Error %d: %s", where, last_error, buf);
+    GR_LOG_ERROR(logger, boost::format("%s: Error %d: %s") % where % last_error % buf);
     return;
 }
 #endif
 
 
-vmcircbuf_createfilemapping::vmcircbuf_createfilemapping(int size) : gr::vmcircbuf(size)
+vmcircbuf_createfilemapping::vmcircbuf_createfilemapping(size_t size)
+    : gr::vmcircbuf(size)
 {
+    gr::configure_default_loggers(
+        d_logger, d_debug_logger, "vmcircbuf_createfilemapping");
 #if !defined(HAVE_CREATEFILEMAPPING)
-    fprintf(stderr, "%s: createfilemapping is not available\n", __FUNCTION__);
+    std::stringstream error_msg;
+    error_msg << __FUNCTION__ << ": createfilemapping is not available";
+    GR_LOG_ERROR(d_logger, error_msg.str());
     throw std::runtime_error("gr::vmcircbuf_createfilemapping");
 #else
     gr::thread::scoped_lock guard(s_vm_mutex);
@@ -72,7 +65,9 @@ vmcircbuf_createfilemapping::vmcircbuf_createfilemapping(int size) : gr::vmcircb
     static int s_seg_counter = 0;
 
     if (size <= 0 || (size % gr::pagesize()) != 0) {
-        fprintf(stderr, "gr::vmcircbuf_createfilemapping: invalid size = %d\n", size);
+        std::stringstream error_msg;
+        error_msg << "invalid size = " << size;
+        GR_LOG_ERROR(d_logger, error_msg.str());
         throw std::runtime_error("gr::vmcircbuf_createfilemapping");
     }
 
@@ -141,12 +136,11 @@ vmcircbuf_createfilemapping::vmcircbuf_createfilemapping(int size) : gr::vmcircb
     }
 
 #ifdef DEBUG
-    fprintf(stderr,
-            "gr::vmcircbuf_mmap_createfilemapping: contiguous? mmap %p %p %p %p\n",
-            (char*)d_first_copy,
-            (char*)d_second_copy,
-            size,
-            (char*)d_first_copy + size);
+    std::stringstream info_msg;
+    info_msg << "contiguous? mmap " << (char*)d_first_copy;
+    info_msg << (char*)d_second_copy << size;
+    info_msg << (char*)d_first_copy + size;
+    GR_LOG_INFO(d_debug_logger, info_msg.str());
 #endif
 
     // Now remember the important stuff
@@ -202,7 +196,7 @@ int vmcircbuf_createfilemapping_factory::granularity()
 #endif
 }
 
-gr::vmcircbuf* vmcircbuf_createfilemapping_factory::make(int size)
+gr::vmcircbuf* vmcircbuf_createfilemapping_factory::make(size_t size)
 {
     try {
         return new vmcircbuf_createfilemapping(size);

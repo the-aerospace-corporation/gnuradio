@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef INCLUDED_DIGITAL_PROBE_MPSK_SNR_EST_C_H
@@ -55,12 +43,14 @@ namespace digital {
  *
  * Some calibration is required to convert dBx of the signal and
  * noise power estimates to real measurements, such as dBm.
+ *
+ * The estimator is normally placed before clock recovery.
  */
 class DIGITAL_API probe_mpsk_snr_est_c : virtual public sync_block
 {
 public:
     // gr::digital::probe_mpsk_snr_est_c::sptr
-    typedef boost::shared_ptr<probe_mpsk_snr_est_c> sptr;
+    typedef std::shared_ptr<probe_mpsk_snr_est_c> sptr;
 
     /*! Make an MPSK SNR probe.
      *
@@ -71,7 +61,8 @@ public:
      *  \param msg_nsamples: [not implemented yet] after this many
      *   samples, a message containing the SNR (key='snr') will be sent
      *  \param alpha: the update rate of internal running average
-     *   calculations.
+     *   calculations. Needs to be between 0 and 1, where higher value
+     *   adjusts faster to new data.
      */
     static sptr make(snr_est_type_t type, int msg_nsamples = 10000, double alpha = 0.001);
 

@@ -1,28 +1,14 @@
 # Copyright 2016 Free Software Foundation, Inc.
 # This file is part of GNU Radio
 #
-# GNU Radio Companion is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by the
-# Free Software Foundation; either version 2 of the License, or (at your
-# option) any later version.
+# SPDX-License-Identifier: GPL-2.0-or-later
 #
-# GNU Radio Companion is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
-# details.
-#
-# You should have received a copy of the GNU General Public License along with
-# this program; if not, write to the Free Software Foundation, Inc.,
-# 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
-from __future__ import absolute_import
 
 from codecs import open
 import json
 import logging
 import os
-
-import six
 
 from . import block_tree, block
 
@@ -94,10 +80,15 @@ class Converter(object):
             with open(self.cache_file, 'w', encoding='utf-8') as cache_file:
                 json.dump(self.cache, cache_file)
 
-    def load_block_xml(self, xml_file):
+    def load_block_xml(self, xml_file, force=False):
         """Load block description from xml file"""
-        if any(part in xml_file for part in excludes):
-            return
+        if any(part in xml_file for part in excludes) and not force:
+            logger.warn('Skipping {} because name is blacklisted!'
+                        .format(xml_file))
+            return False
+        elif any(part in xml_file for part in excludes) and force:
+            logger.warn('Forcing conversion of blacklisted file: {}'
+                        .format(xml_file))
 
         block_id_from_xml = path.basename(xml_file)[:-4]
         yml_file = path.join(self.output_dir, block_id_from_xml + '.block.yml')
@@ -156,10 +147,8 @@ class Converter(object):
 
 def byteify(data):
     if isinstance(data, dict):
-        return {byteify(key): byteify(value) for key, value in six.iteritems(data)}
+        return {byteify(key): byteify(value) for key, value in data.items()}
     elif isinstance(data, list):
         return [byteify(element) for element in data]
-    elif isinstance(data, six.text_type) and six.PY2:
-        return data.encode('utf-8')
     else:
         return data

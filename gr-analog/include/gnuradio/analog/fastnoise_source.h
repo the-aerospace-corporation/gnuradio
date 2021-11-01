@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 
@@ -46,7 +34,7 @@ class ANALOG_API fastnoise_source : virtual public sync_block
 {
 public:
     // gr::analog::fastnoise_source::sptr
-    typedef boost::shared_ptr<fastnoise_source<T>> sptr;
+    typedef std::shared_ptr<fastnoise_source<T>> sptr;
 
     /*! \brief Make a fast noise source
      * \param type the random distribution to use (see
@@ -58,10 +46,11 @@ public:
      * \param seed seed for random generators. Note that for uniform
      *        and Gaussian distributions, this should be a negative
      *        number.
-     * \param samples Number of samples to pre-generate
+     * \param samples Number of samples to pre-generate. For performance
+     *        reasons, prefer a power of 2.
      */
     static sptr
-    make(noise_type_t type, float ampl, long seed = 0, long samples = 1024 * 16);
+    make(noise_type_t type, float ampl, uint64_t seed = 0, size_t samples = 1024 * 16);
     virtual T sample() = 0;
     virtual T sample_unbiased() = 0;
     virtual const std::vector<T>& samples() const = 0;

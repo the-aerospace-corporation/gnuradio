@@ -6,26 +6,10 @@
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 #
 
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
 
 # See gnuradio-examples/python/digital for examples
 
@@ -36,7 +20,7 @@ import numpy
 from gnuradio import gr, filter
 from gnuradio import analog
 from gnuradio import blocks
-from . import digital_swig
+from . import digital_python
 from . import modulation_utils
 
 
@@ -129,7 +113,7 @@ class cpm_mod(gr.hier_block2):
 
 
         # Turn it into symmetric PAM data.
-        self.pam = digital_swig.chunks_to_symbols_bf(self.sym_alphabet,1)
+        self.pam = digital_python.chunks_to_symbols_bf(self.sym_alphabet,1)
 
         # Generate pulse (sum of taps = samples_per_symbol/2)
         if cpm_type == 0: # CPFSK

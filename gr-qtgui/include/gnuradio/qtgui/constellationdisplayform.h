@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef CONSTELLATION_DISPLAY_FORM_H
@@ -41,9 +29,9 @@ class QTGUI_API ConstellationDisplayForm : public DisplayForm
 
 public:
     ConstellationDisplayForm(int nplots = 1, QWidget* parent = 0);
-    ~ConstellationDisplayForm();
+    ~ConstellationDisplayForm() override;
 
-    ConstellationDisplayPlot* getPlot();
+    ConstellationDisplayPlot* getPlot() override;
 
     int getNPoints() const;
     gr::qtgui::trigger_mode getTriggerMode() const;
@@ -53,13 +41,13 @@ public:
     std::string getTriggerTagKey() const;
 
 public slots:
-    void customEvent(QEvent* e);
+    void customEvent(QEvent* e) override;
     void setNPoints(const int);
 
-    void setSampleRate(const QString& samprate);
+    void setSampleRate(const QString& samprate) override;
     void setYaxis(double min, double max);
     void setXaxis(double min, double max);
-    void autoScale(bool en);
+    void autoScale(bool en) override;
 
     void updateTrigger(gr::qtgui::trigger_mode mode);
     void setTriggerMode(gr::qtgui::trigger_mode mode);
@@ -71,7 +59,7 @@ public slots:
     void setTriggerTagKey(const std::string& s);
 
 private slots:
-    void newData(const QEvent*);
+    void newData(const QEvent*) override;
 
 private:
     QIntValidator* d_int_validator;

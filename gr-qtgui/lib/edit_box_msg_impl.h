@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef INCLUDED_QTGUI_EDIT_BOX_MSG_IMPL_H
@@ -40,8 +28,14 @@ class QTGUI_API edit_box_msg_impl : public QObject, public edit_box_msg
     Q_OBJECT
 
 private:
-    int d_argc;
-    char* d_argv;
+    // Required now for Qt; argc must be greater than 0 and argv
+    // must have at least one valid character. Must be valid through
+    // life of the qApplication:
+    // http://harmattan-dev.nokia.com/docs/library/html/qt4/qapplication.html
+    char d_zero = 0;
+    int d_argc = 1;
+    char* d_argv = &d_zero;
+
     data_type_t d_type;
     bool d_is_pair;
     bool d_is_static;
@@ -65,20 +59,14 @@ public:
                       bool is_static = true,
                       const std::string& key = "",
                       QWidget* parent = 0);
-    ~edit_box_msg_impl();
+    ~edit_box_msg_impl() override;
 
     // Overload the start method of gr::block to emit a message if a
     // default value is provided.
-    bool start();
+    bool start() override;
 
-    void exec_();
-    QWidget* qwidget();
-
-#ifdef ENABLE_PYTHON
-    PyObject* pyqwidget();
-#else
-    void* pyqwidget();
-#endif
+    void exec_() override;
+    QWidget* qwidget() override;
 
     void set_value(pmt::pmt_t val);
 

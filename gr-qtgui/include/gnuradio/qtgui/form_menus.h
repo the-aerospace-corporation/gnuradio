@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef FORM_MENUS_H
@@ -83,7 +71,7 @@ public:
         }
     }
 
-    ~LineColorMenu() {}
+    ~LineColorMenu() override {}
 
     int getNumActions() const { return d_act.size(); }
 
@@ -92,7 +80,7 @@ public:
         if (which < static_cast<unsigned int>(d_act.size()))
             return d_act[which];
         else
-            throw std::runtime_error("LineColorMenu::getAction: which out of range.\n");
+            throw std::runtime_error("LineColorMenu::getAction: which out of range.");
     }
 
 signals:
@@ -163,7 +151,7 @@ public:
         }
     }
 
-    ~LineWidthMenu() {}
+    ~LineWidthMenu() override {}
 
     int getNumActions() const { return d_act.size(); }
 
@@ -172,7 +160,7 @@ public:
         if (which < static_cast<unsigned int>(d_act.size()))
             return d_act[which];
         else
-            throw std::runtime_error("LineWidthMenu::getAction: which out of range.\n");
+            throw std::runtime_error("LineWidthMenu::getAction: which out of range.");
     }
 
 signals:
@@ -233,7 +221,7 @@ public:
         }
     }
 
-    ~LineStyleMenu() {}
+    ~LineStyleMenu() override {}
 
     int getNumActions() const { return d_act.size(); }
 
@@ -242,7 +230,7 @@ public:
         if (which < static_cast<unsigned int>(d_act.size()))
             return d_act[which];
         else
-            throw std::runtime_error("LineStyleMenu::getAction: which out of range.\n");
+            throw std::runtime_error("LineStyleMenu::getAction: which out of range.");
     }
 
 signals:
@@ -317,7 +305,7 @@ public:
         }
     }
 
-    ~LineMarkerMenu() {}
+    ~LineMarkerMenu() override {}
 
     int getNumActions() const { return d_act.size(); }
 
@@ -326,7 +314,7 @@ public:
         if (which < static_cast<unsigned int>(d_act.size()))
             return d_act[which];
         else
-            throw std::runtime_error("LineMarkerMenu::getAction: which out of range.\n");
+            throw std::runtime_error("LineMarkerMenu::getAction: which out of range.");
     }
 
 signals:
@@ -390,7 +378,7 @@ public:
         }
     }
 
-    ~MarkerAlphaMenu() {}
+    ~MarkerAlphaMenu() override {}
 
     int getNumActions() const { return d_act.size(); }
 
@@ -399,7 +387,7 @@ public:
         if (which < static_cast<unsigned int>(d_act.size()))
             return d_act[which];
         else
-            throw std::runtime_error("MarkerAlphaMenu::getAction: which out of range.\n");
+            throw std::runtime_error("MarkerAlphaMenu::getAction: which out of range.");
     }
 
 signals:
@@ -449,7 +437,7 @@ public:
         connect(this, SIGNAL(triggered()), this, SLOT(getTextDiag()));
     }
 
-    ~LineTitleAction() {}
+    ~LineTitleAction() override {}
 
 signals:
     void whichTrigger(unsigned int which, const QString& text);
@@ -502,7 +490,7 @@ public:
         connect(this, SIGNAL(triggered()), this, SLOT(getTextDiag()));
     }
 
-    ~OtherAction() {}
+    ~OtherAction() override {}
 
     void setValidator(QValidator* v) { d_text->setValidator(v); }
 
@@ -565,7 +553,7 @@ public:
         connect(this, SIGNAL(triggered()), this, SLOT(getTextDiag()));
     }
 
-    ~OtherDualAction() {}
+    ~OtherDualAction() override {}
 
 signals:
     void whichTrigger(const QString& text0, const QString& text1);
@@ -646,7 +634,7 @@ public:
         }
     }
 
-    ~FFTSizeMenu() {}
+    ~FFTSizeMenu() override {}
 
     int getNumActions() const { return d_act.size(); }
 
@@ -655,7 +643,7 @@ public:
         if (which < static_cast<unsigned int>(d_act.size()))
             return d_act[which];
         else
-            throw std::runtime_error("FFTSizeMenu::getAction: which out of range.\n");
+            throw std::runtime_error("FFTSizeMenu::getAction: which out of range.");
     }
 
     QAction* getActionFromSize(int size)
@@ -668,7 +656,7 @@ public:
                 return d_act[static_cast<int>(which)];
             else
                 throw std::runtime_error(
-                    "FFTSizeMenu::getActionFromString: which out of range.\n");
+                    "FFTSizeMenu::getActionFromString: which out of range.");
         }
         // Or a non-predefined value, return Other
         else {
@@ -754,7 +742,7 @@ public:
         }
     }
 
-    ~AverageMenu() {}
+    ~AverageMenu() override {}
 
     int getNumActions() const { return d_act.size(); }
 
@@ -763,7 +751,7 @@ public:
         if (which < static_cast<unsigned int>(d_act.size()))
             return d_act[which];
         else
-            throw std::runtime_error("FFTSizeMenu::getAction: which out of range.\n");
+            throw std::runtime_error("FFTSizeMenu::getAction: which out of range.");
     }
 
     QAction* getActionFromAvg(float avg)
@@ -820,7 +808,7 @@ public:
         // nop
     }
 
-    ~FFTAverageMenu() {}
+    ~FFTAverageMenu() override {}
 };
 
 /********************************************************************/
@@ -864,7 +852,7 @@ public:
         }
     }
 
-    ~FFTWindowMenu() {}
+    ~FFTWindowMenu() override {}
 
     int getNumActions() const { return d_act.size(); }
 
@@ -873,35 +861,35 @@ public:
         if (which < static_cast<unsigned int>(d_act.size()))
             return d_act[which];
         else
-            throw std::runtime_error("FFTWindowMenu::getAction: which out of range.\n");
+            throw std::runtime_error("FFTWindowMenu::getAction: which out of range.");
     }
 
-    QAction* getActionFromWindow(gr::filter::firdes::win_type type)
+    QAction* getActionFromWindow(gr::fft::window::win_type type)
     {
         int which = 0;
         switch (static_cast<int>(type)) {
-        case ((gr::filter::firdes::WIN_NONE)):
+        case ((gr::fft::window::WIN_NONE)):
             which = 0;
             break;
-        case ((gr::filter::firdes::WIN_HAMMING)):
+        case ((gr::fft::window::WIN_HAMMING)):
             which = 1;
             break;
-        case ((gr::filter::firdes::WIN_HANN)):
+        case ((gr::fft::window::WIN_HANN)):
             which = 2;
             break;
-        case ((gr::filter::firdes::WIN_BLACKMAN)):
+        case ((gr::fft::window::WIN_BLACKMAN)):
             which = 3;
             break;
-        case ((gr::filter::firdes::WIN_BLACKMAN_hARRIS)):
+        case ((gr::fft::window::WIN_BLACKMAN_hARRIS)):
             which = 4;
             break;
-        case ((gr::filter::firdes::WIN_RECTANGULAR)):
+        case ((gr::fft::window::WIN_RECTANGULAR)):
             which = 5;
             break;
-        case ((gr::filter::firdes::WIN_KAISER)):
+        case ((gr::fft::window::WIN_KAISER)):
             which = 6;
             break;
-        case ((gr::filter::firdes::WIN_FLATTOP)):
+        case ((gr::fft::window::WIN_FLATTOP)):
             which = 7;
             break;
         }
@@ -909,20 +897,17 @@ public:
     }
 
 signals:
-    void whichTrigger(const gr::filter::firdes::win_type type);
+    void whichTrigger(const gr::fft::window::win_type type);
 
 public slots:
-    void getNone() { emit whichTrigger(gr::filter::firdes::WIN_NONE); }
-    void getHamming() { emit whichTrigger(gr::filter::firdes::WIN_HAMMING); }
-    void getHann() { emit whichTrigger(gr::filter::firdes::WIN_HANN); }
-    void getBlackman() { emit whichTrigger(gr::filter::firdes::WIN_BLACKMAN); }
-    void getBlackmanharris()
-    {
-        emit whichTrigger(gr::filter::firdes::WIN_BLACKMAN_hARRIS);
-    }
-    void getRectangular() { emit whichTrigger(gr::filter::firdes::WIN_RECTANGULAR); }
-    void getKaiser() { emit whichTrigger(gr::filter::firdes::WIN_KAISER); }
-    void getFlattop() { emit whichTrigger(gr::filter::firdes::WIN_FLATTOP); }
+    void getNone() { emit whichTrigger(gr::fft::window::WIN_NONE); }
+    void getHamming() { emit whichTrigger(gr::fft::window::WIN_HAMMING); }
+    void getHann() { emit whichTrigger(gr::fft::window::WIN_HANN); }
+    void getBlackman() { emit whichTrigger(gr::fft::window::WIN_BLACKMAN); }
+    void getBlackmanharris() { emit whichTrigger(gr::fft::window::WIN_BLACKMAN_hARRIS); }
+    void getRectangular() { emit whichTrigger(gr::fft::window::WIN_RECTANGULAR); }
+    void getKaiser() { emit whichTrigger(gr::fft::window::WIN_KAISER); }
+    void getFlattop() { emit whichTrigger(gr::fft::window::WIN_FLATTOP); }
 
 private:
     QList<QAction*> d_act;
@@ -960,7 +945,7 @@ public:
         connect(this, SIGNAL(triggered()), this, SLOT(getTextDiag()));
     }
 
-    ~NPointsMenu() {}
+    ~NPointsMenu() override {}
 
 signals:
     void whichTrigger(const int npts);
@@ -1026,7 +1011,7 @@ public:
         d_min_value = QColor("white");
     }
 
-    ~ColorMapMenu() {}
+    ~ColorMapMenu() override {}
 
     int getNumActions() const { return d_act.size(); }
 
@@ -1035,7 +1020,7 @@ public:
         if (which < static_cast<unsigned int>(d_act.size()))
             return d_act[which];
         else
-            throw std::runtime_error("ColorMapMenu::getAction: which out of range.\n");
+            throw std::runtime_error("ColorMapMenu::getAction: which out of range.");
     }
 
 signals:
@@ -1047,16 +1032,28 @@ signals:
 public slots:
     void getMultiColor()
     {
-        emit whichTrigger(d_which, INTENSITY_COLOR_MAP_TYPE_MULTI_COLOR);
+        emit whichTrigger(d_which, gr::qtgui::INTENSITY_COLOR_MAP_TYPE_MULTI_COLOR);
     }
-    void getWhiteHot() { emit whichTrigger(d_which, INTENSITY_COLOR_MAP_TYPE_WHITE_HOT); }
-    void getBlackHot() { emit whichTrigger(d_which, INTENSITY_COLOR_MAP_TYPE_BLACK_HOT); }
+    void getWhiteHot()
+    {
+        emit whichTrigger(d_which, gr::qtgui::INTENSITY_COLOR_MAP_TYPE_WHITE_HOT);
+    }
+    void getBlackHot()
+    {
+        emit whichTrigger(d_which, gr::qtgui::INTENSITY_COLOR_MAP_TYPE_BLACK_HOT);
+    }
     void getIncandescent()
     {
-        emit whichTrigger(d_which, INTENSITY_COLOR_MAP_TYPE_INCANDESCENT);
+        emit whichTrigger(d_which, gr::qtgui::INTENSITY_COLOR_MAP_TYPE_INCANDESCENT);
     }
-    void getSunset() { emit whichTrigger(d_which, INTENSITY_COLOR_MAP_TYPE_SUNSET); }
-    void getCool() { emit whichTrigger(d_which, INTENSITY_COLOR_MAP_TYPE_COOL); }
+    void getSunset()
+    {
+        emit whichTrigger(d_which, gr::qtgui::INTENSITY_COLOR_MAP_TYPE_SUNSET);
+    }
+    void getCool()
+    {
+        emit whichTrigger(d_which, gr::qtgui::INTENSITY_COLOR_MAP_TYPE_COOL);
+    }
     // void getOther(d_which, const QString &min_str, const QString &max_str)
     void getOther()
     {
@@ -1068,8 +1065,10 @@ public slots:
         d_min_value = QColorDialog::getColor(d_min_value, this);
         d_max_value = QColorDialog::getColor(d_max_value, this);
 
-        emit whichTrigger(
-            d_which, INTENSITY_COLOR_MAP_TYPE_USER_DEFINED, d_min_value, d_max_value);
+        emit whichTrigger(d_which,
+                          gr::qtgui::INTENSITY_COLOR_MAP_TYPE_USER_DEFINED,
+                          d_min_value,
+                          d_max_value);
     }
 
 private:
@@ -1110,7 +1109,7 @@ public:
         }
     }
 
-    ~TriggerModeMenu() {}
+    ~TriggerModeMenu() override {}
 
     int getNumActions() const { return d_act.size(); }
 
@@ -1119,7 +1118,7 @@ public:
         if (which < static_cast<unsigned int>(d_act.size()))
             return d_act[which];
         else
-            throw std::runtime_error("TriggerModeMenu::getAction: which out of range.\n");
+            throw std::runtime_error("TriggerModeMenu::getAction: which out of range.");
     }
 
     QAction* getAction(gr::qtgui::trigger_mode mode)
@@ -1138,8 +1137,7 @@ public:
             return d_act[3];
             break;
         default:
-            throw std::runtime_error(
-                "TriggerModeMenu::getAction: unknown trigger mode.\n");
+            throw std::runtime_error("TriggerModeMenu::getAction: unknown trigger mode.");
         }
     }
 
@@ -1184,7 +1182,7 @@ public:
         }
     }
 
-    ~TriggerSlopeMenu() {}
+    ~TriggerSlopeMenu() override {}
 
     int getNumActions() const { return d_act.size(); }
 
@@ -1193,8 +1191,7 @@ public:
         if (which < static_cast<unsigned int>(d_act.size()))
             return d_act[which];
         else
-            throw std::runtime_error(
-                "TriggerSlopeMenu::getAction: which out of range.\n");
+            throw std::runtime_error("TriggerSlopeMenu::getAction: which out of range.");
     }
 
     QAction* getAction(gr::qtgui::trigger_slope slope)
@@ -1208,7 +1205,7 @@ public:
             break;
         default:
             throw std::runtime_error(
-                "TriggerSlopeMenu::getAction: unknown trigger slope.\n");
+                "TriggerSlopeMenu::getAction: unknown trigger slope.");
         }
     }
 
@@ -1246,7 +1243,7 @@ public:
         }
     }
 
-    ~TriggerChannelMenu() {}
+    ~TriggerChannelMenu() override {}
 
     int getNumActions() const { return d_act.size(); }
 
@@ -1256,7 +1253,7 @@ public:
             return d_act[which];
         else
             throw std::runtime_error(
-                "TriggerChannelMenu::getAction: which out of range.\n");
+                "TriggerChannelMenu::getAction: which out of range.");
     }
 
 
@@ -1305,7 +1302,7 @@ public:
         }
     }
 
-    ~NumberLayoutMenu() {}
+    ~NumberLayoutMenu() override {}
 
     int getNumActions() const { return d_act.size(); }
 
@@ -1314,8 +1311,7 @@ public:
         if (which < static_cast<unsigned int>(d_act.size()))
             return d_act[which];
         else
-            throw std::runtime_error(
-                "NumberLayoutMenu::getAction: which out of range.\n");
+            throw std::runtime_error("NumberLayoutMenu::getAction: which out of range.");
     }
 
     QAction* getAction(gr::qtgui::graph_t layout)
@@ -1331,8 +1327,7 @@ public:
             return d_act[1];
             break;
         default:
-            throw std::runtime_error(
-                "NumberLayoutMenu::getAction: unknown layout type.\n");
+            throw std::runtime_error("NumberLayoutMenu::getAction: unknown layout type.");
         }
     }
 
@@ -1389,7 +1384,7 @@ public:
         d_min_value = QColor("black");
     }
 
-    ~NumberColorMapMenu() {}
+    ~NumberColorMapMenu() override {}
 
     int getNumActions() const { return d_act.size(); }
 
@@ -1398,7 +1393,7 @@ public:
         if (which < static_cast<unsigned int>(d_act.size()))
             return d_act[which];
         else
-            throw std::runtime_error("ColorMapMenu::getAction: which out of range.\n");
+            throw std::runtime_error("ColorMapMenu::getAction: which out of range.");
     }
 
 signals:
@@ -1462,7 +1457,7 @@ public:
         connect(this, SIGNAL(triggered()), this, SLOT(getTextDiag()));
     }
 
-    ~PopupMenu() {}
+    ~PopupMenu() override {}
 
     void setText(QString s) { d_text->setText(s); }
 
@@ -1516,7 +1511,7 @@ public:
         connect(this, SIGNAL(triggered()), this, SLOT(getTextDiag()));
     }
 
-    ~ItemFloatAct() {}
+    ~ItemFloatAct() override {}
 
     void setText(float f) { d_text->setText(QString("%1").arg(f)); }
 

@@ -3,20 +3,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef INCLUDED_DIGITAL_OFDM_EQUALIZER_STATIC_H
@@ -46,7 +34,7 @@ namespace digital {
 class DIGITAL_API ofdm_equalizer_static : public ofdm_equalizer_1d_pilots
 {
 public:
-    typedef boost::shared_ptr<ofdm_equalizer_static> sptr;
+    typedef std::shared_ptr<ofdm_equalizer_static> sptr;
 
     ofdm_equalizer_static(int fft_len,
                           const std::vector<std::vector<int>>& occupied_carriers =
@@ -57,7 +45,7 @@ public:
                               std::vector<std::vector<gr_complex>>(),
                           int symbols_skipped = 0,
                           bool input_is_shifted = true);
-    ~ofdm_equalizer_static();
+    ~ofdm_equalizer_static() override;
 
     /*! \brief Divide the input signal with the current channel state.
      *
@@ -69,7 +57,7 @@ public:
     void equalize(gr_complex* frame,
                   int n_sym,
                   const std::vector<gr_complex>& initial_taps = std::vector<gr_complex>(),
-                  const std::vector<tag_t>& tags = std::vector<tag_t>());
+                  const std::vector<tag_t>& tags = std::vector<tag_t>()) override;
 
     /*
      * \param fft_len FFT length

@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef CHUNKS_TO_SYMBOLS_H
@@ -55,7 +43,7 @@ template <class IN_T, class OUT_T>
 class DIGITAL_API chunks_to_symbols : virtual public sync_interpolator
 {
 public:
-    typedef boost::shared_ptr<chunks_to_symbols<IN_T, OUT_T>> sptr;
+    typedef std::shared_ptr<chunks_to_symbols<IN_T, OUT_T>> sptr;
 
     /*!
      * Make a chunks-to-symbols block.
@@ -63,9 +51,9 @@ public:
      * \param symbol_table: list that maps chunks to symbols.
      * \param D: dimension of table.
      */
-    static sptr make(const std::vector<OUT_T>& symbol_table, const int D = 1);
+    static sptr make(const std::vector<OUT_T>& symbol_table, const unsigned int D = 1);
 
-    virtual int D() const = 0;
+    virtual unsigned int D() const = 0;
     virtual std::vector<OUT_T> symbol_table() const = 0;
     virtual void set_symbol_table(const std::vector<OUT_T>& symbol_table) = 0;
 };

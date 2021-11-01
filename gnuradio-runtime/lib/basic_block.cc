@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -27,7 +15,6 @@
 #include <gnuradio/basic_block.h>
 #include <gnuradio/block_registry.h>
 #include <gnuradio/logger.h>
-#include <iostream>
 #include <sstream>
 #include <stdexcept>
 
@@ -51,6 +38,7 @@ basic_block::basic_block(const std::string& name,
       d_rpc_set(false),
       d_message_subscribers(pmt::make_dict())
 {
+    configure_default_loggers(d_logger, d_debug_logger, d_symbol_name);
     s_ncurrently_allocated++;
 }
 
@@ -86,8 +74,6 @@ void basic_block::message_port_register_in(pmt::pmt_t port_id)
         throw std::runtime_error("message_port_register_in: bad port id");
     }
     msg_queue[port_id] = msg_queue_t();
-    msg_queue_ready[port_id] =
-        boost::shared_ptr<boost::condition_variable>(new boost::condition_variable());
 }
 
 pmt::pmt_t basic_block::message_ports_in()
@@ -186,18 +172,18 @@ void basic_block::_post(pmt::pmt_t which_port, pmt::pmt_t msg)
 void basic_block::insert_tail(pmt::pmt_t which_port, pmt::pmt_t msg)
 {
     gr::thread::scoped_lock guard(mutex);
-
-    if ((msg_queue.find(which_port) == msg_queue.end()) ||
-        (msg_queue_ready.find(which_port) == msg_queue_ready.end())) {
-        std::cout << "target port = " << pmt::symbol_to_string(which_port) << std::endl;
+    const auto& queue = msg_queue.find(which_port);
+    if (queue == msg_queue.end()) {
+        GR_LOG_ERROR(d_logger,
+                     std::string("attempted insertion on invalid queue ") +
+                         pmt::symbol_to_string(which_port));
         throw std::runtime_error("attempted to insert_tail on invalid queue!");
     }
 
-    msg_queue[which_port].push_back(msg);
-    msg_queue_ready[which_port]->notify_one();
+    queue->second.push_back(msg);
 
     // wake up thread if BLKD_IN or BLKD_OUT
-    global_block_registry.notify_blk(alias());
+    global_block_registry.notify_blk(d_symbol_name);
 }
 
 pmt::pmt_t basic_block::delete_head_nowait(pmt::pmt_t which_port)

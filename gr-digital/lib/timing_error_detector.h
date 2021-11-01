@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this file; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef INCLUDED_DIGITAL_TIMING_ERROR_DETECTOR_H
@@ -62,7 +50,7 @@ public:
      *                      for decision directed timing error detector
      *                      algorithms
      */
-    static timing_error_detector*
+    static std::unique_ptr<timing_error_detector>
     make(enum ted_type type, constellation_sptr constellation = constellation_sptr());
 
     virtual ~timing_error_detector(){};
@@ -244,11 +232,11 @@ public:
         : timing_error_detector(TED_MUELLER_AND_MULLER, 1, 2, false, false, constellation)
     {
     }
-    ~ted_mueller_and_muller(){};
+    ~ted_mueller_and_muller() override{};
 
 private:
-    float compute_error_cf();
-    float compute_error_ff();
+    float compute_error_cf() override;
+    float compute_error_ff() override;
 };
 
 /*!
@@ -282,11 +270,11 @@ public:
               TED_MOD_MUELLER_AND_MULLER, 1, 3, false, false, constellation)
     {
     }
-    ~ted_mod_mueller_and_muller(){};
+    ~ted_mod_mueller_and_muller() override{};
 
 private:
-    float compute_error_cf();
-    float compute_error_ff();
+    float compute_error_cf() override;
+    float compute_error_ff() override;
 };
 
 /*!
@@ -309,11 +297,11 @@ public:
         : timing_error_detector(TED_ZERO_CROSSING, 2, 3, false, false, constellation)
     {
     }
-    ~ted_zero_crossing(){};
+    ~ted_zero_crossing() override{};
 
 private:
-    float compute_error_cf();
-    float compute_error_ff();
+    float compute_error_cf() override;
+    float compute_error_ff() override;
 };
 
 /*!
@@ -337,11 +325,11 @@ public:
         : timing_error_detector(TED_GARDNER, 2, 3, false, false, constellation_sptr())
     {
     }
-    ~ted_gardner(){};
+    ~ted_gardner() override{};
 
 private:
-    float compute_error_cf();
-    float compute_error_ff();
+    float compute_error_cf() override;
+    float compute_error_ff() override;
 };
 
 /*!
@@ -363,11 +351,11 @@ public:
         : timing_error_detector(TED_EARLY_LATE, 2, 2, true, false, constellation_sptr())
     {
     }
-    ~ted_early_late(){};
+    ~ted_early_late() override{};
 
 private:
-    float compute_error_cf();
-    float compute_error_ff();
+    float compute_error_cf() override;
+    float compute_error_ff() override;
 };
 
 /*!
@@ -391,14 +379,14 @@ public:
      */
     ted_generalized_msk()
         : timing_error_detector(
-              TED_DANDREA_AND_MENGALI_GEN_MSK, 2, 4, false, false, constellation_sptr())
+              TED_DANDREA_AND_MENGALI_GEN_MSK, 4, 8, false, false, constellation_sptr())
     {
     }
-    ~ted_generalized_msk(){};
+    ~ted_generalized_msk() override{};
 
 private:
-    float compute_error_cf();
-    float compute_error_ff();
+    float compute_error_cf() override;
+    float compute_error_ff() override;
 };
 
 /*!
@@ -424,11 +412,11 @@ public:
               TED_MENGALI_AND_DANDREA_GMSK, 2, 4, false, false, constellation_sptr())
     {
     }
-    ~ted_gaussian_msk(){};
+    ~ted_gaussian_msk() override{};
 
 private:
-    float compute_error_cf();
-    float compute_error_ff();
+    float compute_error_cf() override;
+    float compute_error_ff() override;
 };
 
 /*!
@@ -459,11 +447,11 @@ public:
               TED_SIGNAL_TIMES_SLOPE_ML, 1, 1, false, true, constellation_sptr())
     {
     }
-    ~ted_signal_times_slope_ml(){};
+    ~ted_signal_times_slope_ml() override{};
 
 private:
-    float compute_error_cf();
-    float compute_error_ff();
+    float compute_error_cf() override;
+    float compute_error_ff() override;
 };
 
 /*!
@@ -494,11 +482,11 @@ public:
               TED_SIGNUM_TIMES_SLOPE_ML, 1, 1, false, true, constellation_sptr())
     {
     }
-    ~ted_signum_times_slope_ml(){};
+    ~ted_signum_times_slope_ml() override{};
 
 private:
-    float compute_error_cf();
-    float compute_error_ff();
+    float compute_error_cf() override;
+    float compute_error_ff() override;
 };
 
 } /* namespace digital */

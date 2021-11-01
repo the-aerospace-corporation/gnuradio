@@ -2,20 +2,8 @@
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 
 ########################################################################
 # Setup dependencies
@@ -33,7 +21,6 @@ GR_REGISTER_COMPONENT("gr-dtv" ENABLE_GR_DTV
     ENABLE_GR_ANALOG
     ENABLE_GR_FILTER
     ENABLE_GR_FEC
-    ENABLE_VOLK
 )
 
 SET(GR_PKG_DTV_EXAMPLES_DIR ${GR_PKG_DATA_DIR}/examples/dtv)
@@ -49,9 +36,10 @@ if(ENABLE_GR_DTV)
 add_subdirectory(include/gnuradio/dtv)
 add_subdirectory(lib)
 if(ENABLE_PYTHON)
-    add_subdirectory(swig)
     add_subdirectory(python/dtv)
-    add_subdirectory(examples)
+    if(ENABLE_EXAMPLES)
+        add_subdirectory(examples)
+    endif(ENABLE_EXAMPLES)
     add_subdirectory(apps)
 endif(ENABLE_PYTHON)
 if(ENABLE_GRC)

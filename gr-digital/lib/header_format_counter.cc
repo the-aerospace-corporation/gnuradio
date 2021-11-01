@@ -3,20 +3,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -26,10 +14,8 @@
 #include <gnuradio/digital/header_buffer.h>
 #include <gnuradio/digital/header_format_counter.h>
 #include <gnuradio/math.h>
-#include <string.h>
-#include <volk/volk.h>
-#include <iomanip>
-#include <iostream>
+#include <volk/volk_alloc.hh>
+#include <string>
 
 namespace gr {
 namespace digital {
@@ -57,9 +43,10 @@ bool header_format_counter::format(int nbytes_in,
                                    pmt::pmt_t& info)
 
 {
-    uint8_t* bytes_out = (uint8_t*)volk_malloc(header_nbytes(), volk_get_alignment());
+    // Creating the output pmt copies data; free our own here when done.
+    volk::vector<uint8_t> bytes_out(header_nbytes());
 
-    header_buffer header(bytes_out);
+    header_buffer header(bytes_out.data());
     header.add_field64(d_access_code, d_access_code_len);
     header.add_field16((uint16_t)(nbytes_in));
     header.add_field16((uint16_t)(nbytes_in));
@@ -67,10 +54,7 @@ bool header_format_counter::format(int nbytes_in,
     header.add_field16((uint16_t)(d_counter));
 
     // Package output data into a PMT vector
-    output = pmt::init_u8vector(header_nbytes(), bytes_out);
-
-    // Creating the output pmt copies data; free our own here.
-    volk_free(bytes_out);
+    output = pmt::init_u8vector(header_nbytes(), bytes_out.data());
 
     d_counter++;
 

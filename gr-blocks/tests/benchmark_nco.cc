@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -28,16 +16,18 @@
 #include <gnuradio/math.h>
 #include <gnuradio/nco.h>
 
-#include <sys/time.h>
-#include <unistd.h>
-
 #ifdef HAVE_SYS_RESOURCE_H
+/* from man getrusage
+   "including <sys/time.h> is not required these days"
+   So, we don't */
 #include <sys/resource.h>
 #endif
 
+#include <sys/time.h>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <ctime>
 
 #define ITERATIONS 20000000
 #define BLOCK_SIZE (10 * 1000) // fits in cache
@@ -96,7 +86,7 @@ static void benchmark(void test(float* x, float* y), const char* implementation_
 
     double total = user + sys;
 #else
-    clock_end = (double)clock() * (1000000. / CLOCKS_PER_SEC);
+    clock_end = (double)std::clock() * (1000000. / CLOCKS_PER_SEC);
     double total = clock_end - clock_start;
 #endif
 
@@ -112,7 +102,7 @@ static void benchmark(void test(float* x, float* y), const char* implementation_
 
 void basic_sincos_vec(float* x, float* y)
 {
-    gr::blocks::nco<float, float> nco;
+    gr::nco<float, float> nco;
 
     nco.set_freq(2 * GR_M_PI / FREQ);
 
@@ -126,7 +116,7 @@ void basic_sincos_vec(float* x, float* y)
 
 void native_sincos_vec(float* x, float* y)
 {
-    gr::blocks::nco<float, float> nco;
+    gr::nco<float, float> nco;
 
     nco.set_freq(2 * GR_M_PI / FREQ);
 
@@ -137,7 +127,7 @@ void native_sincos_vec(float* x, float* y)
 
 void fxpt_sincos_vec(float* x, float* y)
 {
-    gr::blocks::fxpt_nco nco;
+    gr::fxpt_nco nco;
 
     nco.set_freq(2 * GR_M_PI / FREQ);
 
@@ -150,7 +140,7 @@ void fxpt_sincos_vec(float* x, float* y)
 
 void native_sincos(float* x, float* y)
 {
-    gr::blocks::nco<float, float> nco;
+    gr::nco<float, float> nco;
 
     nco.set_freq(2 * GR_M_PI / FREQ);
 
@@ -162,7 +152,7 @@ void native_sincos(float* x, float* y)
 
 void fxpt_sincos(float* x, float* y)
 {
-    gr::blocks::fxpt_nco nco;
+    gr::fxpt_nco nco;
 
     nco.set_freq(2 * GR_M_PI / FREQ);
 
@@ -176,7 +166,7 @@ void fxpt_sincos(float* x, float* y)
 
 void native_sin(float* x, float* y)
 {
-    gr::blocks::nco<float, float> nco;
+    gr::nco<float, float> nco;
 
     nco.set_freq(2 * GR_M_PI / FREQ);
 
@@ -188,7 +178,7 @@ void native_sin(float* x, float* y)
 
 void fxpt_sin(float* x, float* y)
 {
-    gr::blocks::fxpt_nco nco;
+    gr::fxpt_nco nco;
 
     nco.set_freq(2 * GR_M_PI / FREQ);
 

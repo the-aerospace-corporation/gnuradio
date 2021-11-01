@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef TIMERASTER_GLOBAL_DATA_CPP
@@ -27,7 +15,6 @@
 
 #include <cmath>
 #include <cstdio>
-#include <iostream>
 
 TimeRasterData::TimeRasterData(const double rows, const double cols)
 #if QWT_VERSION < 0x060000
@@ -44,10 +31,9 @@ TimeRasterData::TimeRasterData(const double rows, const double cols)
     // We add 1 here so we always have the next row already started
     // (helps when d_cols is fractional and we have to slide).
     d_totalitems = static_cast<int>((d_rows + 1) * floor(d_cols));
-    d_data_size = d_totalitems + static_cast<int>(floor(d_cols));
 
     d_intensityRange = QwtDoubleInterval(0.0, 10.0);
-    d_data = new double[d_data_size];
+    d_data.resize(d_totalitems + static_cast<int>(floor(d_cols)));
 
 #if QWT_VERSION >= 0x060000
     setInterval(Qt::XAxis, QwtInterval(0, cols));
@@ -58,13 +44,13 @@ TimeRasterData::TimeRasterData(const double rows, const double cols)
     reset();
 }
 
-TimeRasterData::~TimeRasterData() { delete[] d_data; }
+TimeRasterData::~TimeRasterData() {}
 
 void TimeRasterData::reset()
 {
     d_resid = 0;
     d_nitems = 0;
-    memset(d_data, 0x0, d_data_size * sizeof(double));
+    std::fill(std::begin(d_data), std::end(d_data), 0.0);
 }
 
 void TimeRasterData::copy(const TimeRasterData* rhs)
@@ -74,19 +60,15 @@ void TimeRasterData::copy(const TimeRasterData* rhs)
         d_cols = rhs->getNumCols();
         d_rows = rhs->getNumRows();
         d_totalitems = static_cast<int>((d_rows + 1) * floor(d_cols));
-        d_data_size = d_totalitems + static_cast<int>(floor(d_cols));
         setBoundingRect(rhs->boundingRect());
-        delete[] d_data;
-        d_data = new double[d_data_size];
+        d_data.resize(d_totalitems + static_cast<int>(floor(d_cols)));
     }
 #else
     if ((d_cols != rhs->getNumCols()) || (d_rows != rhs->getNumRows())) {
         d_cols = rhs->getNumCols();
         d_rows = rhs->getNumRows();
         d_totalitems = static_cast<int>((d_rows + 1) * floor(d_cols));
-        d_data_size = d_totalitems + static_cast<int>(floor(d_cols));
-        delete[] d_data;
-        d_data = new double[d_data_size];
+        d_data.resize(d_totalitems + static_cast<int>(floor(d_cols)));
     }
 #endif
 
@@ -110,9 +92,7 @@ void TimeRasterData::resizeData(const double rows, const double cols)
         d_cols = cols;
         d_rows = rows;
         d_totalitems = static_cast<int>((d_rows + 1) * floor(d_cols));
-        d_data_size = d_totalitems + static_cast<int>(floor(d_cols));
-        delete[] d_data;
-        d_data = new double[d_data_size];
+        d_data.resize(d_totalitems + static_cast<int>(floor(d_cols)));
     }
 
 #else
@@ -125,10 +105,7 @@ void TimeRasterData::resizeData(const double rows, const double cols)
         d_cols = cols;
         d_rows = rows;
         d_totalitems = static_cast<int>((d_rows + 1) * floor(d_cols));
-        d_data_size = d_totalitems + static_cast<int>(floor(d_cols));
-
-        delete[] d_data;
-        d_data = new double[d_data_size];
+        d_data.resize(d_totalitems + static_cast<int>(floor(d_cols)));
     }
 #endif
 
@@ -161,8 +138,6 @@ void TimeRasterData::setRange(const QwtDoubleInterval& newRange)
 
 double TimeRasterData::value(double x, double y) const
 {
-    double returnValue = 0.0;
-
 #if QWT_VERSION < 0x060000
     double top = boundingRect().top();
     double bottom = top - boundingRect().height();
@@ -180,13 +155,13 @@ double TimeRasterData::value(double x, double y) const
 
     double _y = floor(top - y);
     double _loc = _y * (d_cols) + x + d_resid;
-    int location = static_cast<int>(_loc);
+    const auto location = static_cast<size_t>(_loc);
 
-    if ((location > -1) && (location < d_data_size)) {
-        returnValue = d_data[location];
+    if (location < d_data.size()) {
+        return d_data[location];
     }
 
-    return returnValue;
+    return 0.0;
 }
 
 void TimeRasterData::incrementResidual()
@@ -211,7 +186,7 @@ void TimeRasterData::addData(const double* data, const int dataSize)
             d_nitems += cols;
         } else {
             memcpy(&d_data[d_nitems], data, cols * sizeof(double));
-            memmove(d_data, &d_data[cols], d_totalitems * sizeof(double));
+            memmove(d_data.data(), &d_data[cols], d_totalitems * sizeof(double));
         }
     }
 }

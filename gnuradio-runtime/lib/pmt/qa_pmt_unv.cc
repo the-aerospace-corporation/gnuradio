@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #include <gnuradio/messages/msg_passing.h>
@@ -25,7 +13,6 @@
 #include <pmt/pmt.h>
 #include <boost/format.hpp>
 #include <boost/test/unit_test.hpp>
-#include <cstdio>
 #include <cstring>
 #include <sstream>
 
@@ -336,6 +323,8 @@ BOOST_AUTO_TEST_CASE(test_f32vector)
     BOOST_CHECK_EQUAL(float(0), wr[0]);
     BOOST_CHECK_EQUAL(s1, wr[1]);
     BOOST_CHECK_EQUAL(s2, wr[2]);
+
+    BOOST_CHECK_EQUAL(pmt::write_string(v1), "#[0.000000 20.000000 30.000000]");
 }
 BOOST_AUTO_TEST_CASE(test_f64vector)
 {
@@ -370,6 +359,9 @@ BOOST_AUTO_TEST_CASE(test_f64vector)
     BOOST_CHECK_EQUAL(double(0), wr[0]);
     BOOST_CHECK_EQUAL(s1, wr[1]);
     BOOST_CHECK_EQUAL(s2, wr[2]);
+
+    BOOST_CHECK_EQUAL(pmt::write_string(v1),
+                      "#[0.000000000000000 20.000000000000000 30.000000000000000]");
 }
 BOOST_AUTO_TEST_CASE(test_c32vector)
 {

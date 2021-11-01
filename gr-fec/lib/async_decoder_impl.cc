@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -26,8 +14,8 @@
 
 #include "async_decoder_impl.h"
 #include <gnuradio/io_signature.h>
-#include <stdio.h>
 #include <volk/volk.h>
+#include <cstdio>
 
 namespace gr {
 namespace fec {
@@ -35,15 +23,16 @@ namespace fec {
 async_decoder::sptr
 async_decoder::make(generic_decoder::sptr my_decoder, bool packed, bool rev_pack, int mtu)
 {
-    return gnuradio::get_initial_sptr(
-        new async_decoder_impl(my_decoder, packed, rev_pack, mtu));
+    return gnuradio::make_block_sptr<async_decoder_impl>(
+        my_decoder, packed, rev_pack, mtu);
 }
 
 async_decoder_impl::async_decoder_impl(generic_decoder::sptr my_decoder,
                                        bool packed,
                                        bool rev_pack,
                                        int mtu)
-    : block("async_decoder", io_signature::make(0, 0, 0), io_signature::make(0, 0, 0))
+    : block("async_decoder", io_signature::make(0, 0, 0), io_signature::make(0, 0, 0)),
+      d_pack(8)
 {
     d_in_port = pmt::mp("in");
     d_out_port = pmt::mp("out");
@@ -63,43 +52,27 @@ async_decoder_impl::async_decoder_impl(generic_decoder::sptr my_decoder,
     message_port_register_out(d_out_port);
 
     if (d_packed) {
-        d_pack = new blocks::kernel::pack_k_bits(8);
-        set_msg_handler(d_in_port,
-                        boost::bind(&async_decoder_impl::decode_packed, this, _1));
+        set_msg_handler(d_in_port, [this](pmt::pmt_t msg) { this->decode_packed(msg); });
     } else {
         set_msg_handler(d_in_port,
-                        boost::bind(&async_decoder_impl::decode_unpacked, this, _1));
+                        [this](pmt::pmt_t msg) { this->decode_unpacked(msg); });
     }
 
     // The maximum frame size is set by the initial frame size of the decoder.
     d_max_bits_in = d_mtu * 8 * 1.0 / d_decoder->rate();
-    d_tmp_f32 = (float*)volk_malloc(d_max_bits_in * sizeof(float), volk_get_alignment());
+    d_tmp_f32.resize(d_max_bits_in);
 
     if (strncmp(d_decoder->get_input_conversion(), "uchar", 5) == 0) {
-        d_tmp_u8 =
-            (int8_t*)volk_malloc(d_max_bits_in * sizeof(uint8_t), volk_get_alignment());
+        d_tmp_u8.resize(d_max_bits_in);
     }
 
     if (d_packed) {
         int max_bits_out = d_mtu * 8;
-        d_bits_out =
-            (uint8_t*)volk_malloc(max_bits_out * sizeof(uint8_t), volk_get_alignment());
+        d_bits_out.resize(max_bits_out);
     }
 }
 
-async_decoder_impl::~async_decoder_impl()
-{
-    if (d_packed) {
-        delete d_pack;
-        volk_free(d_bits_out);
-    }
-
-    volk_free(d_tmp_f32);
-
-    if (strncmp(d_decoder->get_input_conversion(), "uchar", 5) == 0) {
-        volk_free(d_tmp_u8);
-    }
-}
+async_decoder_impl::~async_decoder_impl() {}
 
 void async_decoder_impl::decode_unpacked(pmt::pmt_t msg)
 {
@@ -116,7 +89,8 @@ void async_decoder_impl::decode_unpacked(pmt::pmt_t msg)
     size_t nbits_in = pmt::length(bits);
     size_t nbits_out = 0;
     size_t nblocks = 1;
-    bool variable_frame_size = d_decoder->set_frame_size(nbits_in * d_decoder->rate());
+    bool variable_frame_size =
+        d_decoder->set_frame_size(nbits_in * d_decoder->rate() - diff);
 
     // Check here if the frame size is larger than what we've
     // allocated for in the constructor.
@@ -142,9 +116,9 @@ void async_decoder_impl::decode_unpacked(pmt::pmt_t msg)
     uint8_t* u8out = pmt::u8vector_writable_elements(outvec, o0);
 
     if (strncmp(d_decoder->get_input_conversion(), "uchar", 5) == 0) {
-        volk_32f_s32f_multiply_32f(d_tmp_f32, f32in, 48.0f, nbits_in);
+        volk_32f_s32f_multiply_32f(d_tmp_f32.data(), f32in, 48.0f, nbits_in);
     } else {
-        memcpy(d_tmp_f32, f32in, nbits_in * sizeof(float));
+        memcpy(d_tmp_f32.data(), f32in, nbits_in * sizeof(float));
     }
 
     if (d_decoder->get_shift() != 0) {
@@ -157,7 +131,7 @@ void async_decoder_impl::decode_unpacked(pmt::pmt_t msg)
         for (size_t n = 0; n < nbits_in; n++)
             d_tmp_u8[n] = static_cast<uint8_t>(d_tmp_f32[n]);
 
-        d_decoder->generic_work((void*)d_tmp_u8, (void*)u8out);
+        d_decoder->generic_work((void*)d_tmp_u8.data(), (void*)u8out);
     } else {
         for (size_t i = 0; i < nblocks; i++) {
             d_decoder->generic_work((void*)&d_tmp_f32[i * d_decoder->get_input_size()],
@@ -195,9 +169,9 @@ void async_decoder_impl::decode_packed(pmt::pmt_t msg)
     const float* f32in = pmt::f32vector_elements(bits, o0);
 
     if (strncmp(d_decoder->get_input_conversion(), "uchar", 5) == 0) {
-        volk_32f_s32f_multiply_32f(d_tmp_f32, f32in, 48.0f, nbits_in);
+        volk_32f_s32f_multiply_32f(d_tmp_f32.data(), f32in, 48.0f, nbits_in);
     } else {
-        memcpy(d_tmp_f32, f32in, nbits_in * sizeof(float));
+        memcpy(d_tmp_f32.data(), f32in, nbits_in * sizeof(float));
     }
 
     if (d_decoder->get_shift() != 0) {
@@ -210,15 +184,15 @@ void async_decoder_impl::decode_packed(pmt::pmt_t msg)
         for (size_t n = 0; n < nbits_in; n++)
             d_tmp_u8[n] = static_cast<uint8_t>(d_tmp_f32[n]);
 
-        d_decoder->generic_work((void*)d_tmp_u8, (void*)d_bits_out);
+        d_decoder->generic_work((void*)d_tmp_u8.data(), (void*)d_bits_out.data());
     } else {
-        d_decoder->generic_work((void*)d_tmp_f32, (void*)d_bits_out);
+        d_decoder->generic_work((void*)d_tmp_f32.data(), (void*)d_bits_out.data());
     }
 
     if (d_rev_pack)
-        d_pack->pack_rev(bytes_out, d_bits_out, nbytes_out);
+        d_pack.pack_rev(bytes_out, d_bits_out.data(), nbytes_out);
     else
-        d_pack->pack(bytes_out, d_bits_out, nbytes_out);
+        d_pack.pack(bytes_out, d_bits_out.data(), nbytes_out);
 
     message_port_pub(d_out_port, pmt::cons(meta, outvec));
 }

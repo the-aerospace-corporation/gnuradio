@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -30,9 +18,8 @@
 #include <gnuradio/prefs.h>
 
 #include <qwt_symbol.h>
-#include <volk/volk.h>
 
-#include <string.h>
+#include <cstring>
 
 namespace gr {
 namespace qtgui {
@@ -48,8 +35,8 @@ vector_sink_f::sptr vector_sink_f::make(unsigned int vlen,
                                         int nconnections,
                                         QWidget* parent)
 {
-    return gnuradio::get_initial_sptr(new vector_sink_f_impl(
-        vlen, x_start, x_step, x_axis_label, y_axis_label, name, nconnections, parent));
+    return gnuradio::make_block_sptr<vector_sink_f_impl>(
+        vlen, x_start, x_step, x_axis_label, y_axis_label, name, nconnections, parent);
 }
 
 vector_sink_f_impl::vector_sink_f_impl(unsigned int vlen,
@@ -71,24 +58,12 @@ vector_sink_f_impl::vector_sink_f_impl(unsigned int vlen,
       d_msg(pmt::mp("x")),
       d_parent(parent)
 {
-    // Required now for Qt; argc must be greater than 0 and argv
-    // must have at least one valid character. Must be valid through
-    // life of the qApplication:
-    // http://harmattan-dev.nokia.com/docs/library/html/qt4/qapplication.html
-    d_argc = 1;
-    d_argv = new char;
-    d_argv[0] = '\0';
-
     // setup output message port to post frequency when display is
     // double-clicked
     message_port_register_out(d_port);
 
-    d_main_gui = NULL;
-
     for (int i = 0; i < d_nconnections; i++) {
-        d_magbufs.push_back(
-            (double*)volk_malloc(d_vlen * sizeof(double), volk_get_alignment()));
-        memset(d_magbufs[i], 0, d_vlen * sizeof(double));
+        d_magbufs.emplace_back(d_vlen);
     }
 
     initialize(name, x_axis_label, y_axis_label, x_start, x_step);
@@ -99,12 +74,6 @@ vector_sink_f_impl::~vector_sink_f_impl()
     if (!d_main_gui->isClosed()) {
         d_main_gui->close();
     }
-
-    for (int i = 0; i < d_nconnections; i++) {
-        volk_free(d_magbufs[i]);
-    }
-
-    delete d_argv;
 }
 
 bool vector_sink_f_impl::check_topology(int ninputs, int noutputs)
@@ -147,17 +116,6 @@ void vector_sink_f_impl::initialize(const std::string& name,
 void vector_sink_f_impl::exec_() { d_qApplication->exec(); }
 
 QWidget* vector_sink_f_impl::qwidget() { return d_main_gui; }
-
-#ifdef ENABLE_PYTHON
-PyObject* vector_sink_f_impl::pyqwidget()
-{
-    PyObject* w = PyLong_FromVoidPtr((void*)d_main_gui);
-    PyObject* retarg = Py_BuildValue("N", w);
-    return retarg;
-}
-#else
-void* vector_sink_f_impl::pyqwidget() { return NULL; }
-#endif
 
 unsigned int vector_sink_f_impl::vlen() const { return d_vlen; }
 

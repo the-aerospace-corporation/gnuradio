@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -33,8 +21,9 @@
 #include <qwt_symbol.h>
 #include <volk/volk.h>
 
-#include <string.h>
+#include <boost/format.hpp>
 #include <algorithm>
+#include <cstring>
 
 namespace gr {
 namespace qtgui {
@@ -45,8 +34,8 @@ time_sink_c::sptr time_sink_c::make(int size,
                                     unsigned int nconnections,
                                     QWidget* parent)
 {
-    return gnuradio::get_initial_sptr(
-        new time_sink_c_impl(size, samp_rate, name, nconnections, parent));
+    return gnuradio::make_block_sptr<time_sink_c_impl>(
+        size, samp_rate, name, nconnections, parent);
 }
 
 time_sink_c_impl::time_sink_c_impl(int size,
@@ -68,33 +57,19 @@ time_sink_c_impl::time_sink_c_impl(int size,
     if (nconnections > 12)
         throw std::runtime_error("time_sink_c only supports up to 12 inputs");
 
-    // Required now for Qt; argc must be greater than 0 and argv
-    // must have at least one valid character. Must be valid through
-    // life of the qApplication:
-    // http://harmattan-dev.nokia.com/docs/library/html/qt4/qapplication.html
-    d_argc = 1;
-    d_argv = new char;
-    d_argv[0] = '\0';
-
-    d_main_gui = NULL;
-
-    // setup PDU handling input port
-    message_port_register_in(pmt::mp("in"));
-    set_msg_handler(pmt::mp("in"), boost::bind(&time_sink_c_impl::handle_pdus, this, _1));
-
     // +2 for the PDU message buffers
     for (unsigned int n = 0; n < d_nconnections + 2; n++) {
-        d_buffers.push_back(
-            (double*)volk_malloc(d_buffer_size * sizeof(double), volk_get_alignment()));
-        memset(d_buffers[n], 0, d_buffer_size * sizeof(double));
+        d_buffers.emplace_back(d_buffer_size);
     }
 
     // We don't use cbuffers with the PDU message handling capabilities.
     for (unsigned int n = 0; n < d_nconnections / 2; n++) {
-        d_cbuffers.push_back((gr_complex*)volk_malloc(d_buffer_size * sizeof(gr_complex),
-                                                      volk_get_alignment()));
-        std::fill_n(d_cbuffers[n], d_buffer_size, 0);
+        d_cbuffers.emplace_back(d_buffer_size);
     }
+
+    // setup PDU handling input port
+    message_port_register_in(pmt::mp("in"));
+    set_msg_handler(pmt::mp("in"), [this](pmt::pmt_t msg) { this->handle_pdus(msg); });
 
     // Set alignment properties for VOLK
     const int alignment_multiple = volk_get_alignment() / sizeof(gr_complex);
@@ -115,16 +90,6 @@ time_sink_c_impl::~time_sink_c_impl()
 {
     if (!d_main_gui->isClosed())
         d_main_gui->close();
-
-    // d_main_gui is a qwidget destroyed with its parent
-    for (unsigned int n = 0; n < d_nconnections + 2; n++) {
-        volk_free(d_buffers[n]);
-    }
-    for (unsigned int n = 0; n < d_nconnections / 2; n++) {
-        volk_free(d_cbuffers[n]);
-    }
-
-    delete d_argv;
 }
 
 bool time_sink_c_impl::check_topology(int ninputs, int noutputs)
@@ -162,17 +127,6 @@ void time_sink_c_impl::initialize()
 void time_sink_c_impl::exec_() { d_qApplication->exec(); }
 
 QWidget* time_sink_c_impl::qwidget() { return d_main_gui; }
-
-#ifdef ENABLE_PYTHON
-PyObject* time_sink_c_impl::pyqwidget()
-{
-    PyObject* w = PyLong_FromVoidPtr((void*)d_main_gui);
-    PyObject* retarg = Py_BuildValue("N", w);
-    return retarg;
-}
-#else
-void* time_sink_c_impl::pyqwidget() { return NULL; }
-#endif
 
 void time_sink_c_impl::set_y_axis(double min, double max)
 {
@@ -313,18 +267,14 @@ void time_sink_c_impl::set_nsamps(const int newsize)
         d_buffer_size = 2 * d_size;
 
         // Resize buffers and replace data
-        for (unsigned int n = 0; n < d_nconnections + 2; n++) {
-            volk_free(d_buffers[n]);
-            d_buffers[n] = (double*)volk_malloc(d_buffer_size * sizeof(double),
-                                                volk_get_alignment());
-            memset(d_buffers[n], 0, d_buffer_size * sizeof(double));
+        for (auto& buf : d_buffers) {
+            buf.clear();
+            buf.resize(d_buffer_size);
         }
 
-        for (unsigned int n = 0; n < d_nconnections / 2; n++) {
-            volk_free(d_cbuffers[n]);
-            d_cbuffers[n] = (gr_complex*)volk_malloc(d_buffer_size * sizeof(gr_complex),
-                                                     volk_get_alignment());
-            std::fill_n(d_cbuffers[n], d_buffer_size, 0);
+        for (auto& cbuf : d_cbuffers) {
+            cbuf.clear();
+            cbuf.resize(d_buffer_size);
         }
 
         // If delay was set beyond the new boundary, pull it back.
@@ -403,7 +353,7 @@ void time_sink_c_impl::_reset()
             // represents data that might have to be plotted again if a
             // trigger occurs and we have a trigger delay set.  The tail
             // section is between (d_end-d_trigger_delay) and d_end.
-            memmove(d_cbuffers[n],
+            memmove(d_cbuffers[n].data(),
                     &d_cbuffers[n][d_end - d_trigger_delay],
                     d_trigger_delay * sizeof(gr_complex));
 
@@ -588,7 +538,7 @@ int time_sink_c_impl::work(int noutput_items,
 
         uint64_t nr = nitems_read(n);
         std::vector<gr::tag_t> tags;
-        get_tags_in_range(tags, n, nr, nr + nitems);
+        get_tags_in_range(tags, n, nr, nr + nitems + 1);
         for (size_t t = 0; t < tags.size(); t++) {
             tags[t].offset = tags[t].offset - nr + (d_index - d_start - 1);
         }
@@ -600,8 +550,8 @@ int time_sink_c_impl::work(int noutput_items,
     if ((d_triggered) && (d_index == d_end)) {
         // Copy data to be plotted to start of buffers.
         for (n = 0; n < d_nconnections / 2; n++) {
-            volk_32fc_deinterleave_64f_x2(d_buffers[2 * n + 0],
-                                          d_buffers[2 * n + 1],
+            volk_32fc_deinterleave_64f_x2(d_buffers[2 * n + 0].data(),
+                                          d_buffers[2 * n + 1].data(),
                                           &d_cbuffers[n][d_start],
                                           d_size);
         }
@@ -683,8 +633,8 @@ void time_sink_c_impl::handle_pdus(pmt::pmt_t msg)
 
         set_nsamps(len);
 
-        volk_32fc_deinterleave_64f_x2(d_buffers[2 * d_nconnections + 0],
-                                      d_buffers[2 * d_nconnections + 1],
+        volk_32fc_deinterleave_64f_x2(d_buffers[2 * d_nconnections + 0].data(),
+                                      d_buffers[2 * d_nconnections + 1].data(),
                                       in,
                                       len);
 

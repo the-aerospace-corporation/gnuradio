@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef INCLUDED_TPC_DECODER_H
@@ -50,14 +38,14 @@ class FEC_API tpc_decoder : public generic_decoder
                 int decoder_type);
 
     // plug into the generic fec api
-    int get_history();
-    float get_shift();
-    int get_input_item_size();
-    int get_output_item_size();
+    int get_history() override;
+    float get_shift() override;
+    int get_input_item_size() override;
+    int get_output_item_size() override;
     const char* get_conversion();
-    void generic_work(void* inBuffer, void* outbuffer);
-    int get_output_size();
-    int get_input_size();
+    void generic_work(void* inBuffer, void* outbuffer) override;
+    int get_output_size() override;
+    int get_input_size() override;
 
     std::vector<int> d_rowpolys;
     std::vector<int> d_colpolys;
@@ -161,9 +149,9 @@ public:
                                       int qval,
                                       int max_iter,
                                       int decoder_type);
-    ~tpc_decoder();
-    double rate() { return (1.0 * get_output_size() / get_input_size()); }
-    bool set_frame_size(unsigned int frame_size) { return false; }
+    ~tpc_decoder() override;
+    double rate() override { return (1.0 * get_output_size() / get_input_size()); }
+    bool set_frame_size(unsigned int frame_size) override { return false; }
 };
 
 } // namespace fec

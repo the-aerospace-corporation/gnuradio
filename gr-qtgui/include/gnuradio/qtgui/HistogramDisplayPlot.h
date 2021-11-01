@@ -4,27 +4,15 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef HISTOGRAM_DISPLAY_PLOT_H
 #define HISTOGRAM_DISPLAY_PLOT_H
 
 #include <gnuradio/qtgui/DisplayPlot.h>
-#include <stdint.h>
+#include <cstdint>
 #include <cstdio>
 #include <vector>
 
@@ -38,13 +26,20 @@ class HistogramDisplayPlot : public DisplayPlot
 
 public:
     HistogramDisplayPlot(unsigned int nplots, QWidget*);
-    virtual ~HistogramDisplayPlot();
+    ~HistogramDisplayPlot() override;
+
+    // Disallow copy/move because of the raw QT pointers.
+    // They are handled by QT.
+    HistogramDisplayPlot(const HistogramDisplayPlot&) = delete;
+    HistogramDisplayPlot(HistogramDisplayPlot&&) = delete;
+    HistogramDisplayPlot& operator=(const HistogramDisplayPlot&) = delete;
+    HistogramDisplayPlot& operator=(HistogramDisplayPlot&&) = delete;
 
     void plotNewData(const std::vector<double*> dataPoints,
                      const uint64_t numDataPoints,
                      const double timeInterval);
 
-    void replot();
+    void replot() override;
 
 public slots:
     void setAutoScale(bool state);
@@ -54,12 +49,12 @@ public slots:
     void setAccumulate(bool en);
     bool getAccumulate() const;
 
-    void setMarkerAlpha(unsigned int which, int alpha);
-    int getMarkerAlpha(unsigned int which) const;
-    void setLineColor(unsigned int which, QColor color);
+    void setMarkerAlpha(unsigned int which, int alpha) override;
+    int getMarkerAlpha(unsigned int which) const override;
+    void setLineColor(unsigned int which, QColor color) override;
 
     void setNumBins(unsigned int bins);
-    void setXaxis(double min, double max);
+    void setXaxis(double min, double max) override;
 
     void clear();
 
@@ -67,17 +62,17 @@ private:
     void _resetXAxisPoints(double left, double right);
     void _autoScaleY(double bottom, double top);
 
-    double* d_xdata;
-    std::vector<double*> d_ydata;
-
-    unsigned int d_bins;
-    bool d_accum;
+    unsigned int d_bins = 100;
+    bool d_accum = false;
     double d_xmin, d_xmax, d_left, d_right;
     double d_width;
 
-    bool d_semilogx;
-    bool d_semilogy;
-    bool d_autoscalex_state;
+    std::vector<double> d_xdata;
+    std::vector<std::vector<double>> d_ydata;
+
+    bool d_semilogx = false;
+    bool d_semilogy = false;
+    bool d_autoscalex_state = true;
 };
 
 #endif /* HISTOGRAM_DISPLAY_PLOT_H */

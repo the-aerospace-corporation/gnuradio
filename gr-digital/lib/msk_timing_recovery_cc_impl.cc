@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -28,6 +16,7 @@
 #include <gnuradio/filter/firdes.h>
 #include <gnuradio/io_signature.h>
 #include <gnuradio/math.h>
+#include <boost/format.hpp>
 
 namespace gr {
 namespace digital {
@@ -35,8 +24,7 @@ namespace digital {
 msk_timing_recovery_cc::sptr
 msk_timing_recovery_cc::make(float sps, float gain, float limit, int osps = 1)
 {
-    return gnuradio::get_initial_sptr(
-        new msk_timing_recovery_cc_impl(sps, gain, limit, osps));
+    return gnuradio::make_block_sptr<msk_timing_recovery_cc_impl>(sps, gain, limit, osps);
 }
 
 /*
@@ -51,7 +39,6 @@ msk_timing_recovery_cc_impl::msk_timing_recovery_cc_impl(float sps,
                 gr::io_signature::make3(
                     1, 3, sizeof(gr_complex), sizeof(float), sizeof(float))),
       d_limit(limit),
-      d_interp(new filter::mmse_fir_interpolator_cc()),
       d_dly_conj_1(0),
       d_dly_conj_2(0),
       d_dly_diff_1(0),
@@ -66,7 +53,7 @@ msk_timing_recovery_cc_impl::msk_timing_recovery_cc_impl(float sps,
         throw std::out_of_range("osps must be 1 or 2");
 }
 
-msk_timing_recovery_cc_impl::~msk_timing_recovery_cc_impl() { delete d_interp; }
+msk_timing_recovery_cc_impl::~msk_timing_recovery_cc_impl() {}
 
 void msk_timing_recovery_cc_impl::set_sps(float sps)
 {
@@ -98,7 +85,7 @@ void msk_timing_recovery_cc_impl::forecast(int noutput_items,
     unsigned ninputs = ninput_items_required.size();
     for (unsigned i = 0; i < ninputs; i++) {
         ninput_items_required[i] =
-            (int)ceil((noutput_items * d_sps * 2) + 3.0 * d_sps + d_interp->ntaps());
+            (int)ceil((noutput_items * d_sps * 2) + 3.0 * d_sps + d_interp.ntaps());
     }
 }
 
@@ -172,7 +159,7 @@ int msk_timing_recovery_cc_impl::general_work(int noutput_items,
         // the actual equation for the nonlinearity is as follows:
         // e(n) = in[n]^2 * in[n-sps].conj()^2
         // we then differentiate the error by subtracting the sample delayed by d_sps/2
-        in_interp = d_interp->interpolate(&in[iidx], d_mu);
+        in_interp = d_interp.interpolate(&in[iidx], d_mu);
         sq = in_interp * in_interp;
         // conjugation is distributive.
         dly_conj = std::conj(d_dly_conj_2 * d_dly_conj_2);

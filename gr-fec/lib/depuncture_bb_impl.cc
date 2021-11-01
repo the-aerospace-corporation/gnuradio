@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -27,21 +15,25 @@
 #include "depuncture_bb_impl.h"
 #include <gnuradio/io_signature.h>
 #include <pmt/pmt.h>
-#include <stdio.h>
 #include <volk/volk.h>
-#include <boost/bind.hpp>
+#include <boost/format.hpp>
+#include <cstdio>
 #include <string>
 
 namespace gr {
 namespace fec {
 
-depuncture_bb::sptr depuncture_bb::make(int puncsize, int puncpat, int delay, char symbol)
+depuncture_bb::sptr
+depuncture_bb::make(int puncsize, int puncpat, int delay, uint8_t symbol)
 {
-    return gnuradio::get_initial_sptr(
-        new depuncture_bb_impl(puncsize, puncpat, delay, symbol));
+    return gnuradio::make_block_sptr<depuncture_bb_impl>(
+        puncsize, puncpat, delay, symbol);
 }
 
-depuncture_bb_impl::depuncture_bb_impl(int puncsize, int puncpat, int delay, char symbol)
+depuncture_bb_impl::depuncture_bb_impl(int puncsize,
+                                       int puncpat,
+                                       int delay,
+                                       uint8_t symbol)
     : block("depuncture_bb",
             io_signature::make(1, 1, sizeof(unsigned char)),
             io_signature::make(1, 1, sizeof(unsigned char))),
@@ -74,7 +66,7 @@ depuncture_bb_impl::depuncture_bb_impl(int puncsize, int puncpat, int delay, cha
     set_fixed_rate(true);
     set_relative_rate((uint64_t)d_puncsize, (uint64_t)(d_puncsize - d_puncholes));
     set_output_multiple(d_puncsize);
-    // set_msg_handler(boost::bind(&depuncture_bb_impl::catch_msg, this, _1));
+    // set_msg_handler(<portname>, [this](pmt::pmt_t msg) { this->catch_msg(msg); });
 }
 
 depuncture_bb_impl::~depuncture_bb_impl() {}

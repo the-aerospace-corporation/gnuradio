@@ -2,31 +2,24 @@
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 
 if(DEFINED __INCLUDED_GR_VERSION_CMAKE)
     return()
 endif()
 set(__INCLUDED_GR_VERSION_CMAKE TRUE)
 
+# always have a value for VERSION_PATCH, even if unset (e.g. some OOTs)
+if(NOT DEFINED VERSION_PATCH)
+    set(VERSION_PATCH "0")
+endif()
+
 #eventually, replace version.sh and fill in the variables below
-set(MAJOR_VERSION ${VERSION_MAJOR})
-set(API_COMPAT    ${VERSION_API})
-set(MINOR_VERSION ${VERSION_ABI})
-set(MAINT_VERSION ${VERSION_PATCH})
+set(MAJOR_VERSION "${VERSION_MAJOR}")
+set(API_COMPAT    "${VERSION_API}")
+set(MINOR_VERSION "${VERSION_ABI}")
+set(MAINT_VERSION "${VERSION_PATCH}")
 
 ########################################################################
 # Extract the version string from git describe.
@@ -86,6 +79,7 @@ else()
     set(VERSION "${MAJOR_VERSION}.${API_COMPAT}.${MINOR_VERSION}.${MAINT_VERSION}")
     set(DOCVER "${VERSION}")
     set(LIBVER "${MAJOR_VERSION}.${API_COMPAT}.${MINOR_VERSION}")
-    set(RC_MINOR_VERSION ${MINOR_VERSION})
-    set(RC_MAINT_VERSION ${MAINT_VERSION})
+    # ensure only numeric values are set for RC_ version parts
+    string(REGEX REPLACE "^([0-9]+).*$" "\\1" RC_MINOR_VERSION "${MINOR_VERSION}")
+    string(REGEX REPLACE "^([0-9]+).*$" "\\1" RC_MAINT_VERSION "${MAINT_VERSION}")
 endif()

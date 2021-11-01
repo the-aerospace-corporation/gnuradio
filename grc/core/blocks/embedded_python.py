@@ -1,27 +1,16 @@
 # Copyright 2015-16 Free Software Foundation, Inc.
 # This file is part of GNU Radio
 #
-# GNU Radio Companion is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
+# SPDX-License-Identifier: GPL-2.0-or-later
 #
-# GNU Radio Companion is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
-from __future__ import absolute_import
 
 from ast import literal_eval
 from textwrap import dedent
 
 from . import Block, register_build_in
 from ._templates import MakoTemplates
+from ._flags import Flags
 
 from .. import utils
 from ..base import Element
@@ -81,6 +70,7 @@ class EPyBlock(Block):
 
     key = 'epy_block'
     label = 'Python Block'
+    exempt_from_id_validation = True  # Exempt epy block from blacklist id validation
     documentation = {'': DOC}
 
     parameters_data = build_params(
@@ -96,6 +86,7 @@ class EPyBlock(Block):
         super(EPyBlock, self).__init__(flow_graph, **kwargs)
         self.states['_io_cache'] = ''
 
+        self.module_name = self.name
         self._epy_source_hash = -1
         self._epy_reload_error = None
 
@@ -131,7 +122,9 @@ class EPyBlock(Block):
         self.label = blk_io.name or blk_io.cls
         self.documentation = {'': blk_io.doc}
 
-        self.templates['imports'] = 'import ' + self.name
+        self.module_name = "{}_{}".format(self.parent_flowgraph.get_option("id"), self.name)
+        self.templates['imports'] = 'import {} as {}  # embedded python block'.format(
+            self.module_name, self.name)
         self.templates['make'] = '{mod}.{cls}({args})'.format(
             mod=self.name,
             cls=blk_io.cls,
@@ -162,7 +155,7 @@ class EPyBlock(Block):
                 param.default = str(value)
             except KeyError:  # need to make a new param
                 param = param_factory(
-                    parent=self,  id=id_, dtype='raw', value=value,
+                    parent=self, id=id_, dtype='raw', value=value,
                     name=id_.replace('_', ' ').title(),
                 )
                 setattr(param, '__epy_param__', True)
@@ -209,6 +202,7 @@ class EPyBlock(Block):
 class EPyModule(Block):
     key = 'epy_module'
     label = 'Python Module'
+    exempt_from_id_validation = True  # Exempt epy module from blacklist id validation
     documentation = {'': dedent("""
         This block lets you embed a python module in your flowgraph.
 
@@ -230,17 +224,22 @@ class EPyModule(Block):
         to set parameters of other blocks in your flowgraph.
     """)}
 
-    epy_flags=Block.flags
-    epy_flags.set(epy_flags.SHOW_ID)
+    flags = Flags(Flags.SHOW_ID)
 
     parameters_data = build_params(
         params_raw=[
             dict(label='Code', id='source_code', dtype='_multiline_python_external',
                  default='# this module will be imported in the into your flowgraph',
                  hide='part')
-        ], have_inputs=False, have_outputs=False, flags=epy_flags, block_id=key
+        ], have_inputs=False, have_outputs=False, flags=flags, block_id=key
     )
 
-    templates = MakoTemplates(
-        imports='import ${ id }  # embedded python module',
-    )
+    def __init__(self, flow_graph, **kwargs):
+        super(EPyModule, self).__init__(flow_graph, **kwargs)
+        self.module_name = self.name
+
+    def rewrite(self):
+        super(EPyModule, self).rewrite()
+        self.module_name = "{}_{}".format(self.parent_flowgraph.get_option("id"), self.name)
+        self.templates['imports'] = 'import {} as {}  # embedded python module'.format(
+            self.module_name, self.name)

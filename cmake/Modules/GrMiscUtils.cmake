@@ -2,20 +2,8 @@
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 
 if(DEFINED __INCLUDED_GR_MISC_UTILS_CMAKE)
     return()
@@ -157,8 +145,6 @@ function(GRCC)
   list(APPEND PYTHONPATHS
     ${CMAKE_SOURCE_DIR}
     ${CMAKE_SOURCE_DIR}/gnuradio-runtime/python
-    ${CMAKE_SOURCE_DIR}/gnuradio-runtime/lib/swig
-    ${CMAKE_BINARY_DIR}/gnuradio-runtime/lib/swig
     )
 
   if(WIN32)
@@ -167,7 +153,7 @@ function(GRCC)
     #Only do this for the python directories matching the following:
     foreach(pydir ${PYTHONPATHS})
       get_filename_component(name ${pydir} NAME)
-      if(name MATCHES "^(swig|lib|src)$")
+      if(name MATCHES "^(lib|src)$")
         list(APPEND PYTHONPATHS ${pydir}/${CMAKE_BUILD_TYPE})
       endif()
     endforeach(pydir)
@@ -225,4 +211,5 @@ set(CMAKE_REQUIRED_LIBRARIES -lpthread)
         } " HAVE_SCHED_SETSCHEDULER
     )
     GR_ADD_COND_DEF(HAVE_SCHED_SETSCHEDULER)
+set(CMAKE_REQUIRED_LIBRARIES)
 endmacro(GR_CHECK_LINUX_SCHED_AVAIL)

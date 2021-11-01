@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef INCLUDED_CHANNELS_CHANNEL_MODEL_IMPL_H
@@ -57,19 +45,19 @@ public:
                        double noise_seed,
                        bool block_tags);
 
-    ~channel_model_impl();
+    ~channel_model_impl() override;
 
-    void setup_rpc();
+    void setup_rpc() override;
 
-    void set_noise_voltage(double noise_voltage);
-    void set_frequency_offset(double frequency_offset);
-    void set_taps(const std::vector<gr_complex>& taps);
-    void set_timing_offset(double epsilon);
+    void set_noise_voltage(double noise_voltage) override;
+    void set_frequency_offset(double frequency_offset) override;
+    void set_taps(const std::vector<gr_complex>& taps) override;
+    void set_timing_offset(double epsilon) override;
 
-    double noise_voltage() const;
-    double frequency_offset() const;
-    std::vector<gr_complex> taps() const;
-    double timing_offset() const;
+    double noise_voltage() const override;
+    double frequency_offset() const override;
+    std::vector<gr_complex> taps() const override;
+    double timing_offset() const override;
 };
 
 } /* namespace channels */

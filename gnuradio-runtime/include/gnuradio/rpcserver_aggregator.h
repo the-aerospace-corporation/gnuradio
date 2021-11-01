@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef RPCSERVER_AGGREGATOR_H
@@ -25,6 +13,7 @@
 
 #include <gnuradio/rpcmanager_base.h>
 #include <gnuradio/rpcserver_base.h>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -32,17 +21,19 @@ class rpcserver_aggregator : public virtual rpcserver_base
 {
 public:
     rpcserver_aggregator();
-    virtual ~rpcserver_aggregator();
+    ~rpcserver_aggregator() override;
 
     void registerConfigureCallback(const std::string& id,
-                                   const configureCallback_t callback);
-    void unregisterConfigureCallback(const std::string& id);
+                                   const configureCallback_t callback) override;
+    void unregisterConfigureCallback(const std::string& id) override;
 
-    void registerQueryCallback(const std::string& id, const queryCallback_t callback);
-    void unregisterQueryCallback(const std::string& id);
+    void registerQueryCallback(const std::string& id,
+                               const queryCallback_t callback) override;
+    void unregisterQueryCallback(const std::string& id) override;
 
-    void registerHandlerCallback(const std::string& id, const handlerCallback_t callback);
-    void unregisterHandlerCallback(const std::string& id);
+    void registerHandlerCallback(const std::string& id,
+                                 const handlerCallback_t callback) override;
+    void unregisterHandlerCallback(const std::string& id) override;
 
     void registerServer(rpcmanager_base::rpcserver_booter_base_sptr server);
 
@@ -52,7 +43,7 @@ public:
 
 private:
     template <class T, typename Tcallback>
-    struct registerConfigureCallback_f : public std::unary_function<T, void> {
+    struct registerConfigureCallback_f : public std::function<void(T)> {
         registerConfigureCallback_f(const std::string& _id, const Tcallback _callback)
             : id(_id), callback(_callback)
         {
@@ -65,7 +56,7 @@ private:
     };
 
     template <class T, typename Tcallback>
-    struct unregisterConfigureCallback_f : public std::unary_function<T, void> {
+    struct unregisterConfigureCallback_f : public std::function<void(T)> {
         unregisterConfigureCallback_f(const std::string& _id) : id(_id) { ; }
 
         void operator()(T& x) { x->i()->unregisterConfigureCallback(id); }
@@ -73,7 +64,7 @@ private:
     };
 
     template <class T, typename Tcallback>
-    struct registerQueryCallback_f : public std::unary_function<T, void> {
+    struct registerQueryCallback_f : public std::function<void(T)> {
         registerQueryCallback_f(const std::string& _id, const Tcallback _callback)
             : id(_id), callback(_callback)
         {
@@ -86,7 +77,7 @@ private:
     };
 
     template <class T, typename Tcallback>
-    struct unregisterQueryCallback_f : public std::unary_function<T, void> {
+    struct unregisterQueryCallback_f : public std::function<void(T)> {
         unregisterQueryCallback_f(const std::string& _id) : id(_id) { ; }
 
         void operator()(T& x) { x->i()->unregisterQueryCallback(id); }
@@ -95,7 +86,7 @@ private:
 
 
     template <class T, typename Tcallback>
-    struct registerHandlerCallback_f : public std::unary_function<T, void> {
+    struct registerHandlerCallback_f : public std::function<void(T)> {
         registerHandlerCallback_f(const std::string& _id, const Tcallback _callback)
             : id(_id), callback(_callback)
         {
@@ -108,7 +99,7 @@ private:
     };
 
     template <class T, typename Tcallback>
-    struct unregisterHandlerCallback_f : public std::unary_function<T, void> {
+    struct unregisterHandlerCallback_f : public std::function<void(T)> {
         unregisterHandlerCallback_f(const std::string& _id) : id(_id) { ; }
 
         void operator()(T& x) { x->i()->unregisterHandlerCallback(id); }

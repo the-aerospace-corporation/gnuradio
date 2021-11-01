@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -25,9 +13,10 @@
 #endif
 
 #include "symbol_sync_ff_impl.h"
+#include <gnuradio/integer_math.h>
 #include <gnuradio/io_signature.h>
 #include <gnuradio/math.h>
-#include <boost/math/common_factor.hpp>
+#include <boost/format.hpp>
 #include <stdexcept>
 
 namespace gr {
@@ -45,35 +34,42 @@ symbol_sync_ff::sptr symbol_sync_ff::make(enum ted_type detector_type,
                                           int n_filters,
                                           const std::vector<float>& taps)
 {
-    return gnuradio::get_initial_sptr(new symbol_sync_ff_impl(detector_type,
-                                                              sps,
-                                                              loop_bw,
-                                                              damping_factor,
-                                                              ted_gain,
-                                                              max_deviation,
-                                                              osps,
-                                                              slicer,
-                                                              interp_type,
-                                                              n_filters,
-                                                              taps));
+    return gnuradio::make_block_sptr<symbol_sync_ff_impl>(detector_type,
+                                                          sps,
+                                                          loop_bw,
+                                                          damping_factor,
+                                                          ted_gain,
+                                                          max_deviation,
+                                                          osps,
+                                                          slicer,
+                                                          interp_type,
+                                                          n_filters,
+                                                          taps);
 }
 
 symbol_sync_ff_impl::symbol_sync_ff_impl(enum ted_type detector_type,
-                                         float sps,
-                                         float loop_bw,
-                                         float damping_factor,
-                                         float ted_gain,
-                                         float max_deviation,
-                                         int osps,
+                                         const float sps,
+                                         const float loop_bw,
+                                         const float damping_factor,
+                                         const float ted_gain,
+                                         const float max_deviation,
+                                         const int osps,
                                          constellation_sptr slicer,
-                                         ir_type interp_type,
-                                         int n_filters,
+                                         const ir_type interp_type,
+                                         const int n_filters,
                                          const std::vector<float>& taps)
     : block("symbol_sync_ff",
             io_signature::make(1, 1, sizeof(float)),
             io_signature::makev(1, 4, std::vector<int>(4, sizeof(float)))),
-      d_ted(NULL),
-      d_interp(NULL),
+      d_ted(timing_error_detector::make(detector_type, slicer)),
+      d_clock(loop_bw,
+              sps + max_deviation,
+              sps - max_deviation,
+              sps,
+              damping_factor,
+              ted_gain),
+      d_interp(interpolating_resampler_fff::make(
+          interp_type, d_ted->needs_derivative(), n_filters, taps)),
       d_inst_output_period(sps / static_cast<float>(osps)),
       d_inst_clock_period(sps),
       d_avg_clock_period(sps),
@@ -88,15 +84,8 @@ symbol_sync_ff_impl::symbol_sync_ff_impl(enum ted_type detector_type,
       d_out_instantaneous_clock_period(NULL),
       d_out_average_clock_period(NULL)
 {
-    // Brute force fix of the output io_signature, because I can't get
-    // an anonymous std::vector<int>() rvalue, with a const expression
-    // initializing the vector, to work.  Lvalues seem to make everything
-    // better.
-    int output_io_sizes[4] = {
-        sizeof(float), sizeof(float), sizeof(float), sizeof(float)
-    };
-    std::vector<int> output_io_sizes_vector(&output_io_sizes[0], &output_io_sizes[4]);
-    set_output_signature(io_signature::makev(1, 4, output_io_sizes_vector));
+    set_output_signature(io_signature::makev(
+        1, 4, { sizeof(float), sizeof(float), sizeof(float), sizeof(float) }));
 
     if (sps <= 1.0f)
         throw std::out_of_range("nominal samples per symbol must be > 1");
@@ -104,19 +93,15 @@ symbol_sync_ff_impl::symbol_sync_ff_impl(enum ted_type detector_type,
     if (osps < 1)
         throw std::out_of_range("output samples per symbol must be > 0");
 
-    // Timing Error Detector
-    d_ted = timing_error_detector::make(detector_type, slicer);
-    if (d_ted == NULL)
+    if (d_ted == nullptr)
         throw std::runtime_error("unable to create timing_error_detector");
 
     // Interpolating Resampler
-    d_interp = interpolating_resampler_fff::make(
-        interp_type, d_ted->needs_derivative(), n_filters, taps);
-    if (d_interp == NULL)
+    if (d_interp == nullptr)
         throw std::runtime_error("unable to create interpolating_resampler_fff");
 
     // Block Internal Clocks
-    d_interps_per_symbol_n = boost::math::lcm(d_ted->inputs_per_symbol(), d_osps_n);
+    d_interps_per_symbol_n = GR_LCM(d_ted->inputs_per_symbol(), d_osps_n);
     d_interps_per_ted_input_n = d_interps_per_symbol_n / d_ted->inputs_per_symbol();
     d_interps_per_output_sample_n = d_interps_per_symbol_n / d_osps_n;
 
@@ -129,15 +114,11 @@ symbol_sync_ff_impl::symbol_sync_ff_impl(enum ted_type detector_type,
 
     if (d_interps_per_symbol > sps)
         GR_LOG_WARN(d_logger,
-                    boost::format("block performing more interopolations per "
-                                  "symbol (%3f) than input samples per symbol"
+                    boost::format("block performing more interpolations per "
+                                  "symbol (%3f) than input samples per symbol "
                                   "(%3f). Consider reducing osps or "
                                   "increasing sps") %
                         d_interps_per_symbol % sps);
-
-    // Symbol Clock Tracking and Estimation
-    d_clock = new clock_tracking_loop(
-        loop_bw, sps + max_deviation, sps - max_deviation, sps, damping_factor, ted_gain);
 
     // Timing Error Detector
     d_ted->sync_reset();
@@ -153,12 +134,7 @@ symbol_sync_ff_impl::symbol_sync_ff_impl(enum ted_type detector_type,
     set_output_multiple(d_osps_n);
 }
 
-symbol_sync_ff_impl::~symbol_sync_ff_impl()
-{
-    delete d_ted;
-    delete d_interp;
-    delete d_clock;
-}
+symbol_sync_ff_impl::~symbol_sync_ff_impl() {}
 
 //
 // Block Internal Clocks
@@ -202,7 +178,6 @@ void symbol_sync_ff_impl::collect_tags(uint64_t nitems_rd, int count)
     // d_tags is used for manual tag propagation.
     d_new_tags.clear();
     get_tags_in_range(d_new_tags, 0, nitems_rd, nitems_rd + count);
-    std::sort(d_new_tags.begin(), d_new_tags.end(), tag_t::offset_compare);
     d_tags.insert(d_tags.end(), d_new_tags.begin(), d_new_tags.end());
     std::sort(d_tags.begin(), d_tags.end(), tag_t::offset_compare);
 }
@@ -244,7 +219,7 @@ bool symbol_sync_ff_impl::find_sync_tag(uint64_t nitems_rd,
             // got a time_est tag
             timing_offset = static_cast<float>(pmt::to_double(t->value));
             // next instantaneous clock period estimate will be nominal
-            clock_period = d_clock->get_nom_avg_period();
+            clock_period = d_clock.get_nom_avg_period();
 
             // Look for a clock_est tag at the same offset,
             // as we prefer clock_est tags
@@ -312,11 +287,11 @@ void symbol_sync_ff_impl::propagate_tags(uint64_t nitems_rd,
     // on and after the interpolated input sample, up to half way to
     // the next output sample.
 
-    uint64_t mid_period_offset =
+    const uint64_t mid_period_offset =
         nitems_rd + d_filter_delay + static_cast<uint64_t>(iidx) +
         static_cast<uint64_t>(llroundf(iidx_fraction + inst_output_period / 2.0f));
 
-    uint64_t output_offset = nitems_wr + static_cast<uint64_t>(oidx);
+    const uint64_t output_offset = nitems_wr + static_cast<uint64_t>(oidx);
 
     int i;
     std::vector<tag_t>::iterator t;
@@ -338,7 +313,7 @@ void symbol_sync_ff_impl::save_expiring_tags(uint64_t nitems_rd, int consumed)
     // Tags that have already been propagated, have already been erased
     // from d_tags.
 
-    uint64_t consumed_offset = nitems_rd + static_cast<uint64_t>(consumed);
+    const uint64_t consumed_offset = nitems_rd + static_cast<uint64_t>(consumed);
     std::vector<tag_t>::iterator t;
 
     for (t = d_tags.begin(); t != d_tags.end();) {
@@ -393,18 +368,18 @@ void symbol_sync_ff_impl::emit_optional_output(int oidx,
 void symbol_sync_ff_impl::forecast(int noutput_items,
                                    gr_vector_int& ninput_items_required)
 {
-    unsigned ninputs = ninput_items_required.size();
+    const unsigned ninputs = ninput_items_required.size();
 
     // The '+ 2' in the expression below is an effort to always have at
     // least one output sample, even if the main loop decides it has to
     // revert one computed sample and wait for the next call to
     // general_work().
-    // The d_clock->get_max_avg_period() is also an effort to do the same,
+    // The d_clock.get_max_avg_period() is also an effort to do the same,
     // in case we have the worst case allowable clock timing deviation on
     // input.
-    int answer = static_cast<int>(ceilf(static_cast<float>(noutput_items + 2) *
-                                        d_clock->get_max_avg_period() / d_osps)) +
-                 static_cast<int>(d_interp->ntaps());
+    const int answer = static_cast<int>(ceilf(static_cast<float>(noutput_items + 2) *
+                                              d_clock.get_max_avg_period() / d_osps)) +
+                       static_cast<int>(d_interp->ntaps());
 
     for (unsigned i = 0; i < ninputs; i++)
         ninput_items_required[i] = answer;
@@ -416,7 +391,7 @@ int symbol_sync_ff_impl::general_work(int noutput_items,
                                       gr_vector_void_star& output_items)
 {
     // max input to consume
-    int ni = ninput_items[0] - static_cast<int>(d_interp->ntaps());
+    const int ni = ninput_items[0] - static_cast<int>(d_interp->ntaps());
     if (ni <= 0)
         return 0;
 
@@ -434,8 +409,8 @@ int symbol_sync_ff_impl::general_work(int noutput_items,
     int look_ahead_phase_n = 0;
     float look_ahead_phase_wrapped = 0.0f;
 
-    uint64_t nitems_rd = nitems_read(0);
-    uint64_t nitems_wr = nitems_written(0);
+    const uint64_t nitems_rd = nitems_read(0);
+    const uint64_t nitems_wr = nitems_written(0);
     uint64_t sync_tag_offset;
     float sync_timing_offset;
     float sync_clock_period;
@@ -466,7 +441,7 @@ int symbol_sync_ff_impl::general_work(int noutput_items,
             // We must interpolate ahead to the *next* ted_input_clock, so the
             // ted will compute the error for *this* symbol.
             d_interp->next_phase(d_interps_per_ted_input *
-                                     (d_clock->get_inst_period() / d_interps_per_symbol),
+                                     (d_clock.get_inst_period() / d_interps_per_symbol),
                                  look_ahead_phase,
                                  look_ahead_phase_n,
                                  look_ahead_phase_wrapped);
@@ -502,10 +477,10 @@ int symbol_sync_ff_impl::general_work(int noutput_items,
 
         if (symbol_clock()) {
             // Symbol Clock Tracking and Estimation
-            d_clock->advance_loop(error);
-            d_inst_clock_period = d_clock->get_inst_period();
-            d_avg_clock_period = d_clock->get_avg_period();
-            d_clock->phase_wrap();
+            d_clock.advance_loop(error);
+            d_inst_clock_period = d_clock.get_inst_period();
+            d_avg_clock_period = d_clock.get_avg_period();
+            d_clock.phase_wrap();
 
             // Symbol Clock and Interpolator Positioning & Alignment
             d_inst_interp_period = d_inst_clock_period / d_interps_per_symbol;
@@ -536,7 +511,7 @@ int symbol_sync_ff_impl::general_work(int noutput_items,
                 // Revert the actions we took in the loop so far, and bail out.
 
                 // Symbol Clock Tracking and Estimation
-                d_clock->revert_loop();
+                d_clock.revert_loop();
 
                 // Timing Error Detector
                 d_ted->revert();
@@ -580,10 +555,10 @@ int symbol_sync_ff_impl::general_work(int noutput_items,
                     1) +
                 sync_timing_offset - d_interp->phase_wrapped();
 
-            d_clock->set_inst_period(d_inst_clock_period);
-            d_clock->set_avg_period(sync_clock_period);
-            d_avg_clock_period = d_clock->get_avg_period();
-            d_clock->set_phase(0.0f);
+            d_clock.set_inst_period(d_inst_clock_period);
+            d_clock.set_avg_period(sync_clock_period);
+            d_avg_clock_period = d_clock.get_avg_period();
+            d_clock.set_phase(0.0f);
 
             // Symbol Clock and Interpolator Positioning & Alignment
             d_inst_interp_period = d_inst_clock_period;

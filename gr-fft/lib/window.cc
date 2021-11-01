@@ -1,23 +1,11 @@
 /* -*- c++ -*- */
 /*
- * Copyright 2002,2007,2008,2012,2013,2018 Free Software Foundation, Inc.
+ * Copyright 2002,2007,2008,2012,2013,2018,2021 Free Software Foundation, Inc.
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -26,6 +14,8 @@
 
 #include <gnuradio/fft/window.h>
 #include <gnuradio/math.h>
+#include <algorithm>
+#include <numeric>
 #include <stdexcept>
 
 namespace gr {
@@ -60,33 +50,53 @@ double freq(int ntaps) { return 2.0 * GR_M_PI / ntaps; }
 
 double rate(int ntaps) { return 1.0 / (ntaps >> 1); }
 
-double window::max_attenuation(win_type type, double beta)
+double window::max_attenuation(win_type type, double param)
 {
     switch (type) {
     case (WIN_HAMMING):
         return 53;
-        break;
     case (WIN_HANN):
         return 44;
-        break;
     case (WIN_BLACKMAN):
         return 74;
-        break;
     case (WIN_RECTANGULAR):
         return 21;
-        break;
     case (WIN_KAISER):
-        return (beta / 0.1102 + 8.7);
-        break;
+        // linear approximation
+        return (param / 0.1102 + 8.7);
     case (WIN_BLACKMAN_hARRIS):
         return 92;
-        break;
     case (WIN_BARTLETT):
         return 27;
-        break;
     case (WIN_FLATTOP):
         return 93;
-        break;
+    case WIN_NUTTALL:
+        return 114;
+    case WIN_NUTTALL_CFD:
+        return 112;
+    case WIN_WELCH:
+        return 31;
+    case WIN_PARZEN:
+        return 56;
+    case WIN_EXPONENTIAL:
+        // varies slightly depending on the decay factor, but this is a safe return value
+        return 26;
+    case WIN_RIEMANN:
+        return 39;
+    case WIN_GAUSSIAN:
+        // value not meaningful for gaussian windows, but return something reasonable
+        return 100;
+    case WIN_TUKEY:
+        // low end is a rectangular window, attenuation exponentially approaches Hann
+        // piecewise linear estimate, determined empirically via curve fitting, median
+        // error is less than 0.5dB and maximum error is 2.5dB; the returned value will
+        // never be less than expected attenuation to ensure that window designed filters
+        // are never below expected quality.
+        if (param > 0.9)
+            return ((param - 0.9) * 135 + 30.5);
+        else if (param > 0.7)
+            return ((param - 0.6) * 20 + 24);
+        return (param * 5 + 21);
     default:
         throw std::out_of_range("window::max_attenuation: unknown window type provided.");
     }
@@ -201,19 +211,12 @@ std::vector<float> window::blackmanharris(int ntaps, int atten)
     return blackman_harris(ntaps, atten);
 }
 
-std::vector<float> window::nuttal(int ntaps) { return nuttall(ntaps); }
-
 std::vector<float> window::nuttall(int ntaps)
 {
     return coswindow(ntaps, 0.3635819, 0.4891775, 0.1365995, 0.0106411);
 }
 
-std::vector<float> window::blackman_nuttal(int ntaps) { return nuttall(ntaps); }
-
 std::vector<float> window::blackman_nuttall(int ntaps) { return nuttall(ntaps); }
-
-std::vector<float> window::nuttal_cfd(int ntaps) { return nuttall_cfd(ntaps); }
-
 std::vector<float> window::nuttall_cfd(int ntaps)
 {
     return coswindow(ntaps, 0.355768, 0.487396, 0.144232, 0.012604);
@@ -328,8 +331,66 @@ std::vector<float> window::riemann(int ntaps)
     return taps;
 }
 
-std::vector<float> window::build(win_type type, int ntaps, double beta)
+std::vector<float> window::tukey(int ntaps, float alpha)
 {
+    if ((alpha < 0) || (alpha > 1))
+        throw std::out_of_range("window::tukey: alpha must be between 0 and 1");
+
+    float N = static_cast<float>(ntaps - 1);
+
+    float aN = alpha * N;
+    float p1 = aN / 2.0;
+    float mid = midn(ntaps);
+    std::vector<float> taps(ntaps);
+    for (int i = 0; i < mid; i++) {
+        if (abs(i) < p1) {
+            taps[i] = 0.5 * (1.0 - cos((2 * GR_M_PI * i) / (aN)));
+            taps[ntaps - 1 - i] = taps[i];
+        } else {
+            taps[i] = 1.0;
+            taps[ntaps - i - 1] = 1.0;
+        }
+    }
+    return taps;
+}
+
+std::vector<float> window::gaussian(int ntaps, float sigma)
+{
+    if (sigma <= 0)
+        throw std::out_of_range("window::gaussian: sigma must be > 0");
+
+    float a = 2 * sigma * sigma;
+    double m1 = midm1(ntaps);
+    std::vector<float> taps(ntaps);
+    for (int i = 0; i < midn(ntaps); i++) {
+        float N = (i - m1);
+        taps[i] = exp(-(N * N / a));
+        taps[ntaps - 1 - i] = taps[i];
+    }
+    return taps;
+}
+
+std::vector<float>
+window::build(win_type type, int ntaps, double param, const bool normalize)
+{
+    // If we want a normalized window, we get a non-normalized one first, then
+    // normalize it here:
+    if (normalize) {
+        auto win = build(type, ntaps, param, false);
+        const double pwr_acc = // sum(win**2) / len(win)
+            std::accumulate(win.cbegin(),
+                            win.cend(),
+                            0.0,
+                            [](const double a, const double b) { return a + b * b; }) /
+            win.size();
+        const float norm_fac = static_cast<float>(std::sqrt(pwr_acc));
+        std::transform(win.begin(), win.end(), win.begin(), [norm_fac](const float tap) {
+            return tap / norm_fac;
+        });
+        return win;
+    }
+
+    // Create non-normalized window:
     switch (type) {
     case WIN_RECTANGULAR:
         return rectangular(ntaps);
@@ -342,11 +403,27 @@ std::vector<float> window::build(win_type type, int ntaps, double beta)
     case WIN_BLACKMAN_hARRIS:
         return blackman_harris(ntaps);
     case WIN_KAISER:
-        return kaiser(ntaps, beta);
+        return kaiser(ntaps, param);
     case WIN_BARTLETT:
         return bartlett(ntaps);
     case WIN_FLATTOP:
         return flattop(ntaps);
+    case WIN_NUTTALL:
+        return nuttall(ntaps);
+    case WIN_NUTTALL_CFD:
+        return nuttall_cfd(ntaps);
+    case WIN_WELCH:
+        return welch(ntaps);
+    case WIN_PARZEN:
+        return parzen(ntaps);
+    case WIN_EXPONENTIAL:
+        return exponential(ntaps, param);
+    case WIN_RIEMANN:
+        return riemann(ntaps);
+    case WIN_GAUSSIAN:
+        return gaussian(ntaps, param);
+    case WIN_TUKEY:
+        return tukey(ntaps, param);
     default:
         throw std::out_of_range("window::build: type out of range");
     }

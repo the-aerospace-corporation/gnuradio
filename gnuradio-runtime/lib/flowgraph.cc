@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -29,15 +17,19 @@
 #include <sstream>
 #include <stdexcept>
 
-namespace gr {
+// TODO: Replace with GNU Radio logging
+#include <iostream>
 
-#define FLOWGRAPH_DEBUG 0
+namespace gr {
 
 edge::~edge() {}
 
 flowgraph_sptr make_flowgraph() { return flowgraph_sptr(new flowgraph()); }
 
-flowgraph::flowgraph() {}
+flowgraph::flowgraph()
+{
+    configure_default_loggers(d_logger, d_debug_logger, "flowgraph");
+}
 
 flowgraph::~flowgraph() {}
 
@@ -85,8 +77,7 @@ void flowgraph::validate()
         std::vector<int> used_ports;
         int ninputs, noutputs;
 
-        if (FLOWGRAPH_DEBUG)
-            std::cout << "Validating block: " << (*p) << std::endl;
+        GR_LOG_DEBUG(d_debug_logger, boost::format("Validating block: %s") % *p);
 
         used_ports = calc_used_ports(*p, true); // inputs
         ninputs = used_ports.size();
@@ -134,17 +125,16 @@ void flowgraph::check_valid_port(gr::io_signature::sptr sig, int port)
 
 void flowgraph::check_valid_port(const msg_endpoint& e)
 {
-    if (FLOWGRAPH_DEBUG)
-        std::cout << "check_valid_port( " << e.block() << ", " << e.port() << ")\n";
+    GR_LOG_DEBUG(d_debug_logger,
+                 boost::format("check_valid_port(%s, %s)") % e.block() % e.port());
 
     if (!e.block()->has_msg_port(e.port())) {
         const gr::basic_block::msg_queue_map_t& msg_map = e.block()->get_msg_map();
-        std::cout << "Could not find port: " << e.port() << " in:" << std::endl;
+        GR_LOG_WARN(d_logger, boost::format("Could not find port %s in:") % e.port());
         for (gr::basic_block::msg_queue_map_t::const_iterator it = msg_map.begin();
              it != msg_map.end();
              ++it)
-            std::cout << it->first << std::endl;
-        std::cout << std::endl;
+            GR_LOG_WARN(d_logger, boost::format("  %s") % it->first);
         throw std::invalid_argument("invalid msg port in connect() or disconnect()");
     }
 }

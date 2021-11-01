@@ -4,25 +4,12 @@
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 #
 
-from __future__ import print_function
-from __future__ import unicode_literals
 from gnuradio import gr, filter
+from gnuradio.fft import window
 from gnuradio import blocks
 import sys
 
@@ -158,10 +145,10 @@ class my_top_block(gr.top_block):
         src  = blocks.add_cc()
         channel = channels.channel_model(0.001)
         thr = blocks.throttle(gr.sizeof_gr_complex, 100*fftsize)
-        self.snk1 = qtgui.sink_c(fftsize, filter.firdes.WIN_BLACKMAN_hARRIS,
+        self.snk1 = qtgui.sink_c(fftsize, window.WIN_BLACKMAN_hARRIS,
                                  0, Rs,
                                  "Complex Signal Example",
-                                 True, True, True, False)
+                                 True, True, True, False, None)
 
         self.connect(src1, (src,0))
         self.connect(src2, (src,1))
@@ -172,7 +159,7 @@ class my_top_block(gr.top_block):
         self.ctrl_win.attach_signal2(src2)
 
         # Get the reference pointer to the SpectrumDisplayForm QWidget
-        pyQt  = self.snk1.pyqwidget()
+        pyQt  = self.snk1.qwidget()
 
         # Wrap the pointer as a PyQt SIP object
         # This can now be manipulated as a PyQt5.QtWidgets.QWidget

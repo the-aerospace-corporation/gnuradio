@@ -3,27 +3,14 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #include "audio_registry.h"
 #include <gnuradio/logger.h>
 #include <gnuradio/prefs.h>
-#include <boost/foreach.hpp>
-#include <iostream>
+#include <boost/format.hpp>
 #include <stdexcept>
 #include <vector>
 
@@ -63,7 +50,7 @@ static std::vector<source_entry_t>& get_source_registry(void)
 
 #ifdef WIN32_FOUND
         s_registry.push_back(
-            register_source(REG_PRIO_HIGH, "windows", windows_source_fcn));
+            register_source(REG_PRIO_LOW, "windows", windows_source_fcn));
 #endif /* WIN32_FOUND */
 
         src_reg = true;
@@ -145,16 +132,20 @@ static void do_arch_warning(const std::string& arch)
 {
     if (arch == "auto")
         return; // no warning when arch not specified
-    std::cerr << "Could not find audio architecture \"" << arch << "\" in registry."
-              << std::endl;
-    std::cerr << "    Defaulting to the first available architecture..." << std::endl;
+
+    gr::logger_ptr logger, debug_logger;
+    gr::configure_default_loggers(logger, debug_logger, "audio_registry");
+    std::ostringstream msg;
+    msg << "Could not find audio architecture \"" << arch << "\" in registry.";
+    msg << " Defaulting to the first available architecture.";
+    GR_LOG_ERROR(logger, msg.str());
 }
 
 source::sptr
 source::make(int sampling_rate, const std::string device_name, bool ok_to_block)
 {
     gr::logger_ptr logger, debug_logger;
-    configure_default_loggers(logger, debug_logger, "audio source");
+    configure_default_loggers(logger, debug_logger, "audio_source");
 
     if (get_source_registry().empty()) {
         throw std::runtime_error("no available audio source factories");
@@ -163,7 +154,7 @@ source::make(int sampling_rate, const std::string device_name, bool ok_to_block)
     std::string arch = default_arch_name();
     source_entry_t entry = get_source_registry().front();
 
-    BOOST_FOREACH (const source_entry_t& e, get_source_registry()) {
+    for (const auto& e : get_source_registry()) {
         if (e.prio > entry.prio)
             entry = e; // entry is highest prio
         if (arch != e.arch)
@@ -171,7 +162,7 @@ source::make(int sampling_rate, const std::string device_name, bool ok_to_block)
         return e.source(sampling_rate, device_name, ok_to_block);
     }
 
-    GR_LOG_INFO(logger, boost::format("Audio source arch: %1%") % (entry.arch));
+    GR_LOG_INFO(debug_logger, boost::format("Audio source arch: %1%") % (entry.arch));
     return entry.source(sampling_rate, device_name, ok_to_block);
 }
 
@@ -187,7 +178,7 @@ sink::sptr sink::make(int sampling_rate, const std::string device_name, bool ok_
     std::string arch = default_arch_name();
     sink_entry_t entry = get_sink_registry().front();
 
-    BOOST_FOREACH (const sink_entry_t& e, get_sink_registry()) {
+    for (const sink_entry_t& e : get_sink_registry()) {
         if (e.prio > entry.prio)
             entry = e; // entry is highest prio
         if (arch != e.arch)
@@ -196,7 +187,7 @@ sink::sptr sink::make(int sampling_rate, const std::string device_name, bool ok_
     }
 
     do_arch_warning(arch);
-    GR_LOG_INFO(logger, boost::format("Audio sink arch: %1%") % (entry.arch));
+    GR_LOG_INFO(debug_logger, boost::format("Audio sink arch: %1%") % (entry.arch));
     return entry.sink(sampling_rate, device_name, ok_to_block);
 }
 

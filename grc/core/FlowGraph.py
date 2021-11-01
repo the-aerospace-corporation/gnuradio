@@ -1,21 +1,9 @@
 # Copyright 2008-2015 Free Software Foundation, Inc.
 # This file is part of GNU Radio
 #
-# GNU Radio Companion is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
+# SPDX-License-Identifier: GPL-2.0-or-later
 #
-# GNU Radio Companion is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
-from __future__ import absolute_import, print_function
 
 import collections
 import itertools
@@ -56,6 +44,7 @@ class FlowGraph(Element):
 
         self._eval_cache = {}
         self.namespace = {}
+        self.imported_names = []
 
         self.grc_file_path = ''
 
@@ -91,6 +80,47 @@ class FlowGraph(Element):
         """
         parameters = [b for b in self.iter_enabled_blocks() if b.key == 'parameter']
         return parameters
+
+    def get_snippets(self):
+        """
+        Get a set of all code snippets (Python) in this flow graph namespace.
+
+        Returns:
+            a list of code snippets
+        """
+        return [b for b in self.iter_enabled_blocks() if b.key == 'snippet']
+
+    def get_snippets_dict(self, section=None):
+        """
+        Get a dictionary of code snippet information for a particular section.
+
+        Args:
+            section: string specifier of section of snippets to return, section=None returns all
+
+        Returns:
+            a list of code snippets dicts
+        """
+        snippets = self.get_snippets()
+        if not snippets:
+            return []
+
+        output = []
+        for snip in snippets:
+            d = {}
+            sect = snip.params['section'].value
+            d['section'] = sect
+            d['priority'] = snip.params['priority'].value
+            d['lines'] = snip.params['code'].value.splitlines()
+            d['def'] = 'def snipfcn_{}(self):'.format(snip.name)
+            d['call'] = 'snipfcn_{}(tb)'.format(snip.name)
+            if not section or sect == section:
+                output.append(d)
+
+        # Sort by descending priority
+        if section:
+            output = sorted(output, key=lambda x: x['priority'], reverse=True)
+
+        return output
 
     def get_monitors(self):
         """
@@ -161,6 +191,16 @@ class FlowGraph(Element):
         except Exception as e:
             raise ValueError("Can't parse run command {!r}: {}".format(run_command, e))
 
+    def get_imported_names(self):
+        """
+        Get a lis of imported names.
+        These names may not be used as id's
+
+        Returns:
+            a list of imported names
+        """
+        return self.imported_names
+
     ##############################################
     # Access Elements
     ##############################################
@@ -176,7 +216,7 @@ class FlowGraph(Element):
         return elements
 
     def children(self):
-        return itertools.chain(self.iter_enabled_blocks(), self.connections)
+        return itertools.chain(self.blocks, self.connections)
 
     def rewrite(self):
         """
@@ -187,6 +227,10 @@ class FlowGraph(Element):
 
     def renew_namespace(self):
         namespace = {}
+        # Before renewing the namespace, clear it
+        # to get rid of entries of blocks that
+        # are no longer valid ( deleted, disabled, ...)
+        self.namespace.clear()
         # Load imports
         for expr in self.imports():
             try:
@@ -199,6 +243,8 @@ class FlowGraph(Element):
             except Exception:
                 log.exception('Failed to evaluate import expression "{0}"'.format(expr), exc_info=True)
                 pass
+
+        self.imported_names = list(namespace.keys())
 
         for id, expr in self.get_python_modules():
             try:
@@ -220,6 +266,9 @@ class FlowGraph(Element):
                 pass
         namespace.update(np)  # Merge param namespace
 
+        # We need the updated namespace to evaluate the variable blocks
+        # otherwise sometimes variable_block rewrite / eval fails
+        self.namespace.update(namespace)
         # Load variables
         for variable_block in self.get_variables():
             try:
@@ -227,15 +276,13 @@ class FlowGraph(Element):
                 value = eval(variable_block.value, namespace, variable_block.namespace)
                 namespace[variable_block.name] = value
                 self.namespace.update(namespace) # rewrite on subsequent blocks depends on an updated self.namespace 
-            except TypeError: #Type Errors may happen, but that desn't matter as they are displayed in the gui
+            except TypeError: #Type Errors may happen, but that doesn't matter as they are displayed in the gui
                 pass
             except Exception:
                 log.exception('Failed to evaluate variable block {0}'.format(variable_block.name), exc_info=True)
                 pass
 
-        self.namespace.clear()
         self._eval_cache.clear()
-        self.namespace.update(namespace)
 
     def evaluate(self, expr, namespace=None, local_namespace=None):
         """
@@ -288,7 +335,7 @@ class FlowGraph(Element):
         connection = self.parent_platform.Connection(
             parent=self, source=porta, sink=portb)
         self.connections.add(connection)
-            
+
         return connection
 
     def disconnect(self, *ports):
@@ -382,7 +429,7 @@ class FlowGraph(Element):
 
             block.import_data(**block_data)
 
-        self.rewrite() 
+        self.rewrite()
 
         # build the connections
         def verify_and_get_port(key, block, dir):
@@ -426,7 +473,7 @@ class FlowGraph(Element):
             had_connect_errors = True
 
         for block in self.blocks:
-            if block.is_dummy_block :
+            if block.is_dummy_block:
                 block.rewrite()      # Make ports visible
                 # Flowgraph errors depending on disabled blocks are not displayed
                 # in the error dialog box

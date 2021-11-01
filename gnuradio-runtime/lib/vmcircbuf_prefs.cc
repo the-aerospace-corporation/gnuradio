@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -27,16 +15,15 @@
 #include "vmcircbuf.h"
 #include "vmcircbuf_prefs.h"
 #include <gnuradio/sys_paths.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-
-#include <boost/filesystem/operations.hpp>
-#include <boost/filesystem/path.hpp>
-namespace fs = boost::filesystem;
+#include <boost/format.hpp>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <filesystem>
+namespace fs = std::filesystem;
 
 namespace gr {
 
@@ -68,8 +55,13 @@ int vmcircbuf_prefs::get(const char* key, char* value, int value_size)
     gr::thread::scoped_lock guard(s_vm_mutex);
 
     FILE* fp = fopen(pathname(key).c_str(), "r");
+
+    gr::logger_ptr logger, debug_logger;
+    gr::configure_default_loggers(logger, debug_logger, "vmcircbuf_prefs::get");
+
     if (fp == 0) {
-        perror(pathname(key).c_str());
+        GR_LOG_ERROR(logger,
+                     boost::format("%s: %s") % pathname(key).c_str() % strerror(errno));
         return 0;
     }
 
@@ -77,7 +69,9 @@ int vmcircbuf_prefs::get(const char* key, char* value, int value_size)
     value[ret] = '\0';
     if (ret == 0 && !feof(fp)) {
         if (ferror(fp) != 0) {
-            perror(pathname(key).c_str());
+            GR_LOG_ERROR(logger,
+                         boost::format("%s: %s") % pathname(key).c_str() %
+                             strerror(errno));
             fclose(fp);
             return -1;
         }
@@ -91,17 +85,22 @@ void vmcircbuf_prefs::set(const char* key, const char* value)
     gr::thread::scoped_lock guard(s_vm_mutex);
 
     ensure_dir_path();
+    gr::logger_ptr logger, debug_logger;
+    gr::configure_default_loggers(logger, debug_logger, "vmcircbuf_prefs::set");
 
     FILE* fp = fopen(pathname(key).c_str(), "w");
     if (fp == 0) {
-        perror(pathname(key).c_str());
+        GR_LOG_ERROR(logger,
+                     boost::format("%s: %s") % pathname(key).c_str() % strerror(errno));
         return;
     }
 
     size_t ret = fwrite(value, 1, strlen(value), fp);
     if (ret == 0) {
         if (ferror(fp) != 0) {
-            perror(pathname(key).c_str());
+            GR_LOG_ERROR(logger,
+                         boost::format("%s: %s") % pathname(key).c_str() %
+                             strerror(errno));
             fclose(fp);
             return;
         }

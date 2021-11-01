@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #include <gnuradio/fec/gf2mat.h>
@@ -36,7 +24,7 @@ GF2Mat::GF2Mat(int m, int n)
     }
 }
 
-GF2Mat::GF2Mat(std::vector<std::vector<char>> X)
+GF2Mat::GF2Mat(std::vector<std::vector<uint8_t>> X)
 {
     M = X.size();
     N = X[0].size();
@@ -191,4 +179,4 @@ GF2Mat GF2Mat::get_G(std::vector<int>& permute, int& rank)
     return G;
 }
 
-std::vector<std::vector<char>> GF2Mat::get_H() { return H; }
+std::vector<std::vector<uint8_t>> GF2Mat::get_H() { return H; }

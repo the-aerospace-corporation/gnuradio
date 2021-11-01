@@ -4,32 +4,20 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef INCLUDED_PMT_H
 #define INCLUDED_PMT_H
 
 #include <pmt/api.h>
-#include <stdint.h>
-#include <boost/any.hpp>
 #include <boost/noncopyable.hpp>
-#include <boost/shared_ptr.hpp>
+#include <any>
 #include <complex>
+#include <cstdint>
 #include <iosfwd>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -53,11 +41,12 @@ namespace pmt {
 /*!
  * \brief base class of all pmt types
  */
-class pmt_base : boost::noncopyable
+class PMT_API pmt_base
 {
 
 public:
     pmt_base(){};
+    pmt_base(const pmt_base&) = delete;
     virtual ~pmt_base();
 
     virtual bool is_bool() const { return false; }
@@ -91,9 +80,8 @@ public:
 
 /*!
  * \brief typedef for shared pointer (transparent reference counting).
- * See http://www.boost.org/libs/smart_ptr/smart_ptr.htm
  */
-typedef boost::shared_ptr<pmt_base> pmt_t;
+typedef std::shared_ptr<pmt_base> pmt_t;
 
 class PMT_API exception : public std::logic_error
 {
@@ -101,7 +89,7 @@ public:
     exception(const std::string& msg, pmt_t obj);
 };
 
-class PMT_API wrong_type : public exception
+class PMT_API wrong_type : public std::invalid_argument
 {
 public:
     wrong_type(const std::string& msg, pmt_t obj);
@@ -606,20 +594,6 @@ PMT_API const std::vector<double> f64vector_elements(pmt_t v);
 PMT_API const std::vector<std::complex<float>> c32vector_elements(pmt_t v);
 PMT_API const std::vector<std::complex<double>> c64vector_elements(pmt_t v);
 
-// len is in elements
-PMT_API const std::vector<uint8_t> pmt_u8vector_elements(pmt_t v);
-PMT_API const std::vector<int8_t> pmt_s8vector_elements(pmt_t v);
-PMT_API const std::vector<uint16_t> pmt_u16vector_elements(pmt_t v);
-PMT_API const std::vector<int16_t> pmt_s16vector_elements(pmt_t v);
-PMT_API const std::vector<uint32_t> pmt_u32vector_elements(pmt_t v);
-PMT_API const std::vector<int32_t> pmt_s32vector_elements(pmt_t v);
-PMT_API const std::vector<uint64_t> pmt_u64vector_elements(pmt_t v);
-PMT_API const std::vector<int64_t> pmt_s64vector_elements(pmt_t v);
-PMT_API const std::vector<float> pmt_f32vector_elements(pmt_t v);
-PMT_API const std::vector<double> pmt_f64vector_elements(pmt_t v);
-PMT_API const std::vector<std::complex<float>> pmt_c32vector_elements(pmt_t v);
-PMT_API const std::vector<std::complex<double>> pmt_c64vector_elements(pmt_t v);
-
 // Return non-const pointers to the elements
 
 PMT_API void*
@@ -654,8 +628,12 @@ c64vector_writable_elements(pmt_t v, size_t& len); //< len is in elements
  * ------------------------------------------------------------------------
  */
 
-//! Return true if \p obj is a dictionary (warning: also returns true for a pair)
+//! Return true if \p obj is a dictionary
 PMT_API bool is_dict(const pmt_t& obj);
+
+//! Return a newly allocated dict whose car is a key-value pair \p x and whose cdr is a
+//! dict \p y.
+PMT_API pmt_t dcons(const pmt_t& x, const pmt_t& y);
 
 //! Make an empty dictionary
 PMT_API pmt_t make_dict();
@@ -686,10 +664,9 @@ PMT_API pmt_t dict_values(pmt_t dict);
 
 /*
  * ------------------------------------------------------------------------
- *   Any (wraps boost::any -- can be used to wrap pretty much anything)
+ *   Any (wraps std::any -- can be used to wrap pretty much anything)
  *
  * Cannot be serialized or used across process boundaries.
- * See http://www.boost.org/doc/html/any.html
  * ------------------------------------------------------------------------
  */
 
@@ -697,13 +674,13 @@ PMT_API pmt_t dict_values(pmt_t dict);
 PMT_API bool is_any(pmt_t obj);
 
 //! make an any
-PMT_API pmt_t make_any(const boost::any& any);
+PMT_API pmt_t make_any(const std::any& any);
 
-//! Return underlying boost::any
-PMT_API boost::any any_ref(pmt_t obj);
+//! Return underlying std::any
+PMT_API std::any any_ref(pmt_t obj);
 
 //! Store \p any in \p obj
-PMT_API void any_set(pmt_t obj, const boost::any& any);
+PMT_API void any_set(pmt_t obj, const std::any& any);
 
 
 /*
@@ -715,16 +692,24 @@ PMT_API void any_set(pmt_t obj, const boost::any& any);
 PMT_API bool is_msg_accepter(const pmt_t& obj);
 
 //! make a msg_accepter
-PMT_API pmt_t make_msg_accepter(boost::shared_ptr<gr::messages::msg_accepter> ma);
+PMT_API pmt_t make_msg_accepter(std::shared_ptr<gr::messages::msg_accepter> ma);
 
 //! Return underlying msg_accepter
-PMT_API boost::shared_ptr<gr::messages::msg_accepter> msg_accepter_ref(const pmt_t& obj);
+PMT_API std::shared_ptr<gr::messages::msg_accepter> msg_accepter_ref(const pmt_t& obj);
 
 /*
  * ------------------------------------------------------------------------
  *			  General functions
  * ------------------------------------------------------------------------
  */
+
+/*!
+ * Returns true if the object is a PDU meaning:
+ *   the object is a pair
+ *   the car is a dictionary type object (including an empty dict)
+ *   the cdr is a uniform vector of any type
+ */
+PMT_API bool is_pdu(const pmt_t& obj);
 
 //! Return true if x and y are the same object; otherwise return false.
 PMT_API bool eq(const pmt_t& x, const pmt_t& y);
@@ -813,7 +798,7 @@ PMT_API pmt_t reverse_x(pmt_t list);
 /*!
  * \brief (acons x y a) == (cons (cons x y) a)
  */
-inline static pmt_t acons(pmt_t x, pmt_t y, pmt_t a) { return cons(cons(x, y), a); }
+inline static pmt_t acons(pmt_t x, pmt_t y, pmt_t a) { return dcons(cons(x, y), a); }
 
 /*!
  * \brief locates \p nth element of \n list where the car is the 'zeroth' element.
@@ -984,16 +969,6 @@ PMT_API pmt_t deserialize_str(std::string str);
  * \brief Provide a comparator function object to allow pmt use in stl types
  */
 class comparator
-{
-public:
-    bool operator()(pmt::pmt_t const& p1, pmt::pmt_t const& p2) const
-    {
-        return pmt::eqv(p1, p2) ? false : p1.get() > p2.get();
-    }
-};
-
-// FIXME: Remove in 3.8.
-class comperator
 {
 public:
     bool operator()(pmt::pmt_t const& p1, pmt::pmt_t const& p2) const

@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #include <gnuradio/trellis/calc_metric.h>
@@ -170,7 +158,7 @@ void viterbi_algorithm_combined(int I,
 {
     std::vector<int> trace(S * K);
     std::vector<float> alpha(S * 2);
-    float* metric = new float[O];
+    std::vector<float> metric(O);
     int alphai;
     float norm, mm, minm;
     int minmi;
@@ -187,7 +175,7 @@ void viterbi_algorithm_combined(int I,
 
     alphai = 0;
     for (int k = 0; k < K; k++) {
-        calc_metric(O, D, TABLE, &(in[k * D]), metric, TYPE); // calc metrics
+        calc_metric(O, D, TABLE, &(in[k * D]), metric.data(), TYPE); // calc metrics
         norm = INF;
         for (int j = 0; j < S; j++) { // for each next state do ACS
             minm = INF;
@@ -225,8 +213,6 @@ void viterbi_algorithm_combined(int I,
         out[k] = (To)PI[st][i0];
         st = PS[st][i0];
     }
-
-    delete[] metric;
 }
 
 // Ti = s i f c
@@ -678,7 +664,7 @@ void siso_algorithm_combined(int I,
     float norm, mm, minm;
     std::vector<float> alpha(S * (K + 1));
     std::vector<float> beta(S * (K + 1));
-    float* prioro = new float[O * K];
+    std::vector<float> prioro(O * K);
 
     if (S0 < 0) { // initial state not specified
         for (int i = 0; i < S; i++)
@@ -813,8 +799,6 @@ void siso_algorithm_combined(int I,
         }
     } else
         throw std::runtime_error("Not both POSTI and POSTO can be false.");
-
-    delete[] prioro;
 }
 
 //---------

@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -26,21 +14,24 @@
 
 #include "flat_flowgraph.h"
 #include "scheduler_tpb.h"
+#include "terminate_handler.h"
 #include "top_block_impl.h"
+#include <gnuradio/logger.h>
 #include <gnuradio/prefs.h>
 #include <gnuradio/top_block.h>
 
-#include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
-#include <iostream>
+#include <cstdlib>
+#include <cstring>
 #include <stdexcept>
 
 namespace gr {
 
 #define GR_TOP_BLOCK_IMPL_DEBUG 0
 
-typedef scheduler_sptr (*scheduler_maker)(flat_flowgraph_sptr ffg, int max_noutput_items);
+typedef scheduler_sptr (*scheduler_maker)(flat_flowgraph_sptr ffg,
+                                          int max_noutput_items,
+                                          bool catch_exceptions);
 
 static struct scheduler_table {
     const char* name;
@@ -49,7 +40,8 @@ static struct scheduler_table {
     { "TPB", scheduler_tpb::make } // first entry is default
 };
 
-static scheduler_sptr make_scheduler(flat_flowgraph_sptr ffg, int max_noutput_items)
+static scheduler_sptr
+make_scheduler(flat_flowgraph_sptr ffg, int max_noutput_items, bool catch_exceptions)
 {
     static scheduler_maker factory = 0;
 
@@ -66,25 +58,38 @@ static scheduler_sptr make_scheduler(flat_flowgraph_sptr ffg, int max_noutput_it
                 }
             }
             if (factory == 0) {
-                std::cerr << "warning: Invalid GR_SCHEDULER environment variable value \""
-                          << v << "\".  Using \"" << scheduler_table[0].name << "\"\n";
+                gr::logger_ptr logger, debug_logger;
+                gr::configure_default_loggers(logger, debug_logger, "top_block_impl");
+                std::ostringstream msg;
+                msg << "Invalid GR_SCHEDULER environment variable value \"" << v
+                    << "\".  Using \"" << scheduler_table[0].name << "\"";
+                GR_LOG_WARN(logger, msg.str());
                 factory = scheduler_table[0].f;
             }
         }
     }
-    return factory(ffg, max_noutput_items);
+    return factory(ffg, max_noutput_items, catch_exceptions);
 }
 
-top_block_impl::top_block_impl(top_block* owner)
-    : d_owner(owner), d_ffg(), d_state(IDLE), d_lock_count(0), d_retry_wait(false)
+top_block_impl::top_block_impl(top_block* owner, bool catch_exceptions = true)
+    : d_owner(owner),
+      d_ffg(),
+      d_state(IDLE),
+      d_lock_count(0),
+      d_retry_wait(false),
+      d_catch_exceptions(catch_exceptions)
 {
+    install_terminate_handler();
+    gr::configure_default_loggers(d_logger, d_debug_logger, "top_block_impl");
 }
 
 top_block_impl::~top_block_impl()
 {
     if (d_lock_count) {
-        std::cerr << "error: destroying locked block." << std::endl;
+        GR_LOG_ERROR(d_logger, "destroying locked block.");
     }
+    // NOTE: Investigate the sensibility of setting a raw pointer to zero at the end of
+    // destructor
     d_owner = 0;
 }
 
@@ -115,7 +120,7 @@ void top_block_impl::start(int max_noutput_items)
         p->get_bool("PerfCounters", "export", false))
         d_ffg->enable_pc_rpc();
 
-    d_scheduler = make_scheduler(d_ffg, d_max_noutput_items);
+    d_scheduler = make_scheduler(d_ffg, d_max_noutput_items, d_catch_exceptions);
     d_state = RUNNING;
 }
 
@@ -125,6 +130,8 @@ void top_block_impl::stop()
 
     if (d_scheduler)
         d_scheduler->stop();
+
+    d_ffg.reset();
 
     d_state = IDLE;
 }
@@ -195,7 +202,7 @@ void top_block_impl::restart()
     d_ffg = new_ffg;
 
     // Create a new scheduler to execute it
-    d_scheduler = make_scheduler(d_ffg, d_max_noutput_items);
+    d_scheduler = make_scheduler(d_ffg, d_max_noutput_items, d_catch_exceptions);
     d_retry_wait = true;
 }
 

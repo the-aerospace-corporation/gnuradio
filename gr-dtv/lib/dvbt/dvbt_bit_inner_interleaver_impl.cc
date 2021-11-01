@@ -2,20 +2,8 @@
 /*
  * Copyright 2015,2016 Free Software Foundation, Inc.
  *
- * This is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -24,6 +12,8 @@
 
 #include "dvbt_bit_inner_interleaver_impl.h"
 #include <gnuradio/io_signature.h>
+
+#include <boost/format.hpp>
 
 #define MAX_MODULATION_ORDER 6
 #define INTERLEAVER_BLOCK_SIZE 126
@@ -40,8 +30,8 @@ dvbt_bit_inner_interleaver::make(int nsize,
                                  dvbt_hierarchy_t hierarchy,
                                  dvbt_transmission_mode_t transmission)
 {
-    return gnuradio::get_initial_sptr(new dvbt_bit_inner_interleaver_impl(
-        nsize, constellation, hierarchy, transmission));
+    return gnuradio::make_block_sptr<dvbt_bit_inner_interleaver_impl>(
+        nsize, constellation, hierarchy, transmission);
 }
 
 /*
@@ -62,18 +52,10 @@ dvbt_bit_inner_interleaver_impl::dvbt_bit_inner_interleaver_impl(
              gr::dtv::GI_1_32,
              transmission),
       d_nsize(nsize),
-      d_hierarchy(hierarchy)
+      d_hierarchy(config.d_hierarchy),
+      d_v(config.d_m),
+      d_perm(d_v * d_bsize)
 {
-    d_v = config.d_m;
-    d_hierarchy = config.d_hierarchy;
-
-    d_perm = (unsigned char*)new (std::nothrow) unsigned char[d_v * d_bsize];
-    if (d_perm == NULL) {
-        GR_LOG_FATAL(d_logger,
-                     "Bit Inner Interleaver, cannot allocate memory for d_perm.");
-        throw std::bad_alloc();
-    }
-
     // Init permutation table (used for b[e][do])
     for (int i = 0; i < d_bsize * d_v; i++) {
         if (d_hierarchy == NH) {
@@ -95,7 +77,7 @@ dvbt_bit_inner_interleaver_impl::dvbt_bit_inner_interleaver_impl(
 /*
  * Our virtual destructor.
  */
-dvbt_bit_inner_interleaver_impl::~dvbt_bit_inner_interleaver_impl() { delete[] d_perm; }
+dvbt_bit_inner_interleaver_impl::~dvbt_bit_inner_interleaver_impl() {}
 
 void dvbt_bit_inner_interleaver_impl::forecast(int noutput_items,
                                                gr_vector_int& ninput_items_required)

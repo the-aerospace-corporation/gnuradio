@@ -2,20 +2,8 @@
 /*
  * Copyright 2015 Free Software Foundation, Inc.
  *
- * This is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -31,7 +19,7 @@ namespace dtv {
 
 atsc_field_sync_mux::sptr atsc_field_sync_mux::make()
 {
-    return gnuradio::get_initial_sptr(new atsc_field_sync_mux_impl());
+    return gnuradio::make_block_sptr<atsc_field_sync_mux_impl>();
 }
 
 atsc_field_sync_mux_impl::atsc_field_sync_mux_impl()
@@ -176,8 +164,7 @@ int atsc_field_sync_mux_impl::general_work(int noutput_items,
                 // write out field sync...
                 atsc_data_segment field_sync;
 
-                field_sync.pli._flags = 0;
-                field_sync.pli._segno = 0;
+                field_sync.pli.reset();
                 memset(field_sync._pad_, 0, atsc_data_segment::NPAD);
 
                 if (in[index].pli.in_field1_p()) {

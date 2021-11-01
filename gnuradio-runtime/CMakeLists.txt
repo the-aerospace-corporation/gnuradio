@@ -2,20 +2,8 @@
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 
 ########################################################################
 # Setup dependencies
@@ -37,28 +25,70 @@ GR_CHECK_LINUX_SCHED_AVAIL()
 include(GrComponent)
 GR_REGISTER_COMPONENT("gnuradio-runtime" ENABLE_GNURADIO_RUNTIME
     Boost_FOUND
-    ENABLE_VOLK
     PYTHONINTERP_FOUND
     MPLIB_FOUND
     LOG4CPP_FOUND
+    pybind11_FOUND
 )
 
 get_filename_component(GNURADIO_RUNTIME_PYTHONPATH
     ${CMAKE_SOURCE_DIR}/python ABSOLUTE
 )
+########################################################################
+# Setup precompiled header pseudo-component
+########################################################################
+if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.16.0")
+  set(GR_CMAKE_HAS_PCH ${CMAKE_VERSION})
+endif()
+
+GR_REGISTER_COMPONENT("common-precompiled-headers" ENABLE_COMMON_PCH
+  ENABLE_GNURADIO_RUNTIME
+  GR_CMAKE_HAS_PCH
+  )
+
+if(ENABLE_COMMON_PCH)
+  add_library(common-precompiled-headers
+    STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/lib/dummy.cc
+    )
+  target_include_directories(common-precompiled-headers
+    PUBLIC
+    $<INSTALL_INTERFACE:include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
+    )
+
+  if(MSVC)
+    target_compile_definitions(common-precompiled-headers PUBLIC
+      # disables stupidity and enables std::min and std::max
+      -DNOMINMAX
+    )
+  endif(MSVC)
+
+  target_precompile_headers(
+    common-precompiled-headers
+    PUBLIC
+    $<$<COMPILE_LANGUAGE:CXX>:$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/gnuradio/top_block.h>>
+    )
+endif()
 
 ########################################################################
 # Register controlport component
 ########################################################################
 
-FIND_PACKAGE(SWIG)
-
 GR_REGISTER_COMPONENT("gr-ctrlport" ENABLE_GR_CTRLPORT
   Boost_FOUND
-  SWIG_FOUND
-  SWIG_VERSION_CHECK
   ENABLE_GNURADIO_RUNTIME
 )
+
+# find thrift quietly to determine whether it should be enabled by default
+find_package(THRIFT ${GR_THRIFT_MIN_VERSION} QUIET)
+option(ENABLE_CTRLPORT_THRIFT "Enable ControlPort Thrift support" ${THRIFT_FOUND})
+
+if(ENABLE_CTRLPORT_THRIFT)
+  # ensure we have thrift, loudly, since it is enabled
+  find_package(THRIFT ${GR_THRIFT_MIN_VERSION} REQUIRED)
+endif()
 
 ########################################################################
 # Begin conditional configuration
@@ -94,9 +124,10 @@ add_subdirectory(include)
 add_subdirectory(lib)
 add_subdirectory(apps)
 if(ENABLE_PYTHON)
-     add_subdirectory(swig)
      add_subdirectory(python)
-    add_subdirectory(examples)
+    if (ENABLE_EXAMPLES)
+        add_subdirectory(examples)
+    endif (ENABLE_EXAMPLES)
 endif(ENABLE_PYTHON)
 
 ########################################################################

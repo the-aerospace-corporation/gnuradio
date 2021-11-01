@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -25,7 +13,6 @@
 #endif
 
 #include "vmcircbuf_mmap_shm_open.h"
-#include <assert.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdexcept>
@@ -37,16 +24,18 @@
 #endif
 #include "pagesize.h"
 #include <gnuradio/sys_paths.h>
-#include <errno.h>
-#include <stdio.h>
 #include <boost/format.hpp>
+#include <cerrno>
+#include <cstdio>
 
 namespace gr {
 
-vmcircbuf_mmap_shm_open::vmcircbuf_mmap_shm_open(int size) : gr::vmcircbuf(size)
+vmcircbuf_mmap_shm_open::vmcircbuf_mmap_shm_open(size_t size) : gr::vmcircbuf(size)
 {
 #if !defined(HAVE_MMAP) || !defined(HAVE_SHM_OPEN)
-    fprintf(stderr, "gr::vmcircbuf_mmap_shm_open: mmap or shm_open is not available\n");
+    std::stringstream error_msg;
+    error_msg << "mmap or shm_open is not available";
+    GR_LOG_ERROR(d_logger, error_msg.str());
     throw std::runtime_error("gr::vmcircbuf_mmap_shm_open");
 #else
     gr::thread::scoped_lock guard(s_vm_mutex);
@@ -54,7 +43,7 @@ vmcircbuf_mmap_shm_open::vmcircbuf_mmap_shm_open(int size) : gr::vmcircbuf(size)
     static int s_seg_counter = 0;
 
     if (size <= 0 || (size % gr::pagesize()) != 0) {
-        fprintf(stderr, "gr::vmcircbuf_mmap_shm_open: invalid size = %d\n", size);
+        GR_LOG_ERROR(d_logger, "invalid size =" + std::to_string(size));
         throw std::runtime_error("gr::vmcircbuf_mmap_shm_open");
     }
 
@@ -74,8 +63,8 @@ vmcircbuf_mmap_shm_open::vmcircbuf_mmap_shm_open(int size) : gr::vmcircbuf(size)
             // Where the "portable format" doesn't work, we try building
             // a full filesystem pathname pointing into a suitable temporary directory.
 
-            seg_name = str(boost::format("%s/gnuradio-%d-%d") %
-                           gr::tmp_path() % getpid() % s_seg_counter);
+            seg_name = str(boost::format("%s/gnuradio-%d-%d") % gr::tmp_path() %
+                           getpid() % s_seg_counter);
         }
 
         shm_fd = shm_open(seg_name.c_str(), O_RDWR | O_CREAT | O_EXCL, 0600);
@@ -92,9 +81,8 @@ vmcircbuf_mmap_shm_open::vmcircbuf_mmap_shm_open(int size) : gr::vmcircbuf(size)
                 continue;
 
             static std::string msg =
-                str(boost::format("gr::vmcircbuf_mmap_shm_open: shm_open [%s]") %
-                    seg_name);
-            perror(msg.c_str());
+                str(boost::format("shm_open [%s] failed") % seg_name);
+            GR_LOG_ERROR(d_logger, msg.c_str());
             throw std::runtime_error("gr::vmcircbuf_mmap_shm_open");
         }
         break;
@@ -104,7 +92,7 @@ vmcircbuf_mmap_shm_open::vmcircbuf_mmap_shm_open(int size) : gr::vmcircbuf(size)
     // Now set it's length to 2x what we really want and mmap it in.
     if (ftruncate(shm_fd, (off_t)2 * size) == -1) {
         close(shm_fd); // cleanup
-        perror("gr::vmcircbuf_mmap_shm_open: ftruncate (1)");
+        GR_LOG_ERROR(d_logger, "ftruncate failed");
         throw std::runtime_error("gr::vmcircbuf_mmap_shm_open");
     }
 
@@ -113,14 +101,14 @@ vmcircbuf_mmap_shm_open::vmcircbuf_mmap_shm_open(int size) : gr::vmcircbuf(size)
 
     if (first_copy == MAP_FAILED) {
         close(shm_fd); // cleanup
-        perror("gr::vmcircbuf_mmap_shm_open: mmap (1)");
+        GR_LOG_ERROR(d_logger, "mmap (1) failed");
         throw std::runtime_error("gr::vmcircbuf_mmap_shm_open");
     }
 
     // unmap the 2nd half
     if (munmap((char*)first_copy + size, size) == -1) {
         close(shm_fd); // cleanup
-        perror("gr::vmcircbuf_mmap_shm_open: munmap (1)");
+        GR_LOG_ERROR(d_logger, "munmap (1) failed");
         throw std::runtime_error("gr::vmcircbuf_mmap_shm_open");
     }
 
@@ -135,7 +123,7 @@ vmcircbuf_mmap_shm_open::vmcircbuf_mmap_shm_open(int size) : gr::vmcircbuf(size)
 
     if (second_copy == MAP_FAILED) {
         close(shm_fd); // cleanup
-        perror("gr::vmcircbuf_mmap_shm_open: mmap (2)");
+        GR_LOG_ERROR(d_logger, "mmap (2) failed");
         throw std::runtime_error("gr::vmcircbuf_mmap_shm_open");
     }
 
@@ -152,7 +140,7 @@ vmcircbuf_mmap_shm_open::vmcircbuf_mmap_shm_open(int size) : gr::vmcircbuf(size)
     close(shm_fd); // fd no longer needed.  The mapping is retained.
 
     if (shm_unlink(seg_name.c_str()) == -1) { // unlink the seg_name.
-        perror("gr::vmcircbuf_mmap_shm_open: shm_unlink");
+        GR_LOG_ERROR(d_logger, "shm_unlink failed");
         throw std::runtime_error("gr::vmcircbuf_mmap_shm_open");
     }
 
@@ -168,7 +156,7 @@ vmcircbuf_mmap_shm_open::~vmcircbuf_mmap_shm_open()
     gr::thread::scoped_lock guard(s_vm_mutex);
 
     if (munmap(d_base, 2 * d_size) == -1) {
-        perror("gr::vmcircbuf_mmap_shm_open: munmap (2)");
+        GR_LOG_ERROR(d_logger, "munmap (2) failed");
     }
 #endif
 }
@@ -190,7 +178,7 @@ gr::vmcircbuf_factory* vmcircbuf_mmap_shm_open_factory::singleton()
 
 int vmcircbuf_mmap_shm_open_factory::granularity() { return gr::pagesize(); }
 
-gr::vmcircbuf* vmcircbuf_mmap_shm_open_factory::make(int size)
+gr::vmcircbuf* vmcircbuf_mmap_shm_open_factory::make(size_t size)
 {
     try {
         return new vmcircbuf_mmap_shm_open(size);

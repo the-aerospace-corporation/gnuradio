@@ -2,20 +2,8 @@
 /*
  * Copyright 2015-2019 Free Software Foundation, Inc.
  *
- * This is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -46,16 +34,16 @@ dvbt2_paprtr_cc::sptr dvbt2_paprtr_cc::make(dvbt2_extended_carrier_t carriermode
                                             int iterations,
                                             unsigned int vlength)
 {
-    return gnuradio::get_initial_sptr(new dvbt2_paprtr_cc_impl(carriermode,
-                                                               fftsize,
-                                                               pilotpattern,
-                                                               guardinterval,
-                                                               numdatasyms,
-                                                               paprmode,
-                                                               version,
-                                                               vclip,
-                                                               iterations,
-                                                               vlength));
+    return gnuradio::make_block_sptr<dvbt2_paprtr_cc_impl>(carriermode,
+                                                           fftsize,
+                                                           pilotpattern,
+                                                           guardinterval,
+                                                           numdatasyms,
+                                                           paprmode,
+                                                           version,
+                                                           vclip,
+                                                           iterations,
+                                                           vlength);
 }
 
 /*
@@ -73,7 +61,20 @@ dvbt2_paprtr_cc_impl::dvbt2_paprtr_cc_impl(dvbt2_extended_carrier_t carriermode,
                                            unsigned int vlength)
     : gr::sync_block("dvbt2_paprtr_cc",
                      gr::io_signature::make(1, 1, sizeof(gr_complex) * vlength),
-                     gr::io_signature::make(1, 1, sizeof(gr_complex) * vlength))
+                     gr::io_signature::make(1, 1, sizeof(gr_complex) * vlength)),
+      papr_fft(vlength, 1),
+      papr_fft_size(vlength),
+      fft_size(fftsize),
+      carrier_mode(carriermode),
+      papr_mode(paprmode),
+      version_num(version),
+      v_clip(vclip),
+      num_iterations(iterations),
+      ones_freq(papr_fft_size),
+      ones_time(papr_fft_size),
+      c(papr_fft_size),
+      ctemp(papr_fft_size),
+      magnitude(papr_fft_size)
 {
     switch (fftsize) {
     case FFTSIZE_1K:
@@ -524,113 +525,15 @@ dvbt2_paprtr_cc_impl::dvbt2_paprtr_cc_impl(dvbt2_extended_carrier_t carriermode,
         dy = 16;
         break;
     }
-    shift = 0;
-    papr_map = p2_papr_map;
-    fft_size = fftsize;
-    pilot_pattern = pilotpattern;
-    carrier_mode = carriermode;
-    papr_mode = paprmode;
-    version_num = version;
     if (version == VERSION_131 && papr_mode == PAPR_OFF) {
         v_clip = 3.0;
         num_iterations = 1;
-    } else {
-        v_clip = vclip;
-        num_iterations = iterations;
     }
     left_nulls = ((vlength - C_PS) / 2) + 1;
     right_nulls = (vlength - C_PS) / 2;
-    papr_fft_size = vlength;
-    papr_fft = new (std::nothrow) fft::fft_complex(papr_fft_size, false, 1);
-    if (papr_fft == NULL) {
-        GR_LOG_FATAL(d_logger,
-                     "Tone Reservation PAPR, cannot allocate memory for papr_fft.");
-        throw std::bad_alloc();
-    }
-    ones_freq = (gr_complex*)volk_malloc(sizeof(gr_complex) * papr_fft_size,
-                                         volk_get_alignment());
-    if (ones_freq == NULL) {
-        GR_LOG_FATAL(d_logger,
-                     "Tone Reservation PAPR, cannot allocate memory for ones_freq.");
-        delete papr_fft;
-        throw std::bad_alloc();
-    }
-    ones_time = (gr_complex*)volk_malloc(sizeof(gr_complex) * papr_fft_size,
-                                         volk_get_alignment());
-    if (ones_time == NULL) {
-        GR_LOG_FATAL(d_logger,
-                     "Tone Reservation PAPR, cannot allocate memory for ones_time.");
-        volk_free(ones_freq);
-        delete papr_fft;
-        throw std::bad_alloc();
-    }
-    c = (gr_complex*)volk_malloc(sizeof(gr_complex) * papr_fft_size,
-                                 volk_get_alignment());
-    if (c == NULL) {
-        GR_LOG_FATAL(d_logger, "Tone Reservation PAPR, cannot allocate memory for c.");
-        volk_free(ones_time);
-        volk_free(ones_freq);
-        delete papr_fft;
-        throw std::bad_alloc();
-    }
-    ctemp = (gr_complex*)volk_malloc(sizeof(gr_complex) * papr_fft_size,
-                                     volk_get_alignment());
-    if (ctemp == NULL) {
-        GR_LOG_FATAL(d_logger,
-                     "Tone Reservation PAPR, cannot allocate memory for ctemp.");
-        volk_free(c);
-        volk_free(ones_time);
-        volk_free(ones_freq);
-        delete papr_fft;
-        throw std::bad_alloc();
-    }
-    magnitude = (float*)volk_malloc(sizeof(float) * papr_fft_size, volk_get_alignment());
-    if (magnitude == NULL) {
-        GR_LOG_FATAL(d_logger,
-                     "Tone Reservation PAPR, cannot allocate memory for magnitude.");
-        volk_free(ctemp);
-        volk_free(c);
-        volk_free(ones_time);
-        volk_free(ones_freq);
-        delete papr_fft;
-        throw std::bad_alloc();
-    }
-    r = (gr_complex*)volk_malloc(sizeof(gr_complex) * N_TR, volk_get_alignment());
-    if (r == NULL) {
-        GR_LOG_FATAL(d_logger, "Tone Reservation PAPR, cannot allocate memory for r.");
-        volk_free(magnitude);
-        volk_free(ctemp);
-        volk_free(c);
-        volk_free(ones_time);
-        volk_free(ones_freq);
-        delete papr_fft;
-        throw std::bad_alloc();
-    }
-    rNew = (gr_complex*)volk_malloc(sizeof(gr_complex) * N_TR, volk_get_alignment());
-    if (rNew == NULL) {
-        GR_LOG_FATAL(d_logger, "Tone Reservation PAPR, cannot allocate memory for rNew.");
-        volk_free(r);
-        volk_free(magnitude);
-        volk_free(ctemp);
-        volk_free(c);
-        volk_free(ones_time);
-        volk_free(ones_freq);
-        delete papr_fft;
-        throw std::bad_alloc();
-    }
-    v = (gr_complex*)volk_malloc(sizeof(gr_complex) * N_TR, volk_get_alignment());
-    if (v == NULL) {
-        GR_LOG_FATAL(d_logger, "Tone Reservation PAPR, cannot allocate memory for v.");
-        volk_free(rNew);
-        volk_free(r);
-        volk_free(magnitude);
-        volk_free(ctemp);
-        volk_free(c);
-        volk_free(ones_time);
-        volk_free(ones_freq);
-        delete papr_fft;
-        throw std::bad_alloc();
-    }
+    r.resize(N_TR);
+    rNew.resize(N_TR);
+    v.resize(N_TR);
     num_symbols = numdatasyms + N_P2;
     set_output_multiple(num_symbols);
 }
@@ -638,18 +541,7 @@ dvbt2_paprtr_cc_impl::dvbt2_paprtr_cc_impl(dvbt2_extended_carrier_t carriermode,
 /*
  * Our virtual destructor.
  */
-dvbt2_paprtr_cc_impl::~dvbt2_paprtr_cc_impl()
-{
-    volk_free(v);
-    volk_free(rNew);
-    volk_free(r);
-    volk_free(magnitude);
-    volk_free(ctemp);
-    volk_free(c);
-    volk_free(ones_time);
-    volk_free(ones_freq);
-    delete papr_fft;
-}
+dvbt2_paprtr_cc_impl::~dvbt2_paprtr_cc_impl() {}
 
 void dvbt2_paprtr_cc_impl::init_pilots(int symbol)
 {
@@ -704,6 +596,7 @@ int dvbt2_paprtr_cc_impl::work(int noutput_items,
 {
     const gr_complex* in = (const gr_complex*)input_items[0];
     gr_complex* out = (gr_complex*)output_items[0];
+    const int* papr_map;
     const gr_complex one(1.0, 0.0);
     const gr_complex zero(0.0, 0.0);
     const float normalization = 1.0 / N_TR;
@@ -767,26 +660,29 @@ int dvbt2_paprtr_cc_impl::work(int noutput_items,
                     valid = TRUE;
                 }
                 if (valid == TRUE) {
-                    dst = papr_fft->get_inbuf();
+                    dst = papr_fft.get_inbuf();
                     memcpy(&dst[papr_fft_size / 2],
                            &ones_freq[0],
                            sizeof(gr_complex) * papr_fft_size / 2);
                     memcpy(&dst[0],
                            &ones_freq[papr_fft_size / 2],
                            sizeof(gr_complex) * papr_fft_size / 2);
-                    papr_fft->execute();
-                    memcpy(ones_time,
-                           papr_fft->get_outbuf(),
+                    papr_fft.execute();
+                    memcpy(ones_time.data(),
+                           papr_fft.get_outbuf(),
                            sizeof(gr_complex) * papr_fft_size);
                     volk_32fc_s32fc_multiply_32fc(
-                        ones_time, ones_time, normalization, papr_fft_size);
+                        ones_time.data(), ones_time.data(), normalization, papr_fft_size);
                     std::fill_n(&r[0], N_TR, 0);
                     std::fill_n(&c[0], papr_fft_size, 0);
                     for (int k = 1; k <= num_iterations; k++) {
                         y = 0.0;
-                        volk_32f_x2_add_32f(
-                            (float*)ctemp, (float*)in, (float*)c, papr_fft_size * 2);
-                        volk_32fc_magnitude_32f(magnitude, ctemp, papr_fft_size);
+                        volk_32f_x2_add_32f((float*)ctemp.data(),
+                                            (float*)in,
+                                            (float*)c.data(),
+                                            papr_fft_size * 2);
+                        volk_32fc_magnitude_32f(
+                            magnitude.data(), ctemp.data(), papr_fft_size);
                         for (int n = 0; n < papr_fft_size; n++) {
                             if (magnitude[n] > y) {
                                 y = magnitude[n];
@@ -810,19 +706,22 @@ int dvbt2_paprtr_cc_impl::work(int noutput_items,
                                 papr_fft_size;
                             ctemp[n] = std::exp(gr_complexd(0.0, vtemp));
                         }
-                        volk_32fc_s32fc_multiply_32fc(v, ctemp, u, N_TR);
+                        volk_32fc_s32fc_multiply_32fc(v.data(), ctemp.data(), u, N_TR);
                         volk_32f_s32f_multiply_32f(
-                            (float*)rNew, (float*)v, alpha, N_TR * 2);
-                        volk_32f_x2_subtract_32f(
-                            (float*)rNew, (float*)r, (float*)rNew, N_TR * 2);
-                        volk_32fc_x2_multiply_conjugate_32fc(ctemp, r, v, N_TR);
+                            (float*)rNew.data(), (float*)v.data(), alpha, N_TR * 2);
+                        volk_32f_x2_subtract_32f((float*)rNew.data(),
+                                                 (float*)r.data(),
+                                                 (float*)rNew.data(),
+                                                 N_TR * 2);
+                        volk_32fc_x2_multiply_conjugate_32fc(
+                            ctemp.data(), r.data(), v.data(), N_TR);
                         for (int n = 0; n < N_TR; n++) {
                             alphaLimit[n] = std::sqrt((aMax * aMax) - (ctemp[n].imag() *
                                                                        ctemp[n].imag())) +
                                             ctemp[n].real();
                         }
                         index = 0;
-                        volk_32fc_magnitude_32f(magnitude, rNew, N_TR);
+                        volk_32fc_magnitude_32f(magnitude.data(), rNew.data(), N_TR);
                         for (int n = 0; n < N_TR; n++) {
                             if (magnitude[n] > aMax) {
                                 alphaLimitMax[index++] = alphaLimit[n];
@@ -837,22 +736,26 @@ int dvbt2_paprtr_cc_impl::work(int noutput_items,
                             }
                             alpha = a;
                             volk_32f_s32f_multiply_32f(
-                                (float*)rNew, (float*)v, alpha, N_TR * 2);
-                            volk_32f_x2_subtract_32f(
-                                (float*)rNew, (float*)r, (float*)rNew, N_TR * 2);
+                                (float*)rNew.data(), (float*)v.data(), alpha, N_TR * 2);
+                            volk_32f_x2_subtract_32f((float*)rNew.data(),
+                                                     (float*)r.data(),
+                                                     (float*)rNew.data(),
+                                                     N_TR * 2);
                         }
                         for (int n = 0; n < papr_fft_size; n++) {
                             ones_freq[(n + m) % papr_fft_size] = ones_time[n];
                         }
                         result = u * alpha;
                         volk_32fc_s32fc_multiply_32fc(
-                            ctemp, ones_freq, result, papr_fft_size);
-                        volk_32f_x2_subtract_32f(
-                            (float*)c, (float*)c, (float*)ctemp, papr_fft_size * 2);
-                        memcpy(r, rNew, sizeof(gr_complex) * N_TR);
+                            ctemp.data(), ones_freq.data(), result, papr_fft_size);
+                        volk_32f_x2_subtract_32f((float*)c.data(),
+                                                 (float*)c.data(),
+                                                 (float*)ctemp.data(),
+                                                 papr_fft_size * 2);
+                        std::copy(std::begin(rNew), std::end(rNew), std::begin(r));
                     }
                     volk_32f_x2_add_32f(
-                        (float*)out, (float*)in, (float*)c, papr_fft_size * 2);
+                        (float*)out, (float*)in, (float*)c.data(), papr_fft_size * 2);
                     in = in + papr_fft_size;
                     out = out + papr_fft_size;
                 } else {

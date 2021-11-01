@@ -4,45 +4,34 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
+#include <gnuradio/logger.h>
 #include <gnuradio/qtgui/timerasterdisplayform.h>
 
 #include <QColorDialog>
 #include <QMessageBox>
 
 #include <cmath>
-#include <iostream>
 
 TimeRasterDisplayForm::TimeRasterDisplayForm(
     int nplots, double samp_rate, double rows, double cols, double zmax, QWidget* parent)
     : DisplayForm(nplots, parent)
 {
 #if QWT_VERSION < 0x060000
-    std::cerr
-        << "Warning: QWT5 has been found which has serious performance issues with "
-           "raster plots."
-        << std::endl
-        << "         Consider updating to QWT version 6 to use the time raster GUIs."
-        << std::endl
-        << std::endl;
+    gr::logger_ptr logger, debug_logger;
+    gr::configure_default_loggers(logger, debug_logger, "timerasterdisplayform");
+
+    GR_LOG_WARN(
+        logger,
+        "Warning: QWT5 has been found which has serious performance issues with raster "
+        "plots. Consider updating to QWT version 6 to use the time raster GUIs.");
 #endif
 
     d_layout = new QGridLayout(this);
+    d_layout->setContentsMargins(0, 0, 0, 0);
     d_display_plot = new TimeRasterDisplayPlot(nplots, samp_rate, rows, cols, this);
     d_layout->addWidget(d_display_plot, 0, 0);
     setLayout(d_layout);
@@ -186,6 +175,30 @@ void TimeRasterDisplayForm::customEvent(QEvent* e)
         getPlot()->setNumCols(c);
         getPlot()->replot();
     }
+}
+
+void TimeRasterDisplayForm::setXAxis(double min, double max)
+{
+    getPlot()->setXAxis(min, max);
+    getPlot()->replot();
+}
+
+void TimeRasterDisplayForm::setXLabel(const std::string& label)
+{
+    getPlot()->setXLabel(label);
+    getPlot()->replot();
+}
+
+void TimeRasterDisplayForm::setYAxis(double min, double max)
+{
+    getPlot()->setYAxis(min, max);
+    getPlot()->replot();
+}
+
+void TimeRasterDisplayForm::setYLabel(const std::string& label)
+{
+    getPlot()->setYLabel(label);
+    getPlot()->replot();
 }
 
 void TimeRasterDisplayForm::setNumRows(double rows)

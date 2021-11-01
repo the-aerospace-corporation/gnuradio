@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -40,8 +28,8 @@ static const int FUDGE = 16;
 clock_recovery_mm_cc::sptr clock_recovery_mm_cc::make(
     float omega, float gain_omega, float mu, float gain_mu, float omega_relative_limit)
 {
-    return gnuradio::get_initial_sptr(new clock_recovery_mm_cc_impl(
-        omega, gain_omega, mu, gain_mu, omega_relative_limit));
+    return gnuradio::make_block_sptr<clock_recovery_mm_cc_impl>(
+        omega, gain_omega, mu, gain_mu, omega_relative_limit);
 }
 
 clock_recovery_mm_cc_impl::clock_recovery_mm_cc_impl(
@@ -55,7 +43,6 @@ clock_recovery_mm_cc_impl::clock_recovery_mm_cc_impl(
       d_omega_relative_limit(omega_relative_limit),
       d_gain_mu(gain_mu),
       d_last_sample(0),
-      d_interp(new filter::mmse_fir_interpolator_cc()),
       d_verbose(prefs::singleton()->get_bool("clock_recovery_mm_cc", "verbose", false)),
       d_p_2T(0),
       d_p_1T(0),
@@ -75,7 +62,7 @@ clock_recovery_mm_cc_impl::clock_recovery_mm_cc_impl(
     enable_update_rate(true); // fixes tag propagation through variable rate block
 }
 
-clock_recovery_mm_cc_impl::~clock_recovery_mm_cc_impl() { delete d_interp; }
+clock_recovery_mm_cc_impl::~clock_recovery_mm_cc_impl() {}
 
 void clock_recovery_mm_cc_impl::forecast(int noutput_items,
                                          gr_vector_int& ninput_items_required)
@@ -83,28 +70,7 @@ void clock_recovery_mm_cc_impl::forecast(int noutput_items,
     unsigned ninputs = ninput_items_required.size();
     for (unsigned i = 0; i < ninputs; i++)
         ninput_items_required[i] =
-            (int)ceil((noutput_items * d_omega) + d_interp->ntaps()) + FUDGE;
-}
-
-gr_complex clock_recovery_mm_cc_impl::slicer_0deg(gr_complex sample)
-{
-    float real = 0, imag = 0;
-
-    if (sample.real() > 0)
-        real = 1;
-    if (sample.imag() > 0)
-        imag = 1;
-    return gr_complex(real, imag);
-}
-
-gr_complex clock_recovery_mm_cc_impl::slicer_45deg(gr_complex sample)
-{
-    float real = -1, imag = -1;
-    if (sample.real() > 0)
-        real = 1;
-    if (sample.imag() > 0)
-        imag = 1;
-    return gr_complex(real, imag);
+            (int)ceil((noutput_items * d_omega) + d_interp.ntaps()) + FUDGE;
 }
 
 void clock_recovery_mm_cc_impl::set_omega(float omega)
@@ -124,10 +90,9 @@ int clock_recovery_mm_cc_impl::general_work(int noutput_items,
 
     bool write_foptr = output_items.size() >= 2;
 
-    int ii = 0; // input index
-    int oo = 0; // output index
-    int ni =
-        ninput_items[0] - d_interp->ntaps() - FUDGE; // don't use more input than this
+    int ii = 0;                                          // input index
+    int oo = 0;                                          // output index
+    int ni = ninput_items[0] - d_interp.ntaps() - FUDGE; // don't use more input than this
 
     assert(d_mu >= 0.0);
     assert(d_mu <= 1.0);
@@ -141,14 +106,14 @@ int clock_recovery_mm_cc_impl::general_work(int noutput_items,
         while (oo < noutput_items && ii < ni) {
             d_p_2T = d_p_1T;
             d_p_1T = d_p_0T;
-            d_p_0T = d_interp->interpolate(&in[ii], d_mu);
+            d_p_0T = d_interp.interpolate(&in[ii], d_mu);
 
             d_c_2T = d_c_1T;
             d_c_1T = d_c_0T;
             d_c_0T = slicer_0deg(d_p_0T);
 
-            x = (d_c_0T - d_c_2T) * conj(d_p_1T);
-            y = (d_p_0T - d_p_2T) * conj(d_c_1T);
+            fast_cc_multiply(x, d_c_0T - d_c_2T, conj(d_p_1T));
+            fast_cc_multiply(y, d_p_0T - d_p_2T, conj(d_c_1T));
             u = y - x;
             mm_val = u.real();
             out[oo++] = d_p_0T;
@@ -175,14 +140,14 @@ int clock_recovery_mm_cc_impl::general_work(int noutput_items,
         while (oo < noutput_items && ii < ni) {
             d_p_2T = d_p_1T;
             d_p_1T = d_p_0T;
-            d_p_0T = d_interp->interpolate(&in[ii], d_mu);
+            d_p_0T = d_interp.interpolate(&in[ii], d_mu);
 
             d_c_2T = d_c_1T;
             d_c_1T = d_c_0T;
             d_c_0T = slicer_0deg(d_p_0T);
 
-            x = (d_c_0T - d_c_2T) * conj(d_p_1T);
-            y = (d_p_0T - d_p_2T) * conj(d_c_1T);
+            fast_cc_multiply(x, d_c_0T - d_c_2T, conj(d_p_1T));
+            fast_cc_multiply(y, d_p_0T - d_p_2T, conj(d_c_1T));
             u = y - x;
             mm_val = u.real();
             out[oo++] = d_p_0T;

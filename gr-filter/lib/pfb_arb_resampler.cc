@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -55,14 +43,13 @@ pfb_arb_resampler_ccf::pfb_arb_resampler_ccf(float rate,
 
     d_last_filter = (taps.size() / 2) % filter_size;
 
-    d_filters = std::vector<fir_filter_ccf*>(d_int_rate);
-    d_diff_filters = std::vector<fir_filter_ccf*>(d_int_rate);
-
     // Create an FIR filter for each channel and zero out the taps
     std::vector<float> vtaps(0, d_int_rate);
+    d_filters.reserve(d_int_rate);
+    d_diff_filters.reserve(d_int_rate);
     for (unsigned int i = 0; i < d_int_rate; i++) {
-        d_filters[i] = new fir_filter_ccf(1, vtaps);
-        d_diff_filters[i] = new fir_filter_ccf(1, vtaps);
+        d_filters.emplace_back(vtaps);
+        d_diff_filters.emplace_back(vtaps);
     }
 
     // Now, actually set the filters' taps
@@ -88,17 +75,9 @@ pfb_arb_resampler_ccf::pfb_arb_resampler_ccf(float rate,
     d_est_phase_change = d_last_filter - (end_filter + accum_frac);
 }
 
-pfb_arb_resampler_ccf::~pfb_arb_resampler_ccf()
-{
-    for (unsigned int i = 0; i < d_int_rate; i++) {
-        delete d_filters[i];
-        delete d_diff_filters[i];
-    }
-}
-
 void pfb_arb_resampler_ccf::create_taps(const std::vector<float>& newtaps,
                                         std::vector<std::vector<float>>& ourtaps,
-                                        std::vector<fir_filter_ccf*>& ourfilter)
+                                        std::vector<fir_filter_ccf>& ourfilter)
 {
     unsigned int ntaps = newtaps.size();
     d_taps_per_filter = (unsigned int)ceil((double)ntaps / (double)d_int_rate);
@@ -122,7 +101,7 @@ void pfb_arb_resampler_ccf::create_taps(const std::vector<float>& newtaps,
         }
 
         // Build a filter for each channel and add it's taps to it
-        ourfilter[i]->set_taps(ourtaps[i]);
+        ourfilter[i].set_taps(ourtaps[i]);
     }
 }
 
@@ -176,7 +155,7 @@ void pfb_arb_resampler_ccf::set_phase(float ph)
 {
     if ((ph < 0) || (ph >= 2.0 * GR_M_PI)) {
         throw std::runtime_error(
-            "pfb_arb_resampler_ccf: set_phase value out of bounds [0, 2pi).\n");
+            "pfb_arb_resampler_ccf: set_phase value out of bounds [0, 2pi).");
     }
 
     float ph_diff = 2.0 * GR_M_PI / (float)d_filters.size();
@@ -211,8 +190,8 @@ int pfb_arb_resampler_ccf::filter(gr_complex* output,
         // start j by wrapping around mod the number of channels
         while (j < d_int_rate) {
             // Take the current filter and derivative filter output
-            o0 = d_filters[j]->filter(&input[i_in]);
-            o1 = d_diff_filters[j]->filter(&input[i_in]);
+            o0 = d_filters[j].filter(&input[i_in]);
+            o1 = d_diff_filters[j].filter(&input[i_in]);
 
             output[i_out] = o0 + o1 * d_acc; // linearly interpolate between samples
             i_out++;
@@ -253,14 +232,14 @@ pfb_arb_resampler_ccc::pfb_arb_resampler_ccc(float rate,
 
     d_last_filter = (taps.size() / 2) % filter_size;
 
-    d_filters = std::vector<fir_filter_ccc*>(d_int_rate);
-    d_diff_filters = std::vector<fir_filter_ccc*>(d_int_rate);
+    d_filters.reserve(d_int_rate);
+    d_diff_filters.reserve(d_int_rate);
 
     // Create an FIR filter for each channel and zero out the taps
     std::vector<gr_complex> vtaps(0, d_int_rate);
     for (unsigned int i = 0; i < d_int_rate; i++) {
-        d_filters[i] = new fir_filter_ccc(1, vtaps);
-        d_diff_filters[i] = new fir_filter_ccc(1, vtaps);
+        d_filters.emplace_back(vtaps);
+        d_diff_filters.emplace_back(vtaps);
     }
 
     // Now, actually set the filters' taps
@@ -286,17 +265,9 @@ pfb_arb_resampler_ccc::pfb_arb_resampler_ccc(float rate,
     d_est_phase_change = d_last_filter - (end_filter + accum_frac);
 }
 
-pfb_arb_resampler_ccc::~pfb_arb_resampler_ccc()
-{
-    for (unsigned int i = 0; i < d_int_rate; i++) {
-        delete d_filters[i];
-        delete d_diff_filters[i];
-    }
-}
-
 void pfb_arb_resampler_ccc::create_taps(const std::vector<gr_complex>& newtaps,
                                         std::vector<std::vector<gr_complex>>& ourtaps,
-                                        std::vector<fir_filter_ccc*>& ourfilter)
+                                        std::vector<fir_filter_ccc>& ourfilter)
 {
     unsigned int ntaps = newtaps.size();
     d_taps_per_filter = (unsigned int)ceil((double)ntaps / (double)d_int_rate);
@@ -320,7 +291,7 @@ void pfb_arb_resampler_ccc::create_taps(const std::vector<gr_complex>& newtaps,
         }
 
         // Build a filter for each channel and add it's taps to it
-        ourfilter[i]->set_taps(ourtaps[i]);
+        ourfilter[i].set_taps(ourtaps[i]);
     }
 }
 
@@ -377,7 +348,7 @@ void pfb_arb_resampler_ccc::set_phase(float ph)
 {
     if ((ph < 0) || (ph >= 2.0 * GR_M_PI)) {
         throw std::runtime_error(
-            "pfb_arb_resampler_ccc: set_phase value out of bounds [0, 2pi).\n");
+            "pfb_arb_resampler_ccc: set_phase value out of bounds [0, 2pi).");
     }
 
     float ph_diff = 2.0 * GR_M_PI / (float)d_filters.size();
@@ -412,8 +383,8 @@ int pfb_arb_resampler_ccc::filter(gr_complex* output,
         // start j by wrapping around mod the number of channels
         while (j < d_int_rate) {
             // Take the current filter and derivative filter output
-            o0 = d_filters[j]->filter(&input[i_in]);
-            o1 = d_diff_filters[j]->filter(&input[i_in]);
+            o0 = d_filters[j].filter(&input[i_in]);
+            o1 = d_diff_filters[j].filter(&input[i_in]);
 
             output[i_out] = o0 + o1 * d_acc; // linearly interpolate between samples
             i_out++;
@@ -454,14 +425,14 @@ pfb_arb_resampler_fff::pfb_arb_resampler_fff(float rate,
 
     d_last_filter = (taps.size() / 2) % filter_size;
 
-    d_filters = std::vector<fir_filter_fff*>(d_int_rate);
-    d_diff_filters = std::vector<fir_filter_fff*>(d_int_rate);
+    d_filters.reserve(d_int_rate);
+    d_diff_filters.reserve(d_int_rate);
 
     // Create an FIR filter for each channel and zero out the taps
     std::vector<float> vtaps(0, d_int_rate);
     for (unsigned int i = 0; i < d_int_rate; i++) {
-        d_filters[i] = new fir_filter_fff(1, vtaps);
-        d_diff_filters[i] = new fir_filter_fff(1, vtaps);
+        d_filters.emplace_back(vtaps);
+        d_diff_filters.emplace_back(vtaps);
     }
 
     // Now, actually set the filters' taps
@@ -487,17 +458,9 @@ pfb_arb_resampler_fff::pfb_arb_resampler_fff(float rate,
     d_est_phase_change = d_last_filter - (end_filter + accum_frac);
 }
 
-pfb_arb_resampler_fff::~pfb_arb_resampler_fff()
-{
-    for (unsigned int i = 0; i < d_int_rate; i++) {
-        delete d_filters[i];
-        delete d_diff_filters[i];
-    }
-}
-
 void pfb_arb_resampler_fff::create_taps(const std::vector<float>& newtaps,
                                         std::vector<std::vector<float>>& ourtaps,
-                                        std::vector<fir_filter_fff*>& ourfilter)
+                                        std::vector<fir_filter_fff>& ourfilter)
 {
     unsigned int ntaps = newtaps.size();
     d_taps_per_filter = (unsigned int)ceil((double)ntaps / (double)d_int_rate);
@@ -521,7 +484,7 @@ void pfb_arb_resampler_fff::create_taps(const std::vector<float>& newtaps,
         }
 
         // Build a filter for each channel and add it's taps to it
-        ourfilter[i]->set_taps(ourtaps[i]);
+        ourfilter[i].set_taps(ourtaps[i]);
     }
 }
 
@@ -575,7 +538,7 @@ void pfb_arb_resampler_fff::set_phase(float ph)
 {
     if ((ph < 0) || (ph >= 2.0 * GR_M_PI)) {
         throw std::runtime_error(
-            "pfb_arb_resampler_fff: set_phase value out of bounds [0, 2pi).\n");
+            "pfb_arb_resampler_fff: set_phase value out of bounds [0, 2pi).");
     }
 
     float ph_diff = 2.0 * GR_M_PI / (float)d_filters.size();
@@ -607,8 +570,8 @@ int pfb_arb_resampler_fff::filter(float* output, float* input, int n_to_read, in
         // start j by wrapping around mod the number of channels
         while (j < d_int_rate) {
             // Take the current filter and derivative filter output
-            o0 = d_filters[j]->filter(&input[i_in]);
-            o1 = d_diff_filters[j]->filter(&input[i_in]);
+            o0 = d_filters[j].filter(&input[i_in]);
+            o1 = d_diff_filters[j].filter(&input[i_in]);
 
             output[i_out] = o0 + o1 * d_acc; // linearly interpolate between samples
             i_out++;

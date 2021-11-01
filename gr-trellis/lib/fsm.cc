@@ -4,29 +4,17 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
+#include <gnuradio/logger.h>
 #include <gnuradio/trellis/base.h>
 #include <gnuradio/trellis/fsm.h>
-#include <stdlib.h>
+#include <boost/format.hpp>
 #include <cmath>
-#include <cstdio>
+#include <cstdlib>
 #include <fstream>
-#include <iostream>
 #include <stdexcept>
 #include <string>
 
@@ -86,12 +74,12 @@ fsm::fsm(const char* name)
     FILE* fsmfile;
 
     if ((fsmfile = fopen(name, "r")) == NULL)
-        throw std::runtime_error("fsm::fsm(const char *name): file open error\n");
+        throw std::runtime_error("fsm::fsm(const char *name): file open error");
     // printf("file open error in fsm()\n");
 
     if (fscanf(fsmfile, "%d %d %d\n", &d_I, &d_S, &d_O) == EOF) {
         if (ferror(fsmfile) != 0)
-            throw std::runtime_error("fsm::fsm(const char *name): file read error\n");
+            throw std::runtime_error("fsm::fsm(const char *name): file read error");
     }
 
     d_NS.resize(d_I * d_S);
@@ -102,7 +90,7 @@ fsm::fsm(const char* name)
             if (fscanf(fsmfile, "%d", &(d_NS[i * d_I + j])) == EOF) {
                 if (ferror(fsmfile) != 0)
                     throw std::runtime_error(
-                        "fsm::fsm(const char *name): file read error\n");
+                        "fsm::fsm(const char *name): file read error");
             }
         }
     }
@@ -111,7 +99,7 @@ fsm::fsm(const char* name)
             if (fscanf(fsmfile, "%d", &(d_OS[i * d_I + j])) == EOF) {
                 if (ferror(fsmfile) != 0)
                     throw std::runtime_error(
-                        "fsm::fsm(const char *name): file read error\n");
+                        "fsm::fsm(const char *name): file read error");
             }
         }
     }
@@ -431,6 +419,8 @@ void fsm::generate_PS_PI()
 //######################################################################
 void fsm::generate_TM()
 {
+    gr::logger_ptr logger, debug_logger;
+    gr::configure_default_loggers(logger, debug_logger, "gnuradio-config-info.cc");
     d_TMi.resize(d_S * d_S);
     d_TMl.resize(d_S * d_S);
 
@@ -450,9 +440,13 @@ void fsm::generate_TM()
         }
         if (done == false && d_S > 1) {
             // throw std::runtime_error ("fsm::generate_TM(): FSM appears to be
-            // disconnected\n");
-            printf("fsm::generate_TM(): FSM appears to be disconnected\n");
-            printf("state %d cannot be reached from all other states\n", s);
+            // disconnected");
+
+            GR_LOG_ERROR(
+                logger,
+                (boost::format("fsm::generate_TM(): FSM appears to be disconnected"
+                               "state %d cannot be reached from all other states") %
+                 s));
         }
     }
 }
@@ -488,8 +482,7 @@ void fsm::write_trellis_svg(std::string filename, int number_stages)
 {
     std::ofstream trellis_fname(filename.c_str());
     if (!trellis_fname) {
-        std::cout << "file not found " << std::endl;
-        exit(-1);
+        throw std::runtime_error("file not found");
     }
     const int TRELLIS_Y_OFFSET = 30;
     const int TRELLIS_X_OFFSET = 20;
@@ -578,8 +571,7 @@ void fsm::write_fsm_txt(std::string filename)
 {
     std::ofstream trellis_fname(filename.c_str());
     if (!trellis_fname) {
-        std::cout << "file not found " << std::endl;
-        exit(-1);
+        throw std::runtime_error("file not found");
     }
     trellis_fname << d_I << ' ' << d_S << ' ' << d_O << std::endl;
     trellis_fname << std::endl;

@@ -7,12 +7,24 @@ While not primarily a simulation tool, GNU Radio does support development of sig
 
 GNU Radio is licensed under the GNU General Public License (GPL) version 3. All of the code is copyright of the Free Software Foundation.
 """
-from __future__ import unicode_literals
 
 # This file makes gnuradio a package
 # The docstring will be associated with the top level of the package.
 
 import os
+
+# python3.8 and up need to have the dll search path set
+# https://docs.python.org/3/whatsnew/3.8.html#bpo-36085-whatsnew
+if os.name == 'nt' and hasattr(os, 'add_dll_directory'):
+    root_dir = __file__
+    for i in range(5): #limit search depth
+        root_dir = os.path.dirname(root_dir)
+        bin_dir = os.path.join(root_dir, 'bin')
+        if os.path.exists(bin_dir):
+            try: os.add_dll_directory(bin_dir)
+            except Exception as ex:
+                print('add_dll_directory(%s): %s'%(bin_dir, ex))
+            break
 
 # Check if the gnuradio package is installed or whether we're attempting to import it from
 # the build directory.
@@ -42,6 +54,10 @@ if path.endswith(path_ending):
     __path__.append(os.path.join(build_path, 'gr-vocoder', 'python'))
     __path__.append(os.path.join(build_path, 'gr-channels', 'python'))
     __path__.append(os.path.join(build_path, 'gr-fec', 'python'))
-    __path__.append(os.path.join(build_path, 'gr-utils', 'python'))
+    __path__.append(os.path.join(build_path, 'gr-utils'))
+    __path__.append(os.path.join(build_path, 'gr-iio', 'python'))
     __path__.append(os.path.join(build_path, 'gr-uhd', 'python'))
+    __path__.append(os.path.join(build_path, 'gr-pdu', 'python'))
+    __path__.append(os.path.join(build_path, 'gr-network', 'python'))
     __path__.append(os.path.join(build_path, 'gr-zeromq', 'python'))
+    __path__.append(os.path.join(build_path, 'gr-soapy', 'python'))

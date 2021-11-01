@@ -3,20 +3,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -78,17 +66,17 @@ header_payload_demux::make(int header_len,
                            const std::vector<std::string>& special_tags,
                            const size_t header_padding)
 {
-    return gnuradio::get_initial_sptr(new header_payload_demux_impl(header_len,
-                                                                    items_per_symbol,
-                                                                    guard_interval,
-                                                                    length_tag_key,
-                                                                    trigger_tag_key,
-                                                                    output_symbols,
-                                                                    itemsize,
-                                                                    timing_tag_key,
-                                                                    samp_rate,
-                                                                    special_tags,
-                                                                    header_padding));
+    return gnuradio::make_block_sptr<header_payload_demux_impl>(header_len,
+                                                                items_per_symbol,
+                                                                guard_interval,
+                                                                length_tag_key,
+                                                                trigger_tag_key,
+                                                                output_symbols,
+                                                                itemsize,
+                                                                timing_tag_key,
+                                                                samp_rate,
+                                                                special_tags,
+                                                                header_padding);
 }
 
 header_payload_demux_impl::header_payload_demux_impl(
@@ -150,9 +138,8 @@ header_payload_demux_impl::header_payload_demux_impl(
     }
     set_tag_propagation_policy(TPP_DONT);
     message_port_register_in(msg_port_id());
-    set_msg_handler(
-        msg_port_id(),
-        boost::bind(&header_payload_demux_impl::parse_header_data_msg, this, _1));
+    set_msg_handler(msg_port_id(),
+                    [this](pmt::pmt_t msg) { this->parse_header_data_msg(msg); });
     for (size_t i = 0; i < special_tags.size(); i++) {
         d_special_tags.push_back(pmt::string_to_symbol(special_tags[i]));
         d_special_tags_last_value.push_back(pmt::PMT_NIL);
@@ -393,7 +380,6 @@ int header_payload_demux_impl::find_trigger_signal(int skip_items,
                           base_offset + max_rel_offset,
                           d_trigger_tag_key);
         if (!tags.empty()) {
-            std::sort(tags.begin(), tags.end(), tag_t::offset_compare);
             const int tag_rel_offset = tags[0].offset - base_offset;
             if (tag_rel_offset < rel_offset) {
                 rel_offset = tag_rel_offset;
@@ -534,7 +520,6 @@ void header_payload_demux_impl::update_special_tags(uint64_t range_start,
         std::vector<tag_t> tags;
         get_tags_in_range(tags, PORT_INPUTDATA, range_start, range_end, d_timing_key);
         if (!tags.empty()) {
-            std::sort(tags.begin(), tags.end(), tag_t::offset_compare);
             d_last_time = tags.back().value;
             d_last_time_offset = tags.back().offset;
         }
@@ -549,7 +534,8 @@ void header_payload_demux_impl::update_special_tags(uint64_t range_start,
                           range_start,
                           range_end,
                           d_special_tags[i]);
-        std::sort(tags.begin(), tags.end(), tag_t::offset_compare);
+        // TODO / FIXME this loop seems lacking reason (just use the last value)
+        // However, not fixing this on the fly without understanding it.
         for (size_t t = 0; t < tags.size(); t++) {
             d_special_tags_last_value[i] = tags[t].value;
         }

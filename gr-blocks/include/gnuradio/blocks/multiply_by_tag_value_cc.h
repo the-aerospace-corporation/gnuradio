@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * This is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef INCLUDED_MULTIPLY_BY_TAG_VALUE_CC_H
@@ -45,7 +33,7 @@ class BLOCKS_API multiply_by_tag_value_cc : virtual public sync_block
 {
 public:
     // gr::blocks::multiply_by_tag_value_cc::sptr
-    typedef boost::shared_ptr<multiply_by_tag_value_cc> sptr;
+    typedef std::shared_ptr<multiply_by_tag_value_cc> sptr;
 
     /*!
      * \brief Create an instance of multiply_by_tag_value_cc

@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -215,8 +203,7 @@ multiply_matrix<T>::make(std::vector<std::vector<T>> A,
     if (A.empty() || A[0].empty()) {
         throw std::invalid_argument("matrix A has invalid dimensions.");
     }
-    return gnuradio::get_initial_sptr(
-        new multiply_matrix_impl<T>(A, tag_propagation_policy));
+    return gnuradio::make_block_sptr<multiply_matrix_impl<T>>(A, tag_propagation_policy);
 }
 
 template <>
@@ -235,9 +222,7 @@ multiply_matrix_impl<gr_complex>::multiply_matrix_impl(
 
     pmt::pmt_t port_name = pmt::string_to_symbol("set_A");
     message_port_register_in(port_name);
-    set_msg_handler(
-        port_name,
-        boost::bind(&multiply_matrix_impl<gr_complex>::msg_handler_A, this, _1));
+    set_msg_handler(port_name, [this](pmt::pmt_t msg) { this->msg_handler_A(msg); });
 }
 
 template <>
@@ -256,8 +241,7 @@ multiply_matrix_impl<float>::multiply_matrix_impl(
 
     pmt::pmt_t port_name = pmt::string_to_symbol("set_A");
     message_port_register_in(port_name);
-    set_msg_handler(port_name,
-                    boost::bind(&multiply_matrix_impl<float>::msg_handler_A, this, _1));
+    set_msg_handler(port_name, [this](pmt::pmt_t msg) { this->msg_handler_A(msg); });
 }
 
 

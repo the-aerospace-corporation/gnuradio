@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef INCLUDED_DIGITAL_MPSK_SNR_EST_CC_H
@@ -48,12 +36,14 @@ namespace digital {
  * designed and proven theoretically under AWGN conditions; some
  * amount of error should be assumed and/or estimated for real
  * channel conditions.
+ *
+ * The estimator is normally placed before clock recovery.
  */
 class DIGITAL_API mpsk_snr_est_cc : virtual public sync_block
 {
 public:
     // gr::digital::mpsk_snr_est_cc::sptr
-    typedef boost::shared_ptr<mpsk_snr_est_cc> sptr;
+    typedef std::shared_ptr<mpsk_snr_est_cc> sptr;
 
     /*! Factory function returning shared pointer of this class
      *
@@ -62,7 +52,8 @@ public:
      *  \param tag_nsamples: after this many samples, a tag containing
      *  the SNR (key='snr') will be sent
      *  \param alpha: the update rate of internal running average
-     *  calculations
+     *  calculations. Needs to be between 0 and 1, where higher value
+     *  adjusts faster to new data.
      */
     static sptr make(snr_est_type_t type, int tag_nsamples = 10000, double alpha = 0.001);
 

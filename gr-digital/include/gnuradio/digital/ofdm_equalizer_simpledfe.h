@@ -3,20 +3,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef INCLUDED_DIGITAL_OFDM_EQUALIZER_SIMPLEDFE_H
@@ -56,15 +44,18 @@ namespace digital {
  * channel state is estimated incorrectly during equalization; after that,
  * all subsequent symbols will be completely wrong.
  *
- * Note that the equalized symbols are *exact points* on the constellation.
- * This means soft information of the modulation symbols is lost after the
+ * Note that, by default, the equalized symbols are *exact points* on the
+ * constellation.
+ * This means that soft information of the modulation symbols is lost after the
  * equalization, which is suboptimal for channel codes that use soft decision.
+ * If this behaviour is not desired, set the `enable_soft_output` parameter to
+ * true.
  *
  */
 class DIGITAL_API ofdm_equalizer_simpledfe : public ofdm_equalizer_1d_pilots
 {
 public:
-    typedef boost::shared_ptr<ofdm_equalizer_simpledfe> sptr;
+    typedef std::shared_ptr<ofdm_equalizer_simpledfe> sptr;
 
     ofdm_equalizer_simpledfe(int fft_len,
                              const gr::digital::constellation_sptr& constellation,
@@ -76,14 +67,15 @@ public:
                                  std::vector<std::vector<gr_complex>>(),
                              int symbols_skipped = 0,
                              float alpha = 0.1,
-                             bool input_is_shifted = true);
+                             bool input_is_shifted = true,
+                             bool enable_soft_output = false);
 
-    ~ofdm_equalizer_simpledfe();
+    ~ofdm_equalizer_simpledfe() override;
 
     void equalize(gr_complex* frame,
                   int n_sym,
                   const std::vector<gr_complex>& initial_taps = std::vector<gr_complex>(),
-                  const std::vector<tag_t>& tags = std::vector<tag_t>());
+                  const std::vector<tag_t>& tags = std::vector<tag_t>()) override;
 
     /*
      * \param fft_len FFT length
@@ -109,6 +101,9 @@ public:
      *                         the first input items is on the DC carrier.
      *                         Note that a lot of the OFDM receiver blocks operate on
      * shifted signals!
+     * \param enable_soft_output Output noisy equalized symbols instead of exact
+     *                           constellation symbols.
+     *                           This is useful for soft demodulation and decoding.
      */
     static sptr make(int fft_len,
                      const gr::digital::constellation_sptr& constellation,
@@ -120,12 +115,15 @@ public:
                          std::vector<std::vector<gr_complex>>(),
                      int symbols_skipped = 0,
                      float alpha = 0.1,
-                     bool input_is_shifted = true);
+                     bool input_is_shifted = true,
+                     bool enable_soft_output = false);
 
 private:
     gr::digital::constellation_sptr d_constellation;
     //! Averaging coefficient
     float d_alpha;
+    //! Do not output exact constellation symbols
+    bool d_enable_soft_output;
 };
 
 } /* namespace digital */

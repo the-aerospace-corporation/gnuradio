@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -27,6 +15,8 @@
 #include "atsc_rs_decoder_impl.h"
 #include "gnuradio/dtv/atsc_consts.h"
 #include <gnuradio/io_signature.h>
+
+#include <boost/format.hpp>
 
 namespace gr {
 namespace dtv {
@@ -43,39 +33,42 @@ static const int amount_of_pad = N - ATSC_MPEG_RS_ENCODED_LENGTH; // 48
 
 atsc_rs_decoder::sptr atsc_rs_decoder::make()
 {
-    return gnuradio::get_initial_sptr(new atsc_rs_decoder_impl());
+    return gnuradio::make_block_sptr<atsc_rs_decoder_impl>();
 }
 
 atsc_rs_decoder_impl::atsc_rs_decoder_impl()
-    : gr::sync_block("dtv_atsc_rs_decoder",
-                     io_signature::make(1, 1, sizeof(atsc_mpeg_packet_rs_encoded)),
-                     io_signature::make(1, 1, sizeof(atsc_mpeg_packet_no_sync)))
+    : gr::sync_block(
+          "dtv_atsc_rs_decoder",
+          io_signature::make2(
+              2, 2, sizeof(uint8_t) * ATSC_MPEG_RS_ENCODED_LENGTH, sizeof(plinfo)),
+          io_signature::make2(
+              2, 2, sizeof(uint8_t) * ATSC_MPEG_PKT_LENGTH, sizeof(plinfo)))
 {
     d_rs = init_rs_char(
         rs_init_symsize, rs_init_gfpoly, rs_init_fcr, rs_init_prim, rs_init_nroots);
     assert(d_rs != 0);
-    d_nerrors_corrrected_count = 0;
+    d_nerrors_corrected_count = 0;
     d_bad_packet_count = 0;
     d_total_packets = 0;
 }
 
-int atsc_rs_decoder_impl::decode(atsc_mpeg_packet_no_sync& out,
-                                 const atsc_mpeg_packet_rs_encoded& in)
+int atsc_rs_decoder_impl::decode(uint8_t* out, const uint8_t* in)
 {
     unsigned char tmp[N];
     int ncorrections;
 
-    assert((int)(amount_of_pad + sizeof(in.data)) == N);
+    // assert((int)(amount_of_pad + sizeof(in.data)) == N);
+    assert((int)(amount_of_pad + ATSC_MPEG_RS_ENCODED_LENGTH) == N);
 
     // add missing prefix zero padding to message
     memset(tmp, 0, amount_of_pad);
-    memcpy(&tmp[amount_of_pad], in.data, sizeof(in.data));
+    memcpy(&tmp[amount_of_pad], in, ATSC_MPEG_RS_ENCODED_LENGTH);
 
     // correct message...
     ncorrections = decode_rs_char(d_rs, tmp, 0, 0);
 
     // copy corrected message to output, skipping prefix zero padding
-    memcpy(out.data, &tmp[amount_of_pad], sizeof(out.data));
+    memcpy(out, &tmp[amount_of_pad], ATSC_MPEG_PKT_LENGTH);
 
     return ncorrections;
 }
@@ -89,7 +82,7 @@ atsc_rs_decoder_impl::~atsc_rs_decoder_impl()
 
 int atsc_rs_decoder_impl::num_errors_corrected() const
 {
-    return d_nerrors_corrrected_count;
+    return d_nerrors_corrected_count;
 }
 
 int atsc_rs_decoder_impl::num_bad_packets() const { return d_bad_packet_count; }
@@ -100,29 +93,31 @@ int atsc_rs_decoder_impl::work(int noutput_items,
                                gr_vector_const_void_star& input_items,
                                gr_vector_void_star& output_items)
 {
-    const atsc_mpeg_packet_rs_encoded* in =
-        (const atsc_mpeg_packet_rs_encoded*)input_items[0];
-    atsc_mpeg_packet_no_sync* out = (atsc_mpeg_packet_no_sync*)output_items[0];
+    auto in = static_cast<const uint8_t*>(input_items[0]);
+    auto out = static_cast<uint8_t*>(output_items[0]);
+    auto plin = static_cast<const plinfo*>(input_items[1]);
+    auto plout = static_cast<plinfo*>(output_items[1]);
 
     for (int i = 0; i < noutput_items; i++) {
-        assert(in[i].pli.regular_seg_p());
-        out[i].pli = in[i].pli; // copy pipeline info...
+        assert(plin[i].regular_seg_p());
 
-        int nerrors_corrrected = decode(out[i], in[i]);
-        out[i].pli.set_transport_error(nerrors_corrrected == -1);
-        if (nerrors_corrrected == -1) {
+        plout[i] = plin[i]; // copy pipeline info...
+
+        int nerrors_corrected =
+            decode(&out[i * ATSC_MPEG_PKT_LENGTH], &in[i * ATSC_MPEG_RS_ENCODED_LENGTH]);
+        plout[i].set_transport_error(nerrors_corrected == -1);
+        if (nerrors_corrected == -1) {
             d_bad_packet_count++;
-            d_nerrors_corrrected_count +=
-                10; // lower bound estimate; most this RS can fix
+            d_nerrors_corrected_count += 10; // lower bound estimate; most this RS can fix
         } else {
-            d_nerrors_corrrected_count += nerrors_corrrected;
+            d_nerrors_corrected_count += nerrors_corrected;
         }
 
         d_total_packets++;
 #if 0
         if (d_total_packets > 1000) {
           GR_LOG_INFO(d_logger, boost::format("Error rate: %1%\tPacket error rate: %2%") \
-                       % ((float)d_nerrors_corrrected_count/(ATSC_MPEG_DATA_LENGTH*d_total_packets))
+                       % ((float)d_nerrors_corrected_count/(ATSC_MPEG_PKT_LENGTH*d_total_packets))
                        % ((float)d_bad_packet_count/d_total_packets));
         }
 #endif

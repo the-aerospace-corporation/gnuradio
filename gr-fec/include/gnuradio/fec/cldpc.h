@@ -4,26 +4,13 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef LDPC_H
 #define LDPC_H
 
-#include <iostream>
 #include <vector>
 
 #include "gnuradio/fec/alist.h"
@@ -60,7 +47,7 @@ public:
       section A.1 of the reference given below.
        - "Modern Coding Theory", T Richardson and R Urbanke.
     */
-    std::vector<char> encode(std::vector<char> dataword);
+    std::vector<uint8_t> encode(std::vector<uint8_t> dataword);
 
     //! Returns the dimension of the code
     int dimension();
@@ -78,16 +65,16 @@ public:
     int get_N();
 
     //! Returns the syndrome for a given vector "in"
-    std::vector<char> syndrome(const std::vector<char> in);
+    std::vector<uint8_t> syndrome(const std::vector<uint8_t> in);
 
     //! Returns true if "in" is a codeword, else false
-    bool is_codeword(const std::vector<char> in);
+    bool is_codeword(const std::vector<uint8_t> in);
 
     //! Set the variable _list
     void set_alist(const alist _list);
 
     //! Obtain systematic bits from "in"
-    std::vector<char> get_systematic_bits(std::vector<char> in);
+    std::vector<uint8_t> get_systematic_bits(std::vector<uint8_t> in);
 
 private:
     //! The parity check matrix

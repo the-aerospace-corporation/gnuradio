@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef SPECTRUM_DISPLAY_FORM_H
@@ -43,7 +31,13 @@ class SpectrumDisplayForm : public QWidget, public Ui::SpectrumDisplayForm
 
 public:
     SpectrumDisplayForm(QWidget* parent = 0);
-    ~SpectrumDisplayForm();
+    ~SpectrumDisplayForm() override;
+
+    // Disable copy/move because of QT raw pointers.
+    SpectrumDisplayForm(const SpectrumDisplayForm&) = delete;
+    SpectrumDisplayForm(SpectrumDisplayForm&&) = delete;
+    SpectrumDisplayForm& operator=(const SpectrumDisplayForm&) = delete;
+    SpectrumDisplayForm& operator=(SpectrumDisplayForm&&) = delete;
 
     void setSystem(SpectrumGUIClass* newSystem,
                    const uint64_t numFFTDataPoints,
@@ -63,8 +57,8 @@ public:
     bool checkClicked();
 
 public slots:
-    void resizeEvent(QResizeEvent* e);
-    void customEvent(QEvent* e);
+    void resizeEvent(QResizeEvent* e) override;
+    void customEvent(QEvent* e) override;
     void avgLineEdit_valueChanged(int valueString);
     void maxHoldCheckBox_toggled(bool newState);
     void minHoldCheckBox_toggled(bool newState);
@@ -75,7 +69,7 @@ public slots:
     void setFrequencyRange(const double newCenterFrequency,
                            const double newStartFrequency,
                            const double newStopFrequency);
-    void closeEvent(QCloseEvent* e);
+    void closeEvent(QCloseEvent* e) override;
     void windowTypeChanged(int newItem);
     void useRFFrequenciesCB(bool useRFFlag);
     void toggleRFFrequencies(bool en);
@@ -109,31 +103,30 @@ signals:
     void plotPointSelected(const QPointF p, int type);
 
 private:
-    void _averageHistory(const double* newBuffer);
+    void _averageHistory(const std::vector<double>& newBuffer);
 
-    int _historyEntryCount;
-    int _historyEntry;
-    std::vector<double*>* _historyVector;
-    double* _averagedValues;
-    uint64_t _numRealDataPoints;
-    double* _realFFTDataPoints;
-    QIntValidator* _intValidator;
+    int _historyEntryCount = 0;
+    int _historyEntry = 0;
+    std::deque<std::vector<double>> _historyVector;
+    std::vector<double> _averagedValues;
+    std::vector<double> _realFFTDataPoints;
+    QIntValidator _intValidator;
     FrequencyDisplayPlot* _frequencyDisplayPlot;
     WaterfallDisplayPlot* _waterfallDisplayPlot;
     TimeDomainDisplayPlot* _timeDomainDisplayPlot;
     ConstellationDisplayPlot* _constellationDisplayPlot;
     SpectrumGUIClass* _system;
-    bool _systemSpecifiedFlag;
+    bool _systemSpecifiedFlag = false;
     double _centerFrequency;
     double _startFrequency;
     double _noiseFloorAmplitude;
-    double _peakFrequency;
+    double _peakFrequency = 0;
     double _peakAmplitude;
     double _stopFrequency;
 
     double d_units;
-    bool d_clicked;
-    double d_clicked_freq;
+    bool d_clicked = false;
+    double d_clicked_freq = 0;
 
     // SpectrumUpdateEvent _lastSpectrumEvent;
 
@@ -143,7 +136,7 @@ private:
     int d_plot_time;
     int d_plot_constellation;
 
-    QTimer* displayTimer;
+    QTimer displayTimer;
     double d_update_time;
 };
 

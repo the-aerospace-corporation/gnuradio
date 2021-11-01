@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef WATERFALL_DISPLAY_PLOT_H
@@ -27,7 +15,7 @@
 #include <gnuradio/qtgui/DisplayPlot.h>
 #include <gnuradio/qtgui/waterfallGlobalData.h>
 #include <qwt_plot_spectrogram.h>
-#include <stdint.h>
+#include <cstdint>
 #include <cstdio>
 #include <vector>
 
@@ -57,7 +45,7 @@ class WaterfallDisplayPlot : public DisplayPlot
 
 public:
     WaterfallDisplayPlot(int nplots, QWidget*);
-    virtual ~WaterfallDisplayPlot();
+    ~WaterfallDisplayPlot() override;
 
     void resetAxis();
 
@@ -85,7 +73,7 @@ public:
     double getMinIntensity(unsigned int which) const;
     double getMaxIntensity(unsigned int which) const;
 
-    void replot(void);
+    void replot(void) override;
     void clearData();
 
     int getIntensityColorMapType(unsigned int) const;
@@ -107,7 +95,7 @@ public slots:
     void setUserDefinedLowIntensityColor(QColor);
     void setUserDefinedHighIntensityColor(QColor);
     void setPlotPosHalf(bool half);
-    void disableLegend();
+    void disableLegend() override;
     void enableLegend();
     void enableLegend(bool en);
     void setNumRows(int nrows);

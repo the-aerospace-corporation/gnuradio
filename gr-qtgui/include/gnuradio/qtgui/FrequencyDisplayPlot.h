@@ -4,27 +4,15 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef FREQUENCY_DISPLAY_PLOT_HPP
 #define FREQUENCY_DISPLAY_PLOT_HPP
 
 #include <gnuradio/qtgui/DisplayPlot.h>
-#include <stdint.h>
+#include <cstdint>
 #include <cstdio>
 #include <vector>
 
@@ -60,7 +48,7 @@ class FrequencyDisplayPlot : public DisplayPlot
 
 public:
     FrequencyDisplayPlot(int nplots, QWidget*);
-    virtual ~FrequencyDisplayPlot();
+    ~FrequencyDisplayPlot() override;
 
     void setFrequencyRange(const double,
                            const double,
@@ -84,9 +72,9 @@ public:
                      const double peakAmplitude,
                      const double timeInterval);
 
-    void replot();
+    void replot() override;
 
-    void setYaxis(double min, double max);
+    void setYaxis(double min, double max) override;
     double getYMin() const;
     double getYMax() const;
 
@@ -144,7 +132,7 @@ private:
     void _resetXAxisPoints();
     void _autoScale(double bottom, double top);
 
-    std::vector<double*> d_ydata;
+    std::vector<std::vector<double>> d_ydata;
 
     QwtPlotCurve* d_min_fft_plot_curve;
     QwtPlotCurve* d_max_fft_plot_curve;
@@ -161,12 +149,12 @@ private:
     bool d_marker_noise_floor_amplitude_visible;
     QColor d_marker_cf_color;
 
-    double d_start_frequency;
-    double d_stop_frequency;
+    double d_start_frequency = -1;
+    double d_stop_frequency = 1;
     double d_center_frequency;
-    double d_ymax;
-    double d_ymin;
-    bool d_half_freq;
+    double d_ymax = 10;
+    double d_ymin = -120;
+    bool d_half_freq = false;
 
     QwtPlotMarker* d_lower_intensity_marker;
     QwtPlotMarker* d_upper_intensity_marker;
@@ -175,18 +163,18 @@ private:
     QwtPlotMarker* d_marker_noise_floor_amplitude;
     QwtPlotMarker* d_marker_cf;
 
-    double* d_xdata;
+    std::vector<double> d_xdata;
     int d_xdata_multiplier;
 
-    double* d_min_fft_data;
-    double* d_max_fft_data;
+    std::vector<double> d_min_fft_data;
+    std::vector<double> d_max_fft_data;
 
     double d_peak_frequency;
     double d_peak_amplitude;
 
     double d_noise_floor_amplitude;
 
-    bool d_autoscale_shot;
+    bool d_autoscale_shot = false;
 
     QwtPlotMarker* d_trigger_line;
 };

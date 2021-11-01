@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -71,8 +59,8 @@ BOOST_AUTO_TEST_CASE(t2)
     static const unsigned int N = 100000;
 
     gr::blocks::rotator r;
-    gr_complex* input = new gr_complex[N];
-    gr_complex* output = new gr_complex[N];
+    std::vector<gr_complex> input(N);
+    std::vector<gr_complex> output(N);
 
     double phase_incr = 2 * GR_M_PI / 1003;
     double phase = 0;
@@ -85,7 +73,7 @@ BOOST_AUTO_TEST_CASE(t2)
         input[i] = gr_complex(1.0f, 0.0f);
 
     // Rotate it
-    r.rotateN(output, input, N);
+    r.rotateN(output.data(), input.data(), N);
 
     // Compare with expected result
     for (unsigned i = 0; i < N; i++) {
@@ -98,7 +86,4 @@ BOOST_AUTO_TEST_CASE(t2)
         if (phase >= 2 * GR_M_PI)
             phase -= 2 * GR_M_PI;
     }
-
-    delete[] output;
-    delete[] input;
 }

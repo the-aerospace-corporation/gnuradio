@@ -2,25 +2,17 @@
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 
 ########################################################################
 # Install header files
 ########################################################################
 install(FILES
+    adaptive_algorithm.h
+    adaptive_algorithm_cma.h
+    adaptive_algorithm_lms.h
+    adaptive_algorithm_nlms.h
     additive_scrambler_bb.h
     api.h
     binary_slicer_fb.h
@@ -28,9 +20,9 @@ install(FILES
     chunks_to_symbols.h
     clock_recovery_mm_cc.h
     clock_recovery_mm_ff.h
-    cma_equalizer_cc.h
     constellation.h
     constellation_decoder_cb.h
+    constellation_encoder_bc.h
     constellation_receiver_cb.h
     constellation_soft_decoder_cf.h
     corr_est_cc.h
@@ -41,10 +33,12 @@ install(FILES
     correlate_access_code_ff_ts.h
     costas_loop_cc.h
     cpmmod_bc.h
-    crc32.h
+    crc16_async_bb.h
     crc32_bb.h
     crc32_async_bb.h
+    decision_feedback_equalizer.h
     descrambler_bb.h
+    diff_coding_type.h
     diff_decoder_bb.h
     diff_encoder_bb.h
     diff_phasor_cc.h
@@ -57,9 +51,8 @@ install(FILES
     hdlc_framer_pb.h
     header_buffer.h
     header_payload_demux.h
-    kurtotic_equalizer_cc.h
     lfsr.h
-    lms_dd_equalizer_cc.h
+    linear_equalizer.h
     map_bb.h
     metric_type.h
     modulate_vector.h
@@ -94,12 +87,10 @@ install(FILES
     probe_density_b.h
     probe_mpsk_snr_est_c.h
     scrambler_bb.h
-    simple_correlator.h
-    simple_framer.h
-    simple_framer_sync.h
     interpolating_resampler_type.h
     symbol_sync_cc.h
     symbol_sync_ff.h
     timing_error_detector_type.h
     DESTINATION ${GR_INCLUDE_DIR}/gnuradio/digital
 )
+

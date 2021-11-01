@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #include "thrift/ControlPort.h"
@@ -35,14 +23,19 @@
 
 using namespace rpcpmtconverter;
 
+gr::logger_ptr rpcserver_thrift::d_logger;
+gr::logger_ptr rpcserver_thrift::d_debug_logger;
+
+
 rpcserver_thrift::rpcserver_thrift()
 {
-    // std::cerr << "rpcserver_thrift::ctor" << std::endl;
+    gr::configure_default_loggers(d_logger, d_debug_logger, "rpcserver_thrift");
+    // std::cerr << "rpcserver_thrift::ctor" ;
 }
 
 rpcserver_thrift::~rpcserver_thrift()
 {
-    // std::cerr << "rpcserver_thrift::dtor" << std::endl;
+    // std::cerr << "rpcserver_thrift::dtor" ;
 }
 
 void rpcserver_thrift::registerConfigureCallback(const std::string& id,
@@ -55,13 +48,15 @@ void rpcserver_thrift::registerConfigureCallback(const std::string& id,
             std::stringstream s;
             s << "rpcserver_thrift:: rpcserver_thrift ERROR registering set, already "
                  "registered: "
-              << id << std::endl;
+              << id;
             throw std::runtime_error(s.str().c_str());
         }
     }
 
     if (DEBUG) {
-        std::cerr << "rpcserver_thrift registering set: " << id << std::endl;
+        std::ostringstream msg;
+        msg << "registering set: " << id;
+        GR_LOG_INFO(d_debug_logger, msg.str());
     }
     d_setcallbackmap.insert(ConfigureCallbackMap_t::value_type(id, callback));
 }
@@ -74,12 +69,15 @@ void rpcserver_thrift::unregisterConfigureCallback(const std::string& id)
         std::stringstream s;
         s << "rpcserver_thrift:: rpcserver_thrift ERROR unregistering set, not "
              "registered: "
-          << id << std::endl;
+          << id;
         throw std::runtime_error(s.str().c_str());
     }
 
-    if (DEBUG)
-        std::cerr << "rpcserver_thrift unregistering set: " << id << std::endl;
+    if (DEBUG) {
+        std::ostringstream msg;
+        msg << "unregistering set: " << id;
+        GR_LOG_INFO(d_debug_logger, msg.str());
+    }
 
     d_setcallbackmap.erase(iter);
 }
@@ -94,13 +92,15 @@ void rpcserver_thrift::registerQueryCallback(const std::string& id,
             std::stringstream s;
             s << "rpcserver_thrift:: rpcserver_thrift ERROR registering get, already "
                  "registered: "
-              << id << std::endl;
+              << id;
             throw std::runtime_error(s.str().c_str());
         }
     }
 
     if (DEBUG) {
-        std::cerr << "rpcserver_thrift registering get: " << id << std::endl;
+        std::ostringstream msg;
+        msg << "registering get: " << id;
+        GR_LOG_INFO(d_debug_logger, msg.str());
     }
     d_getcallbackmap.insert(QueryCallbackMap_t::value_type(id, callback));
 }
@@ -112,12 +112,14 @@ void rpcserver_thrift::unregisterQueryCallback(const std::string& id)
     if (iter == d_getcallbackmap.end()) {
         std::stringstream s;
         s << "rpcserver_thrift:: rpcserver_thrift ERROR unregistering get,  registered: "
-          << id << std::endl;
+          << id;
         throw std::runtime_error(s.str().c_str());
     }
 
     if (DEBUG) {
-        std::cerr << "rpcserver_thrift unregistering get: " << id << std::endl;
+        std::ostringstream msg;
+        msg << "unregistering get: " << id;
+        GR_LOG_INFO(d_debug_logger, msg.str());
     }
 
     d_getcallbackmap.erase(iter);
@@ -134,13 +136,15 @@ void rpcserver_thrift::registerHandlerCallback(const std::string& id,
             std::stringstream s;
             s << "rpcserver_thrift:: rpcserver_thrift ERROR registering handler, already "
                  "registered: "
-              << id << std::endl;
+              << id;
             throw std::runtime_error(s.str().c_str());
         }
     }
 
     if (DEBUG) {
-        std::cerr << "rpcserver_thrift registering handler: " << id << std::endl;
+        std::ostringstream msg;
+        msg << "registering handler: " << id;
+        GR_LOG_INFO(d_debug_logger, msg.str());
     }
     d_handlercallbackmap.insert(HandlerCallbackMap_t::value_type(id, callback));
 }
@@ -153,12 +157,14 @@ void rpcserver_thrift::unregisterHandlerCallback(const std::string& id)
         std::stringstream s;
         s << "rpcserver_thrift:: rpcserver_thrift ERROR unregistering handler, "
              "registered: "
-          << id << std::endl;
+          << id;
         throw std::runtime_error(s.str().c_str());
     }
 
     if (DEBUG) {
-        std::cerr << "rpcserver_thrift unregistering handler: " << id << std::endl;
+        std::ostringstream msg;
+        msg << "unregistering handler: " << id;
+        GR_LOG_INFO(d_debug_logger, msg.str());
     }
 
     d_handlercallbackmap.erase(iter);
@@ -178,7 +184,7 @@ void rpcserver_thrift::getKnobs(GNURadio::KnobMap& _return,
                                 const GNURadio::KnobIDList& knobs)
 {
     boost::mutex::scoped_lock lock(d_callback_map_lock);
-    if (knobs.size() == 0) {
+    if (knobs.empty()) {
         std::for_each(d_getcallbackmap.begin(),
                       d_getcallbackmap.end(),
                       get_all_f<QueryCallbackMap_t::value_type,
@@ -196,7 +202,7 @@ void rpcserver_thrift::getRe(GNURadio::KnobMap& _return,
                              const GNURadio::KnobIDList& knobs)
 {
     boost::mutex::scoped_lock lock(d_callback_map_lock);
-    if (knobs.size() == 0) {
+    if (knobs.empty()) {
         std::for_each(d_getcallbackmap.begin(),
                       d_getcallbackmap.end(),
                       get_all_f<QueryCallbackMap_t::value_type,
@@ -222,7 +228,7 @@ void rpcserver_thrift::properties(GNURadio::KnobPropMap& _return,
                                   const GNURadio::KnobIDList& knobs)
 {
     boost::mutex::scoped_lock lock(d_callback_map_lock);
-    if (knobs.size() == 0) {
+    if (knobs.empty()) {
         std::for_each(
             d_getcallbackmap.begin(),
             d_getcallbackmap.end(),
@@ -270,6 +276,8 @@ void rpcserver_thrift::postMessage(const std::string& alias,
 void rpcserver_thrift::shutdown()
 {
     if (DEBUG) {
-        std::cerr << "Shutting down..." << std::endl;
+        std::ostringstream msg;
+        msg << "shutting down rpcserver_thrift... ";
+        GR_LOG_INFO(d_debug_logger, msg.str());
     }
 }

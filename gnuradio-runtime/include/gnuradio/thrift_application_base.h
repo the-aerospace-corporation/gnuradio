@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef THRIFT_APPLICATION_BASE_H
@@ -28,12 +16,12 @@
 #include <gnuradio/prefs.h>
 #include <gnuradio/thread/thread.h>
 #include <boost/date_time/posix_time/posix_time.hpp>
-#include <boost/scoped_ptr.hpp>
+#include <memory>
 
 namespace {
 // Time, in milliseconds, to wait between checks to the Thrift runtime to see if
 // it has fully initialized.
-static const unsigned int THRIFTAPPLICATION_ACTIVATION_TIMEOUT_MS(200);
+static constexpr unsigned int THRIFTAPPLICATION_ACTIVATION_TIMEOUT_MS(200);
 }; // namespace
 
 namespace apache {
@@ -63,7 +51,7 @@ public:
     // Stores the generated endpoint string after the Thrift runtime has initialized.
     std::string d_endpointStr;
     // Thread to execute the Thrift runtime's blocking serve() function.
-    boost::shared_ptr<gr::thread::thread> d_start_thrift_thread;
+    std::shared_ptr<gr::thread::thread> d_start_thrift_thread;
 };
 
 /*!
@@ -126,7 +114,7 @@ protected:
     /*!
      * Reference to the Thrift runtime.
      */
-    boost::scoped_ptr<apache::thrift::server::TServer> d_thriftserver;
+    std::unique_ptr<apache::thrift::server::TServer> d_thriftserver;
 
     /*!
      * Max number of attempts when checking the Thrift runtime for
@@ -156,7 +144,8 @@ protected:
     static const unsigned int d_default_thrift_buffer_size;
 
     /*!
-     * \ref page_logger instances.
+     * <a href="https://wiki.gnuradio.org/index.php/Logging" target="_blank">Logging</a>
+     * instances.
      */
     gr::logger_ptr d_logger, d_debug_logger;
 
@@ -182,7 +171,7 @@ private:
 
     // Pointer to the structure containing statically allocated
     // state information for the applicaiton_base singleton.
-    static boost::scoped_ptr<thrift_application_base_impl> p_impl;
+    static std::unique_ptr<thrift_application_base_impl> p_impl;
 
     // Mutex to protect the endpoint string.
     gr::thread::mutex d_lock;
@@ -213,8 +202,8 @@ void thrift_application_base<TserverBase, TserverClass>::start_application()
             "thrift", "init_attempts", d_default_max_init_attempts));
 
     if (!p_impl->d_application_initialized) {
-        p_impl->d_start_thrift_thread.reset((new gr::thread::thread(
-            boost::bind(&thrift_application_base::start_thrift, d_application))));
+        p_impl->d_start_thrift_thread = std::make_shared<gr::thread::thread>(
+            [app = d_application] { app->start_thrift(); });
 
         bool app_started(false);
         for (unsigned int attempts(0); (!app_started && attempts < max_init_attempts);

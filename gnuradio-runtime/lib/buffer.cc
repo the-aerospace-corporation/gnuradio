@@ -4,47 +4,30 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 #include "vmcircbuf.h"
+#include <gnuradio/block.h>
 #include <gnuradio/buffer.h>
+#include <gnuradio/buffer_double_mapped.h>
+#include <gnuradio/buffer_reader.h>
+#include <gnuradio/buffer_single_mapped.h>
+#include <gnuradio/buffer_type.h>
+#include <gnuradio/integer_math.h>
 #include <gnuradio/math.h>
-#include <assert.h>
+#include <boost/format.hpp>
 #include <algorithm>
-#include <iostream>
+#include <cassert>
 #include <stdexcept>
-
-// the following header is deprecated as of Boost 1.66.0, and the
-// other API was introduced in Boost 1.58.0. Since we still support
-// Boost back to 1.54.0, use the older API if pre-1.5.80 and otherwise
-// use the newer API.
-#if (BOOST_VERSION < 105800)
-#include <boost/math/common_factor_rt.hpp>
-#else
-#include <boost/integer/common_factor_rt.hpp>
-#endif
 
 namespace gr {
 
 static long s_buffer_count = 0; // counts for debugging storage mgmt
-static long s_buffer_reader_count = 0;
 
 /* ----------------------------------------------------------------------------
                       Notes on storage management
@@ -59,7 +42,7 @@ static long s_buffer_reader_count = 0;
  both want pointers to each other, and unless we do something, we'll
  never delete any of them because of the circular structure.
  They'll always have a reference count of at least one.  We could
- use boost::weak_ptr's from gr::buffer to gr::buffer_reader but that
+ use std::weak_ptr's from gr::buffer to gr::buffer_reader but that
  introduces it's own problems.  (gr::buffer_reader's destructor needs
  to call gr::buffer::drop_reader, but has no easy way to get a
  shared_ptr to itself.)
@@ -73,148 +56,99 @@ static long s_buffer_reader_count = 0;
  gr::buffer_reader goes to zero, we can successfully reclaim it.
  ---------------------------------------------------------------------------- */
 
-/*
- * Compute the minimum number of buffer items that work (i.e.,
- * address space wrap-around works).  To work is to satisfy this
- * constraint for integer buffer_size and k:
- *
- *     type_size * nitems == k * page_size
- */
-static long minimum_buffer_items(long type_size, long page_size)
-{
-#if (BOOST_VERSION < 105800)
-    return page_size / boost::math::gcd(type_size, page_size);
-#else
-    return page_size / boost::integer::gcd(type_size, page_size);
-#endif
-}
 
-
-buffer::buffer(int nitems, size_t sizeof_item, block_sptr link)
+buffer::buffer(buffer_mapping_type buf_type,
+               int nitems,
+               size_t sizeof_item,
+               uint64_t downstream_lcm_nitems,
+               uint32_t downstream_max_out_mult,
+               block_sptr link)
     : d_base(0),
       d_bufsize(0),
+      d_buf_map_type(buf_type),
       d_max_reader_delay(0),
-      d_vmcircbuf(0),
+      d_max_reader_history(1),
+      d_has_history(false),
       d_sizeof_item(sizeof_item),
       d_link(link),
       d_write_index(0),
       d_abs_write_offset(0),
       d_done(false),
-      d_last_min_items_read(0)
+      d_last_min_items_read(0),
+      d_callback_flag(false),
+      d_active_pointer_counter(0),
+      d_downstream_lcm_nitems(downstream_lcm_nitems),
+      d_write_multiple(0),
+      d_max_reader_output_multiple(downstream_max_out_mult),
+      d_transfer_type(transfer_type::DEFAULT_INVALID)
 {
-    if (!allocate_buffer(nitems, sizeof_item))
-        throw std::bad_alloc();
+    gr::configure_default_loggers(d_logger, d_debug_logger, "buffer");
 
     s_buffer_count++;
 }
 
-buffer_sptr make_buffer(int nitems, size_t sizeof_item, block_sptr link)
+buffer_sptr make_buffer(int nitems,
+                        size_t sizeof_item,
+                        uint64_t downstream_lcm_nitems,
+                        uint32_t downstream_max_out_mult,
+                        block_sptr link,
+                        block_sptr buf_owner)
 {
-    return buffer_sptr(new buffer(nitems, sizeof_item, link));
+#ifdef BUFFER_DEBUG
+    gr::logger_ptr logger;
+    gr::logger_ptr debug_logger;
+    gr::configure_default_loggers(logger, debug_logger, "make_buffer");
+    std::ostringstream msg;
+#endif
+
+    // NOTE: This function is no longer called by flat_flowgraph functions and
+    // therefore is somewhat deprecated. It will create and return a
+    // buffer_double_mapped subclass by default.
+    buffer_type buftype = buffer_double_mapped::type;
+    return buftype.make_buffer(nitems,
+                               sizeof_item,
+                               downstream_lcm_nitems,
+                               downstream_max_out_mult,
+                               link,
+                               buf_owner);
 }
 
 buffer::~buffer()
 {
-    delete d_vmcircbuf;
     assert(d_readers.size() == 0);
     s_buffer_count--;
 }
 
-/*!
- * sets d_vmcircbuf, d_base, d_bufsize.
- * returns true iff successful.
- */
-bool buffer::allocate_buffer(int nitems, size_t sizeof_item)
-{
-    int orig_nitems = nitems;
-
-    // Any buffersize we come up with must be a multiple of min_nitems.
-    int granularity = gr::vmcircbuf_sysconfig::granularity();
-    int min_nitems = minimum_buffer_items(sizeof_item, granularity);
-
-    // Round-up nitems to a multiple of min_nitems.
-    if (nitems % min_nitems != 0)
-        nitems = ((nitems / min_nitems) + 1) * min_nitems;
-
-    // If we rounded-up a whole bunch, give the user a heads up.
-    // This only happens if sizeof_item is not a power of two.
-
-    if (nitems > 2 * orig_nitems && nitems * (int)sizeof_item > granularity) {
-        std::cerr << "gr::buffer::allocate_buffer: warning: tried to allocate\n"
-                  << "   " << orig_nitems << " items of size " << sizeof_item
-                  << ". Due to alignment requirements\n"
-                  << "   " << nitems
-                  << " were allocated.  If this isn't OK, consider padding\n"
-                  << "   your structure to a power-of-two bytes.\n"
-                  << "   On this platform, our allocation granularity is " << granularity
-                  << " bytes.\n";
-    }
-
-    d_bufsize = nitems;
-    d_vmcircbuf = gr::vmcircbuf_sysconfig::make(d_bufsize * d_sizeof_item);
-    if (d_vmcircbuf == 0) {
-        std::cerr << "gr::buffer::allocate_buffer: failed to allocate buffer of size "
-                  << d_bufsize * d_sizeof_item / 1024 << " KB\n";
-        return false;
-    }
-
-    d_base = (char*)d_vmcircbuf->pointer_to_first_copy();
-    return true;
-}
-
-int buffer::space_available()
-{
-    if (d_readers.empty())
-        return d_bufsize - 1; // See comment below
-
-    else {
-        // Find out the maximum amount of data available to our readers
-
-        int most_data = d_readers[0]->items_available();
-        uint64_t min_items_read = d_readers[0]->nitems_read();
-        for (size_t i = 1; i < d_readers.size(); i++) {
-            most_data = std::max(most_data, d_readers[i]->items_available());
-            min_items_read = std::min(min_items_read, d_readers[i]->nitems_read());
-        }
-
-        if (min_items_read != d_last_min_items_read) {
-            prune_tags(d_last_min_items_read);
-            d_last_min_items_read = min_items_read;
-        }
-
-        // The -1 ensures that the case d_write_index == d_read_index is
-        // unambiguous.  It indicates that there is no data for the reader
-        return d_bufsize - most_data - 1;
-    }
-}
-
 void* buffer::write_pointer() { return &d_base[d_write_index * d_sizeof_item]; }
+
+const void* buffer::_read_pointer(unsigned int read_index)
+{
+    return &d_base[read_index * d_sizeof_item];
+}
 
 void buffer::update_write_pointer(int nitems)
 {
     gr::thread::scoped_lock guard(*mutex());
+
+#ifdef BUFFER_DEBUG
+    unsigned orig_wr_idx = d_write_index;
+#endif
+
     d_write_index = index_add(d_write_index, nitems);
     d_abs_write_offset += nitems;
+
+#ifdef BUFFER_DEBUG
+    std::ostringstream msg;
+    msg << "[" << this << "] update_write_pointer -- orig d_write_index: " << orig_wr_idx
+        << " -- nitems: " << nitems << " -- d_write_index: " << d_write_index;
+    GR_LOG_DEBUG(d_logger, msg.str());
+#endif
 }
 
 void buffer::set_done(bool done)
 {
     gr::thread::scoped_lock guard(*mutex());
     d_done = done;
-}
-
-buffer_reader_sptr
-buffer_add_reader(buffer_sptr buf, int nzero_preload, block_sptr link, int delay)
-{
-    if (nzero_preload < 0)
-        throw std::invalid_argument("buffer_add_reader: nzero_preload must be >= 0");
-
-    buffer_reader_sptr r(
-        new buffer_reader(buf, buf->index_sub(buf->d_write_index, nzero_preload), link));
-    r->declare_sample_delay(delay);
-    buf->d_readers.push_back(r.get());
-
-    return r;
 }
 
 void buffer::drop_reader(buffer_reader* reader)
@@ -286,85 +220,59 @@ void buffer::prune_tags(uint64_t max_time)
     }
 }
 
+void buffer::on_lock(gr::thread::scoped_lock& lock)
+{
+    // NOTE: the protecting mutex (scoped_lock) is held by the custom_lock object
+
+    // Wait until no other callback is active and no pointers are active for
+    // the buffer, then mark the callback flag active.
+    d_cv.wait(lock, [this]() {
+        return (d_callback_flag == false && d_active_pointer_counter == 0);
+    });
+    d_callback_flag = true;
+}
+
+void buffer::on_unlock()
+{
+    // NOTE: the protecting mutex (scoped_lock) is held by the custom_lock object
+
+    // Mark the callback flag inactive and notify anyone waiting
+    d_callback_flag = false;
+    d_cv.notify_all();
+}
+
 long buffer_ncurrently_allocated() { return s_buffer_count; }
 
-// ----------------------------------------------------------------------------
-
-buffer_reader::buffer_reader(buffer_sptr buffer, unsigned int read_index, block_sptr link)
-    : d_buffer(buffer),
-      d_read_index(read_index),
-      d_abs_read_offset(0),
-      d_link(link),
-      d_attr_delay(0)
+std::ostream& operator<<(std::ostream& os, const buffer& buf)
 {
-    s_buffer_reader_count++;
-
-    buffer->d_max_reader_delay = 0;
+    os << std::endl
+       << "  sz:    " << buf.d_bufsize << std::endl
+       << "  nrdrs: " << buf.d_readers.size() << std::endl;
+    for (auto& rdr : buf.d_readers) {
+        os << "    rd_idx: " << rdr->get_read_index() << std::endl
+           << "    abs_rd_offset: " << rdr->get_abs_read_offset() << std::endl
+           << std::endl;
+    }
+    return os;
 }
 
-buffer_reader::~buffer_reader()
+void buffer::set_transfer_type(const transfer_type& type)
 {
-    d_buffer->drop_reader(this);
-    s_buffer_reader_count--;
-}
-
-void buffer_reader::declare_sample_delay(unsigned delay)
-{
-    d_attr_delay = delay;
-    d_buffer->d_max_reader_delay = std::max(d_attr_delay, d_buffer->d_max_reader_delay);
-}
-
-unsigned buffer_reader::sample_delay() const { return d_attr_delay; }
-
-int buffer_reader::items_available() const
-{
-    return d_buffer->index_sub(d_buffer->d_write_index, d_read_index);
-}
-
-const void* buffer_reader::read_pointer()
-{
-    return &d_buffer->d_base[d_read_index * d_buffer->d_sizeof_item];
-}
-
-void buffer_reader::update_read_pointer(int nitems)
-{
-    gr::thread::scoped_lock guard(*mutex());
-    d_read_index = d_buffer->index_add(d_read_index, nitems);
-    d_abs_read_offset += nitems;
-}
-
-void buffer_reader::get_tags_in_range(std::vector<tag_t>& v,
-                                      uint64_t abs_start,
-                                      uint64_t abs_end,
-                                      long id)
-{
-    gr::thread::scoped_lock guard(*mutex());
-
-    v.clear();
-    std::multimap<uint64_t, tag_t>::iterator itr =
-        d_buffer->get_tags_lower_bound(std::min(abs_start, abs_start - d_attr_delay));
-    std::multimap<uint64_t, tag_t>::iterator itr_end =
-        d_buffer->get_tags_upper_bound(std::min(abs_end, abs_end - d_attr_delay));
-
-    uint64_t item_time;
-    while (itr != itr_end) {
-        item_time = (*itr).second.offset + d_attr_delay;
-        if ((item_time >= abs_start) && (item_time < abs_end)) {
-            std::vector<long>::iterator id_itr;
-            id_itr = std::find(
-                itr->second.marked_deleted.begin(), itr->second.marked_deleted.end(), id);
-            // If id is not in the vector of marked blocks
-            if (id_itr == itr->second.marked_deleted.end()) {
-                tag_t t = (*itr).second;
-                t.offset += d_attr_delay;
-                v.push_back(t);
-                v.back().marked_deleted.clear();
-            }
-        }
-        itr++;
+    if ((d_transfer_type == transfer_type::DEFAULT_INVALID) ||
+        (d_transfer_type == type)) {
+        // Set the transfer type if the existing value is the default or if it is the
+        // same as what's already been set
+        d_transfer_type = type;
+    } else {
+        // Otherwise error out as the transfer type value cannot be changed after
+        // it is set
+        std::ostringstream msg;
+        msg << "Block: " << link()->identifier() << " has transfer type "
+            << d_transfer_type << " assigned. Cannot change to transfer type " << type
+            << ".";
+        GR_LOG_ERROR(d_logger, msg.str());
+        throw std::runtime_error(msg.str());
     }
 }
-
-long buffer_reader_ncurrently_allocated() { return s_buffer_reader_count; }
 
 } /* namespace gr */

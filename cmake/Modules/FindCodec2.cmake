@@ -2,42 +2,29 @@
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 
 ##############################
 # Check for system libcodec2 #
 ##############################
 
-INCLUDE(FindPkgConfig)
+find_package(PkgConfig)
 INCLUDE(FindPackageHandleStandardArgs)
 
 pkg_check_modules(LIBCODEC2_PKG QUIET codec2)
 
 find_path(LIBCODEC2_INCLUDE_DIR NAMES codec2.h
+  HINTS ${LIBCODEC2_PKG_INCLUDE_DIRS}
   PATHS
-  ${LIBCODEC2_PKG_INCLUDE_DIRS}
-  /usr/include/codec2
   /usr/include
-  /usr/local/include/codec2
   /usr/local/include
+  PATH_SUFFIXES codec2
   )
 
-find_library(LIBCODEC2_LIBRARIES NAMES codec2
+find_library(LIBCODEC2_LIBRARIES NAMES codec2 libcodec2
+  HINTS ${LIBCODEC2_PKG_LIBRARY_DIRS}
   PATHS
-  ${LIBCODEC2_PKG_LIBRARY_DIRS}
   /usr/lib
   /usr/local/lib
   )
@@ -75,7 +62,7 @@ if(LIBCODEC2_INCLUDE_DIR AND LIBCODEC2_LIBRARIES)
   endif()
 endif(LIBCODEC2_INCLUDE_DIR AND LIBCODEC2_LIBRARIES)
 
-FIND_PACKAGE_HANDLE_STANDARD_ARGS(LIBCODEC2 DEFAULT_MSG LIBCODEC2_LIBRARIES LIBCODEC2_INCLUDE_DIRS)
+FIND_PACKAGE_HANDLE_STANDARD_ARGS(Codec2 DEFAULT_MSG LIBCODEC2_LIBRARIES LIBCODEC2_INCLUDE_DIRS)
 mark_as_advanced(LIBCODEC2_INCLUDE_DIR LIBCODEC2_LIBRARIES)
 
 if (LIBCODEC2_FOUND AND NOT TARGET CODEC2::CODEC2)

@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #include <gnuradio/fec/awgn_bp.h>
@@ -146,7 +134,7 @@ void awgn_bp::update_vars()
     }
 }
 
-std::vector<char> awgn_bp::get_estimate() { return estimate; }
+std::vector<uint8_t> awgn_bp::get_estimate() { return estimate; }
 
 void awgn_bp::compute_init_estimate(std::vector<float> rx_word)
 {
@@ -172,9 +160,9 @@ void awgn_bp::set_K(int k) { K = k; }
 
 int awgn_bp::get_K() { return K; }
 
-std::vector<char> awgn_bp::get_syndrome(std::vector<char> codeword)
+std::vector<uint8_t> awgn_bp::get_syndrome(std::vector<uint8_t> codeword)
 {
-    std::vector<char> synd;
+    std::vector<uint8_t> synd;
     synd.resize(N - K);
     GF2Vec in_bvec;
     in_bvec.set_vec(codeword);
@@ -184,9 +172,9 @@ std::vector<char> awgn_bp::get_syndrome(std::vector<char> codeword)
     return synd;
 }
 
-std::vector<char> awgn_bp::get_syndrome()
+std::vector<uint8_t> awgn_bp::get_syndrome()
 {
-    std::vector<char> synd;
+    std::vector<uint8_t> synd;
     synd.resize(N - K);
     GF2Vec in_bvec;
     in_bvec.set_vec(estimate);
@@ -196,9 +184,9 @@ std::vector<char> awgn_bp::get_syndrome()
     return synd;
 }
 
-bool awgn_bp::is_codeword(std::vector<char> codeword)
+bool awgn_bp::is_codeword(std::vector<uint8_t> codeword)
 {
-    std::vector<char> synd;
+    std::vector<uint8_t> synd;
     synd = get_syndrome(codeword);
     bool is_code;
     is_code = true;
@@ -212,7 +200,7 @@ bool awgn_bp::is_codeword(std::vector<char> codeword)
 
 bool awgn_bp::is_codeword()
 {
-    std::vector<char> synd;
+    std::vector<uint8_t> synd;
     synd = get_syndrome();
     bool is_code;
     is_code = true;
@@ -228,7 +216,7 @@ void awgn_bp::set_max_iterations(int k) { max_iterations = k; }
 
 int awgn_bp::get_max_iterations() { return max_iterations; }
 
-std::vector<char> awgn_bp::decode(std::vector<float> rx_word, int* niteration)
+std::vector<uint8_t> awgn_bp::decode(std::vector<float> rx_word, int* niteration)
 {
     *niteration = 0;
     compute_init_estimate(rx_word);

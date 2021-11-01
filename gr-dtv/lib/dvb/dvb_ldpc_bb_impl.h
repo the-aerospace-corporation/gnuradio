@@ -2,20 +2,8 @@
 /*
  * Copyright 2015,2016 Free Software Foundation, Inc.
  *
- * This is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef INCLUDED_DTV_DVB_LDPC_BB_IMPL_H
@@ -24,8 +12,6 @@
 #include "dvb_defines.h"
 
 #include <gnuradio/dtv/dvb_ldpc_bb.h>
-#include <boost/smart_ptr.hpp>
-
 
 namespace gr {
 namespace dtv {
@@ -49,7 +35,8 @@ private:
     int ldpc_lut_index[FRAME_SIZE_NORMAL];
     void ldpc_lookup_generate(void);
 
-    uint16_t** ldpc_lut;
+    std::vector<uint16_t*> ldpc_lut; // Pointers into ldpc_lut_data.
+    std::vector<uint16_t> ldpc_lut_data;
 
     template <typename entry_t, size_t rows, size_t cols>
     void ldpc_bf(entry_t (&table)[rows][cols])
@@ -89,9 +76,10 @@ private:
          * see
          * https://stackoverflow.com/questions/29375797/copy-2d-array-using-memcpy/29375830#29375830
          */
-        ldpc_lut = new uint16_t*[pbits];
-        ldpc_lut[0] = new uint16_t[pbits * max_lut_arraysize];
-        ldpc_lut[0][0] = 1;
+        ldpc_lut.resize(pbits);
+        ldpc_lut_data.resize(pbits * max_lut_arraysize);
+        ldpc_lut_data[0] = 1;
+        ldpc_lut[0] = ldpc_lut_data.data();
         for (unsigned int i = 1; i < pbits; i++) {
             ldpc_lut[i] = ldpc_lut[i - 1] + max_lut_arraysize;
             ldpc_lut[i][0] = 1;
@@ -176,14 +164,20 @@ public:
                      dvb_framesize_t framesize,
                      dvb_code_rate_t rate,
                      dvb_constellation_t constellation);
-    ~dvb_ldpc_bb_impl();
+    ~dvb_ldpc_bb_impl() override;
 
-    void forecast(int noutput_items, gr_vector_int& ninput_items_required);
+    // Disallow copy/move because of the raw pointers.
+    dvb_ldpc_bb_impl(const dvb_ldpc_bb_impl&) = delete;
+    dvb_ldpc_bb_impl(dvb_ldpc_bb_impl&&) = delete;
+    dvb_ldpc_bb_impl& operator=(const dvb_ldpc_bb_impl&) = delete;
+    dvb_ldpc_bb_impl& operator=(dvb_ldpc_bb_impl&&) = delete;
+
+    void forecast(int noutput_items, gr_vector_int& ninput_items_required) override;
 
     int general_work(int noutput_items,
                      gr_vector_int& ninput_items,
                      gr_vector_const_void_star& input_items,
-                     gr_vector_void_star& output_items);
+                     gr_vector_void_star& output_items) override;
 };
 
 } // namespace dtv

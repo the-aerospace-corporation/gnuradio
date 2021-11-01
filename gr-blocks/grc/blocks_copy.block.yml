@@ -18,7 +18,7 @@ parameters:
     options: ['True', 'False']
     option_labels: [Enabled, Disabled]
 -   id: vlen
-    label: Vec Length
+    label: Vector Length
     dtype: int
     default: '1'
     hide: ${ 'part' if vlen == 1 else 'none' }
@@ -62,7 +62,6 @@ cpp_templates:
     callbacks:
     - set_enabled(${enabled})
     translations:
-        gr.sizeof_: 'sizeof('
         'True': 'true'
         'False': 'false'
 

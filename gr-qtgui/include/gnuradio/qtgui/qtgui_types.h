@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef QTGUI_TYPES_H
@@ -113,7 +101,7 @@ public:
     {
     }
 
-    virtual QwtText label(double value) const
+    QwtText label(double value) const override
     {
         return QString("%1").arg(value, 0, 'f', getFrequencyPrecision());
     }
@@ -133,11 +121,7 @@ enum graph_t {
     NUM_GRAPH_VERT,
 };
 
-} /* namespace qtgui */
-} /* namespace gr */
-
-
-enum {
+enum intensity_t {
     INTENSITY_COLOR_MAP_TYPE_MULTI_COLOR = 0,
     INTENSITY_COLOR_MAP_TYPE_WHITE_HOT = 1,
     INTENSITY_COLOR_MAP_TYPE_BLACK_HOT = 2,
@@ -146,6 +130,10 @@ enum {
     INTENSITY_COLOR_MAP_TYPE_SUNSET = 5,
     INTENSITY_COLOR_MAP_TYPE_COOL = 6,
 };
+
+} /* namespace qtgui */
+} /* namespace gr */
+
 
 class ColorMap_MultiColor : public QwtLinearColorMap
 {

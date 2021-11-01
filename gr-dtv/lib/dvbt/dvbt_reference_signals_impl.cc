@@ -1,21 +1,9 @@
 /* -*- c++ -*- */
 /*
- * Copyright 2015,2016,2018,2019 Free Software Foundation, Inc.
+ * Copyright 2015,2016,2018,2019,2020 Free Software Foundation, Inc.
  *
- * This is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -100,28 +88,22 @@ const int dvbt_pilot_gen::d_tps_sync_odd[d_tps_sync_size] = { 1, 1, 0, 0, 1, 0, 
  */
 dvbt_pilot_gen::dvbt_pilot_gen(const dvbt_configure& c)
     : config(c),
-      d_spilot_index(0),
-      d_cpilot_index(0),
-      d_tpilot_index(0),
-      d_symbol_index(0),
-      d_symbol_index_known(0),
-      d_frame_index(0),
-      d_superframe_index(0),
-      d_freq_offset_max(8),
-      d_trigger_index(0),
-      d_payload_index(0),
-      d_chanestim_index(0),
-      d_prev_mod_symbol_index(0),
-      d_mod_symbol_index(0)
+      d_Kmin(config.d_Kmin),
+      d_Kmax(config.d_Kmax),
+      d_fft_length(config.d_fft_length),
+      d_payload_length(config.d_payload_length),
+      d_zeros_on_left(config.d_zeros_on_left),
+      d_zeros_on_right(config.d_zeros_on_right),
+      d_cp_length(config.d_cp_length),
+      d_spilot_carriers_val(d_Kmax - d_Kmin + 1),
+      d_channel_gain(d_Kmax - d_Kmin + 1),
+      d_derot_in(d_fft_length),
+      d_chanestim_carriers(d_Kmax - d_Kmin + 1),
+      d_payload_carriers(d_Kmax - d_Kmin + 1),
+      d_wk(d_Kmax - d_Kmin + 1)
 {
+    gr::configure_default_loggers(d_logger, d_debug_logger, "dvbt_pilot_gen");
     // Determine parameters from config file
-    d_Kmin = config.d_Kmin;
-    d_Kmax = config.d_Kmax;
-    d_fft_length = config.d_fft_length;
-    d_payload_length = config.d_payload_length;
-    d_zeros_on_left = config.d_zeros_on_left;
-    d_zeros_on_right = config.d_zeros_on_right;
-    d_cp_length = config.d_cp_length;
 
     // Set-up pilot data depending on transmission mode
     if (config.d_transmission_mode == T2k) {
@@ -144,49 +126,11 @@ dvbt_pilot_gen::dvbt_pilot_gen(const dvbt_configure& c)
         d_tps_carriers = d_tps_carriers_2k;
     }
 
-    d_freq_offset = 0;
-    d_carrier_freq_correction = 0.0;
-    d_sampling_freq_correction = 0.0;
-
-    // allocate PRBS buffer
-    d_wk = new char[d_Kmax - d_Kmin + 1];
-    if (d_wk == NULL) {
-        std::cerr << "Reference Signals, cannot allocate memory for d_wk." << std::endl;
-        throw std::bad_alloc();
-    }
     // Generate wk sequence
     generate_prbs();
 
-    // allocate buffer for scattered pilots
-    d_spilot_carriers_val = new (std::nothrow) gr_complex[d_Kmax - d_Kmin + 1];
-    if (d_spilot_carriers_val == NULL) {
-        std::cerr
-            << "Reference Signals, cannot allocate memory for d_spilot_carriers_val."
-            << std::endl;
-        delete[] d_wk;
-        throw std::bad_alloc();
-    }
-
-    // allocate buffer for channel gains (for each useful carrier)
-    d_channel_gain = new (std::nothrow) gr_complex[d_Kmax - d_Kmin + 1];
-    if (d_channel_gain == NULL) {
-        std::cerr << "Reference Signals, cannot allocate memory for d_channel_gain."
-                  << std::endl;
-        delete[] d_spilot_carriers_val;
-        delete[] d_wk;
-        throw std::bad_alloc();
-    }
-
     // Allocate buffer for continual pilots phase diffs
-    d_known_phase_diff = new (std::nothrow) float[d_cpilot_carriers_size - 1];
-    if (d_known_phase_diff == NULL) {
-        std::cerr << "Reference Signals, cannot allocate memory for d_known_phase_diff."
-                  << std::endl;
-        delete[] d_channel_gain;
-        delete[] d_spilot_carriers_val;
-        delete[] d_wk;
-        throw std::bad_alloc();
-    }
+    d_known_phase_diff.resize(d_cpilot_carriers_size - 1);
 
     // Obtain phase diff for all continual pilots
     for (int i = 0; i < (d_cpilot_carriers_size - 1); i++) {
@@ -194,91 +138,17 @@ dvbt_pilot_gen::dvbt_pilot_gen(const dvbt_configure& c)
                                      get_cpilot_value(d_cpilot_carriers[i]));
     }
 
-    d_cpilot_phase_diff = new (std::nothrow) float[d_cpilot_carriers_size - 1];
-    if (d_cpilot_phase_diff == NULL) {
-        std::cerr << "Reference Signals, cannot allocate memory for d_cpilot_phase_diff."
-                  << std::endl;
-        delete[] d_known_phase_diff;
-        delete[] d_channel_gain;
-        delete[] d_spilot_carriers_val;
-        delete[] d_wk;
-        throw std::bad_alloc();
-    }
-
-    // Allocate buffer for derotated input symbol
-    d_derot_in = new (std::nothrow) gr_complex[d_fft_length];
-    if (d_derot_in == NULL) {
-        std::cerr << "Reference Signals, cannot allocate memory for d_derot_in."
-                  << std::endl;
-        delete[] d_cpilot_phase_diff;
-        delete[] d_known_phase_diff;
-        delete[] d_channel_gain;
-        delete[] d_spilot_carriers_val;
-        delete[] d_wk;
-        throw std::bad_alloc();
-    }
+    d_cpilot_phase_diff.resize(d_cpilot_carriers_size - 1);
 
     // allocate buffer for first tps symbol constellation
-    d_tps_carriers_val = new (std::nothrow) gr_complex[d_tps_carriers_size];
-    if (d_tps_carriers_val == NULL) {
-        std::cerr << "Reference Signals, cannot allocate memory for d_tps_carriers_val."
-                  << std::endl;
-        delete[] d_derot_in;
-        delete[] d_cpilot_phase_diff;
-        delete[] d_known_phase_diff;
-        delete[] d_channel_gain;
-        delete[] d_spilot_carriers_val;
-        delete[] d_wk;
-        throw std::bad_alloc();
-    }
+    d_tps_carriers_val.resize(d_tps_carriers_size);
 
     // allocate tps data buffer
-    d_tps_data = new (std::nothrow) unsigned char[d_symbols_per_frame];
-    if (d_tps_data == NULL) {
-        std::cerr << "Reference Signals, cannot allocate memory for d_tps_data."
-                  << std::endl;
-        delete[] d_tps_carriers_val;
-        delete[] d_derot_in;
-        delete[] d_cpilot_phase_diff;
-        delete[] d_known_phase_diff;
-        delete[] d_channel_gain;
-        delete[] d_spilot_carriers_val;
-        delete[] d_wk;
-        throw std::bad_alloc();
-    }
+    d_tps_data.resize(d_symbols_per_frame);
 
-    d_prev_tps_symbol = new (std::nothrow) gr_complex[d_tps_carriers_size];
-    if (d_prev_tps_symbol == NULL) {
-        std::cerr << "Reference Signals, cannot allocate memory for d_prev_tps_symbol."
-                  << std::endl;
-        delete[] d_tps_data;
-        delete[] d_tps_carriers_val;
-        delete[] d_derot_in;
-        delete[] d_cpilot_phase_diff;
-        delete[] d_known_phase_diff;
-        delete[] d_channel_gain;
-        delete[] d_spilot_carriers_val;
-        delete[] d_wk;
-        throw std::bad_alloc();
-    }
-    std::fill_n(d_prev_tps_symbol, d_tps_carriers_size, 0);
+    d_prev_tps_symbol.resize(d_tps_carriers_size);
 
-    d_tps_symbol = new (std::nothrow) gr_complex[d_tps_carriers_size];
-    if (d_tps_symbol == NULL) {
-        std::cerr << "Reference Signals, cannot allocate memory for d_tps_symbol."
-                  << std::endl;
-        delete[] d_prev_tps_symbol;
-        delete[] d_tps_data;
-        delete[] d_tps_carriers_val;
-        delete[] d_derot_in;
-        delete[] d_cpilot_phase_diff;
-        delete[] d_known_phase_diff;
-        delete[] d_channel_gain;
-        delete[] d_spilot_carriers_val;
-        delete[] d_wk;
-        throw std::bad_alloc();
-    }
-    std::fill_n(d_tps_symbol, d_tps_carriers_size, 0);
+    d_tps_symbol.resize(d_tps_carriers_size);
 
     // Init receive TPS data vector
     for (int i = 0; i < d_symbols_per_frame; i++) {
@@ -291,43 +161,6 @@ dvbt_pilot_gen::dvbt_pilot_gen(const dvbt_configure& c)
         d_tps_sync_oddv.push_back(d_tps_sync_odd[i]);
     }
 
-    // Allocate buffer for channel estimation carriers
-    d_chanestim_carriers = new (std::nothrow) int[d_Kmax - d_Kmin + 1];
-    if (d_chanestim_carriers == NULL) {
-        std::cerr << "Reference Signals, cannot allocate memory for d_chanestim_carriers."
-                  << std::endl;
-        delete[] d_tps_symbol;
-        delete[] d_prev_tps_symbol;
-        delete[] d_tps_data;
-        delete[] d_tps_carriers_val;
-        delete[] d_derot_in;
-        delete[] d_cpilot_phase_diff;
-        delete[] d_known_phase_diff;
-        delete[] d_channel_gain;
-        delete[] d_spilot_carriers_val;
-        delete[] d_wk;
-        throw std::bad_alloc();
-    }
-
-    // Allocate buffer for payload carriers
-    d_payload_carriers = new (std::nothrow) int[d_Kmax - d_Kmin + 1];
-    if (d_payload_carriers == NULL) {
-        std::cerr << "Reference Signals, cannot allocate memory for d_payload_carriers."
-                  << std::endl;
-        delete[] d_chanestim_carriers;
-        delete[] d_tps_symbol;
-        delete[] d_prev_tps_symbol;
-        delete[] d_tps_data;
-        delete[] d_tps_carriers_val;
-        delete[] d_derot_in;
-        delete[] d_cpilot_phase_diff;
-        delete[] d_known_phase_diff;
-        delete[] d_channel_gain;
-        delete[] d_spilot_carriers_val;
-        delete[] d_wk;
-        throw std::bad_alloc();
-    }
-
     // Reset the pilot generator
     reset_pilot_generator();
     // Format TPS data with current values
@@ -337,21 +170,7 @@ dvbt_pilot_gen::dvbt_pilot_gen(const dvbt_configure& c)
 /*
  * Destructor of class
  */
-dvbt_pilot_gen::~dvbt_pilot_gen()
-{
-    delete[] d_payload_carriers;
-    delete[] d_chanestim_carriers;
-    delete[] d_tps_symbol;
-    delete[] d_prev_tps_symbol;
-    delete[] d_tps_data;
-    delete[] d_tps_carriers_val;
-    delete[] d_derot_in;
-    delete[] d_cpilot_phase_diff;
-    delete[] d_known_phase_diff;
-    delete[] d_channel_gain;
-    delete[] d_spilot_carriers_val;
-    delete[] d_wk;
-}
+dvbt_pilot_gen::~dvbt_pilot_gen() {}
 
 /*
  * Generate PRBS sequence
@@ -753,7 +572,7 @@ int dvbt_pilot_gen::get_current_tpilot() const { return d_tps_carriers[d_tpilot_
 
 gr_complex dvbt_pilot_gen::get_tpilot_value(int tpilot)
 {
-    // TODO - it can be calculated at the beginnning
+    // TODO - it can be calculated at the beginning
     if (d_symbol_index == 0) {
         d_tps_carriers_val[d_tpilot_index] = gr_complex(2 * (0.5 - d_wk[tpilot]), 0);
     } else {
@@ -1136,11 +955,11 @@ int dvbt_pilot_gen::parse_input(const gr_complex* in,
     // - integer frequency correction (post-FFT)
     // - fractional frequency (carrier and sampling) corrections (post-FFT)
     // TODO - use PI to update the corrections
-    frequency_correction(in, d_derot_in);
+    frequency_correction(in, d_derot_in.data());
 
     // Process spilot data
     // This is channel estimation function
-    int diff_symbol_index = process_spilot_data(d_derot_in);
+    int diff_symbol_index = process_spilot_data(d_derot_in.data());
 
     // Correct symbol index so that all subsequent processing
     // use correct symbol index
@@ -1153,7 +972,7 @@ int dvbt_pilot_gen::parse_input(const gr_complex* in,
 
     // Process TPS data
     // If a frame is recognized then signal end of frame
-    int frame_end = process_tps_data(d_derot_in, diff_symbol_index);
+    int frame_end = process_tps_data(d_derot_in.data(), diff_symbol_index);
 
     // We are just at the end of a frame
     if (frame_end) {
@@ -1161,7 +980,7 @@ int dvbt_pilot_gen::parse_input(const gr_complex* in,
     }
 
     // Process payload data with correct symbol index
-    process_payload_data(d_derot_in, out);
+    process_payload_data(d_derot_in.data(), out);
 
     // noutput_items should be 1 in this case
     return 1;
@@ -1180,17 +999,17 @@ dvbt_reference_signals::make(int itemsize,
                              int include_cell_id,
                              int cell_id)
 {
-    return gnuradio::get_initial_sptr(new dvbt_reference_signals_impl(itemsize,
-                                                                      ninput,
-                                                                      noutput,
-                                                                      constellation,
-                                                                      hierarchy,
-                                                                      code_rate_HP,
-                                                                      code_rate_LP,
-                                                                      guard_interval,
-                                                                      transmission_mode,
-                                                                      include_cell_id,
-                                                                      cell_id));
+    return gnuradio::make_block_sptr<dvbt_reference_signals_impl>(itemsize,
+                                                                  ninput,
+                                                                  noutput,
+                                                                  constellation,
+                                                                  hierarchy,
+                                                                  code_rate_HP,
+                                                                  code_rate_LP,
+                                                                  guard_interval,
+                                                                  transmission_mode,
+                                                                  include_cell_id,
+                                                                  cell_id);
 }
 
 /*
@@ -1219,10 +1038,13 @@ dvbt_reference_signals_impl::dvbt_reference_signals_impl(
              transmission_mode,
              include_cell_id,
              cell_id),
-      d_pg(config)
+      d_pg(config),
+      d_ninput(ninput),
+      d_noutput(noutput),
+      ofdm_fft(config.d_transmission_mode == T2k ? 2048 : 8192, 1),
+      ofdm_fft_size(config.d_transmission_mode == T2k ? 2048 : 8192),
+      normalization(1.0 / std::sqrt(27.0 * config.d_payload_length))
 {
-    d_ninput = ninput;
-    d_noutput = noutput;
 }
 
 /*
@@ -1243,9 +1065,20 @@ int dvbt_reference_signals_impl::general_work(int noutput_items,
 {
     const gr_complex* in = (const gr_complex*)input_items[0];
     gr_complex* out = (gr_complex*)output_items[0];
+    gr_complex* dst;
 
     for (int i = 0; i < noutput_items; i++) {
         d_pg.update_output(&in[i * d_ninput], &out[i * d_noutput]);
+        dst = ofdm_fft.get_inbuf();
+        memcpy(&dst[ofdm_fft_size / 2],
+               &out[i * d_noutput],
+               sizeof(gr_complex) * ofdm_fft_size / 2);
+        memcpy(&dst[0],
+               &out[(i * d_noutput) + (ofdm_fft_size / 2)],
+               sizeof(gr_complex) * ofdm_fft_size / 2);
+        ofdm_fft.execute();
+        volk_32fc_s32fc_multiply_32fc(
+            &out[i * d_noutput], ofdm_fft.get_outbuf(), normalization, ofdm_fft_size);
     }
 
     // Tell runtime system how many input items we consumed on

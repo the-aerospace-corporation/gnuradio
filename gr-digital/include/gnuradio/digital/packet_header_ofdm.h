@@ -3,20 +3,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef INCLUDED_DIGITAL_PACKET_HEADER_OFDM_H
@@ -36,7 +24,7 @@ namespace digital {
 class DIGITAL_API packet_header_ofdm : public packet_header_default
 {
 public:
-    typedef boost::shared_ptr<packet_header_ofdm> sptr;
+    typedef std::shared_ptr<packet_header_ofdm> sptr;
 
     packet_header_ofdm(const std::vector<std::vector<int>>& occupied_carriers,
                        int n_syms,
@@ -46,7 +34,7 @@ public:
                        int bits_per_header_sym,
                        int bits_per_payload_sym,
                        bool scramble_header);
-    ~packet_header_ofdm();
+    ~packet_header_ofdm() override;
 
     /*!
      * \brief Header formatter.
@@ -55,8 +43,9 @@ public:
      * optionally scrambles the bits (this is more important for OFDM to avoid
      * PAPR spikes).
      */
-    bool
-    header_formatter(long packet_len, unsigned char* out, const std::vector<tag_t>& tags);
+    bool header_formatter(long packet_len,
+                          unsigned char* out,
+                          const std::vector<tag_t>& tags) override;
 
     /*!
      * \brief Inverse function to header_formatter().
@@ -68,7 +57,7 @@ public:
      * of OFDM symbols and the packet length because a packet might
      * finish mid-OFDM-symbol.
      */
-    bool header_parser(const unsigned char* header, std::vector<tag_t>& tags);
+    bool header_parser(const unsigned char* header, std::vector<tag_t>& tags) override;
 
     /*!
      * \param occupied_carriers See carrier allocator

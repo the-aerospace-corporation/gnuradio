@@ -4,31 +4,20 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #include <gnuradio/fec/decoder.h>
 #include <gnuradio/fec/ldpc_decoder.h>
 #include <gnuradio/fec/maxstar.h>
-#include <math.h>
-#include <stdio.h>
-#include <string.h> // for memcpy
 #include <volk/volk.h>
-#include <boost/assign/list_of.hpp>
+#include <boost/format.hpp>
 #include <algorithm> // for std::reverse
+#include <cmath>
+#include <cstdio>
+#include <cstring> // for memcpy
+#include <filesystem>
 #include <sstream>
 #include <vector>
 
@@ -45,7 +34,7 @@ ldpc_decoder::make(std::string alist_file, float sigma, int max_iterations)
 ldpc_decoder::ldpc_decoder(std::string alist_file, float sigma, int max_iterations)
     : generic_decoder("ldpc_decoder")
 {
-    if (!boost::filesystem::exists(alist_file))
+    if (!std::filesystem::exists(alist_file))
         throw std::runtime_error("Bad AList file name!");
 
     d_list.read(alist_file.c_str());
@@ -96,8 +85,8 @@ void ldpc_decoder::generic_work(void* inBuffer, void* outBuffer)
         }
 
         int n_iterations = 0;
-        std::vector<char> estimate(d_spa.decode(rx, &n_iterations));
-        std::vector<char> data(d_code.get_systematic_bits(estimate));
+        std::vector<uint8_t> estimate(d_spa.decode(rx, &n_iterations));
+        std::vector<uint8_t> data(d_code.get_systematic_bits(estimate));
         memcpy(&out[j], &data[0], d_code.dimension());
         d_iterations = n_iterations;
 

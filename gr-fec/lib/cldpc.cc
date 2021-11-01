@@ -4,23 +4,12 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #include <gnuradio/fec/cldpc.h>
+#include <iostream>
 #include <stdexcept>
 
 cldpc::cldpc(const GF2Mat X)
@@ -50,9 +39,9 @@ void cldpc::set_alist(const alist _list)
     K = N - rank_H;
 }
 
-std::vector<char> cldpc::get_systematic_bits(std::vector<char> in)
+std::vector<uint8_t> cldpc::get_systematic_bits(std::vector<uint8_t> in)
 {
-    std::vector<char> data;
+    std::vector<uint8_t> data;
     data.resize(K);
     int index;
     for (size_t i = 0; i < K; i++) {
@@ -70,9 +59,9 @@ void cldpc::print_permute()
     std::cout << "\n";
 }
 
-std::vector<char> cldpc::syndrome(const std::vector<char> in)
+std::vector<uint8_t> cldpc::syndrome(const std::vector<uint8_t> in)
 {
-    std::vector<char> synd;
+    std::vector<uint8_t> synd;
     synd.resize(rank_H);
     GF2Vec in_bvec;
     in_bvec.set_vec(in);
@@ -82,9 +71,9 @@ std::vector<char> cldpc::syndrome(const std::vector<char> in)
     return synd;
 }
 
-bool cldpc::is_codeword(const std::vector<char> in)
+bool cldpc::is_codeword(const std::vector<uint8_t> in)
 {
-    std::vector<char> synd;
+    std::vector<uint8_t> synd;
     synd = syndrome(in);
     bool is_code;
     is_code = true;
@@ -96,7 +85,7 @@ bool cldpc::is_codeword(const std::vector<char> in)
     return is_code;
 }
 
-std::vector<char> cldpc::encode(std::vector<char> dataword)
+std::vector<uint8_t> cldpc::encode(std::vector<uint8_t> dataword)
 {
     if (dataword.size() == K) {
         GF2Vec x(N);
@@ -115,7 +104,7 @@ std::vector<char> cldpc::encode(std::vector<char> dataword)
         return y.get_vec();
     } else {
         throw std::runtime_error("bad vector length!");
-        return std::vector<char>();
+        return std::vector<uint8_t>();
     }
 }
 

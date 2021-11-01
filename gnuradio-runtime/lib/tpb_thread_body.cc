@@ -4,19 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -26,7 +15,7 @@
 #include "tpb_thread_body.h"
 #include <gnuradio/prefs.h>
 #include <pmt/pmt.h>
-#include <boost/foreach.hpp>
+#include <boost/format.hpp>
 #include <boost/thread.hpp>
 #include <iostream>
 
@@ -88,7 +77,7 @@ tpb_thread_body::tpb_thread_body(block_sptr block,
         gr::thread::set_thread_priority(d->thread, block->thread_priority());
     }
 
-    // make sure our block isnt finished
+    // make sure our block isn't finished
     block->clear_finished();
 
     start_sync->wait();
@@ -98,7 +87,7 @@ tpb_thread_body::tpb_thread_body(block_sptr block,
         d->d_tpb.clear_changed();
 
         // handle any queued up messages
-        BOOST_FOREACH (basic_block::msg_queue_map_t::value_type& i, block->msg_queue) {
+        for (const auto& i : block->msg_queue) {
             // Check if we have a message handler attached before getting
             // any messages. This is mostly a protection for the unknown
             // startup sequence of the threads.

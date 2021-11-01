@@ -15,7 +15,7 @@ parameters:
     label: Interpolation
     dtype: int
 -   id: vlen
-    label: Vec Length
+    label: Vector Length
     dtype: int
     default: '1'
     hide: ${ 'part' if vlen == 1 else 'none' }
@@ -45,7 +45,5 @@ cpp_templates:
     make: 'this->${id} = blocks::repeat::make(${type.size}*${vlen}, ${interp});'
     callbacks:
     - set_interpolation(${interp})
-    translations:
-        gr.sizeof_: 'sizeof('
 
 file_format: 1

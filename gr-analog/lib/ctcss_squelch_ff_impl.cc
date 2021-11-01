@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -25,6 +13,7 @@
 #endif
 
 #include "ctcss_squelch_ff_impl.h"
+#include <memory>
 
 namespace gr {
 namespace analog {
@@ -40,8 +29,8 @@ static int max_tone_index = 37;
 ctcss_squelch_ff::sptr
 ctcss_squelch_ff::make(int rate, float freq, float level, int len, int ramp, bool gate)
 {
-    return gnuradio::get_initial_sptr(
-        new ctcss_squelch_ff_impl(rate, freq, level, len, ramp, gate));
+    return gnuradio::make_block_sptr<ctcss_squelch_ff_impl>(
+        rate, freq, level, len, ramp, gate);
 }
 
 int ctcss_squelch_ff_impl::find_tone(float freq)
@@ -84,12 +73,12 @@ ctcss_squelch_ff_impl::ctcss_squelch_ff_impl(
     : block("ctcss_squelch_ff",
             io_signature::make(1, 1, sizeof(float)),
             io_signature::make(1, 1, sizeof(float))),
-      squelch_base_ff_impl("ctcss_squelch_ff", ramp, gate)
+      squelch_base_ff_impl("ctcss_squelch_ff", ramp, gate),
+      d_freq(freq),
+      d_level(level),
+      d_rate(rate),
+      d_mute(true)
 {
-    d_freq = freq;
-    d_level = level;
-    d_rate = rate;
-
     // Default is 100 ms detection time
     if (len == 0)
         d_len = (int)(d_rate / 10.0);
@@ -99,19 +88,12 @@ ctcss_squelch_ff_impl::ctcss_squelch_ff_impl(
     float f_l, f_r;
     compute_freqs(d_freq, f_l, f_r);
 
-    d_goertzel_l = new fft::goertzel(d_rate, d_len, f_l);
-    d_goertzel_c = new fft::goertzel(d_rate, d_len, freq);
-    d_goertzel_r = new fft::goertzel(d_rate, d_len, f_r);
-
-    d_mute = true;
+    d_goertzel_l = std::make_unique<fft::goertzel>(d_rate, d_len, f_l);
+    d_goertzel_c = std::make_unique<fft::goertzel>(d_rate, d_len, freq);
+    d_goertzel_r = std::make_unique<fft::goertzel>(d_rate, d_len, f_r);
 }
 
-ctcss_squelch_ff_impl::~ctcss_squelch_ff_impl()
-{
-    delete d_goertzel_l;
-    delete d_goertzel_c;
-    delete d_goertzel_r;
-}
+ctcss_squelch_ff_impl::~ctcss_squelch_ff_impl() {}
 
 std::vector<float> ctcss_squelch_ff_impl::squelch_range() const
 {

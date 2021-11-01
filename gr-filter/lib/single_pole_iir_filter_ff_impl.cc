@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -33,7 +21,7 @@ namespace filter {
 single_pole_iir_filter_ff::sptr single_pole_iir_filter_ff::make(double alpha,
                                                                 unsigned int vlen)
 {
-    return gnuradio::get_initial_sptr(new single_pole_iir_filter_ff_impl(alpha, vlen));
+    return gnuradio::make_block_sptr<single_pole_iir_filter_ff_impl>(alpha, vlen);
 }
 
 single_pole_iir_filter_ff_impl::single_pole_iir_filter_ff_impl(double alpha,
@@ -46,8 +34,6 @@ single_pole_iir_filter_ff_impl::single_pole_iir_filter_ff_impl(double alpha,
 {
     set_taps(alpha);
 }
-
-single_pole_iir_filter_ff_impl::~single_pole_iir_filter_ff_impl() {}
 
 void single_pole_iir_filter_ff_impl::set_taps(double alpha)
 {

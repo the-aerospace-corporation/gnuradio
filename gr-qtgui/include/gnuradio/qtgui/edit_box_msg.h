@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef INCLUDED_QTGUI_EDIT_BOX_MSG_H
@@ -69,10 +57,10 @@ namespace qtgui {
  * how to handle complex numbers.
  *
  * Complex numbers are currently handled a bit differently than
- * expected. Because we use the Boost lexical_cast function,
- * complex numbers MUST be in the form "(a,b)" to represent "a +
- * jb". Note that you cannot even have a space after the comma, so
- * "(1.23,10.56)" is correct while "(1.23, 10.56)" will not parse.
+ * expected. Because we use the std iostream for complex, complex numbers MUST
+ * be in the form "(a,b)" to represent "a + jb". Note that you cannot even have
+ * a space after the comma, so "(1.23,10.56)" is correct while "(1.23, 10.56)"
+ * will not parse.
  *
  * The 'static' mode prevents the user from changing the data type
  * or the key used in the widget. If also in 'pair' mode, the key
@@ -108,7 +96,7 @@ class QTGUI_API edit_box_msg : virtual public block
 {
 public:
     // gr::qtgui::edit_box_msg::sptr
-    typedef boost::shared_ptr<edit_box_msg> sptr;
+    typedef std::shared_ptr<edit_box_msg> sptr;
 
     /*!
      * \brief Constructs the Edit box block.
@@ -135,12 +123,6 @@ public:
 
     virtual void exec_() = 0;
     virtual QWidget* qwidget() = 0;
-
-#ifdef ENABLE_PYTHON
-    virtual PyObject* pyqwidget() = 0;
-#else
-    virtual void* pyqwidget() = 0;
-#endif
 
     QApplication* d_qApplication;
 };

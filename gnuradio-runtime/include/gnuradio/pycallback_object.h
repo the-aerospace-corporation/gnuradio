@@ -4,25 +4,14 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #include <gnuradio/rpcregisterhelpers.h>
 #include <pythread.h>
 #include <boost/format.hpp>
+
 #include <iostream>
 
 enum pyport_t { PYPORT_STRING, PYPORT_FLOAT };
@@ -83,7 +72,9 @@ public:
     {
         myType rVal = d_deflt;
         if (d_callback == NULL) {
-            printf("WARNING: pycallback_object get() called without py callback set!\n");
+            std::cerr
+                << "WARNING: pycallback_object get() called without py callback set!"
+                << std::endl;
             return rVal;
         } else {
             // obtain  PyGIL
@@ -143,7 +134,7 @@ private:
      * something. */
     myType pyCast(PyObject* obj)
     {
-        printf("TYPE NOT IMPLEMENTED!\n");
+        std::cerr << "TYPE NOT IMPLEMENTED!" << std::endl;
         assert(0);
         // the following is to make compilers happy only.
         myType dummy;

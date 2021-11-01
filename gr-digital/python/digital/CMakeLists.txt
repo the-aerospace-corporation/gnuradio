@@ -2,20 +2,8 @@
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 
 ########################################################################
 # Setup python install
@@ -28,18 +16,10 @@ GR_PYTHON_INSTALL(
     bpsk.py
     constellation_map_generator.py
     cpm.py
-    crc.py
     generic_mod_demod.py
     gmsk.py
     gfsk.py
     modulation_utils.py
-    ofdm.py
-    ofdm_packet_utils.py
-    ofdm_receiver.py
-    ofdm_sync_fixed.py
-    ofdm_sync_ml.py
-    ofdm_sync_pnac.py
-    ofdm_sync_pn.py
     ofdm_txrx.py
     packet_utils.py
     psk.py
@@ -56,6 +36,7 @@ GR_PYTHON_INSTALL(
     FILES
     utils/__init__.py
     utils/gray_code.py
+    utils/lfsr.py
     utils/mod_codes.py
     utils/alignment.py
     utils/tagged_streams.py
@@ -70,14 +51,7 @@ if(ENABLE_TESTING)
   set(GR_TEST_TARGET_DEPS "")
   set(GR_TEST_LIBRARY_DIRS "")
   set(GR_TEST_PYTHON_DIRS
-    ${CMAKE_BINARY_DIR}/gnuradio-runtime/python
-    ${CMAKE_BINARY_DIR}/gnuradio-runtime/swig	
-    ${CMAKE_BINARY_DIR}/gr-blocks/swig	
-    ${CMAKE_BINARY_DIR}/gr-filter/swig	
-    ${CMAKE_BINARY_DIR}/gr-channels/swig	
-    ${CMAKE_BINARY_DIR}/gr-digital/swig	
-    ${CMAKE_BINARY_DIR}/gr-fft/swig		
-    ${CMAKE_BINARY_DIR}/gr-analog/swig		
+    ${CMAKE_BINARY_DIR}/gnuradio-runtime/python		
     )
 
   include(GrTest)
@@ -87,3 +61,5 @@ if(ENABLE_TESTING)
     GR_ADD_TEST(${py_qa_test_name} ${QA_PYTHON_EXECUTABLE} -B ${py_qa_test_file})
   endforeach(py_qa_test_file)
 endif(ENABLE_TESTING)
+
+add_subdirectory(bindings)

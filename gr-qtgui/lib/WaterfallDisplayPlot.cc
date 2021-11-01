@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef WATERFALL_DISPLAY_PLOT_C
@@ -31,7 +19,6 @@
 #include <qwt_plot_layout.h>
 #include <qwt_scale_draw.h>
 #include <QColor>
-#include <iostream>
 
 #if QWT_VERSION < 0x060100
 #include <qwt_legend_item.h>
@@ -53,12 +40,12 @@ class QwtTimeScaleDraw : public QwtScaleDraw, public TimeScaleData
 public:
     QwtTimeScaleDraw() : QwtScaleDraw(), TimeScaleData() {}
 
-    virtual ~QwtTimeScaleDraw() {}
+    ~QwtTimeScaleDraw() override {}
 
-    virtual QwtText label(double value) const
+    QwtText label(double value) const override
     {
         double secs = double(value * getSecondsPerLine());
-        return QwtText(QString("").sprintf("%.2e", secs));
+        return QwtText(QString::number(secs, 'e', 2));
     }
 
     virtual void initiateUpdate()
@@ -92,7 +79,7 @@ public:
         setTrackerMode(QwtPicker::AlwaysOn);
     }
 
-    virtual ~WaterfallZoomer() {}
+    ~WaterfallZoomer() override {}
 
     virtual void updateTrackerText() { updateDisplay(); }
 
@@ -100,7 +87,7 @@ public:
 
 protected:
     using QwtPlotZoomer::trackerText;
-    virtual QwtText trackerText(QPoint const& p) const
+    QwtText trackerText(QPoint const& p) const override
     {
         QwtDoublePoint dp = QwtPlotZoomer::invTransform(p);
         double secs = double(dp.y() * getSecondsPerLine());
@@ -158,7 +145,8 @@ WaterfallDisplayPlot::WaterfallDisplayPlot(int nplots, QWidget* parent)
 
         d_spectrogram[i]->attach(this);
 
-        d_intensity_color_map_type.push_back(INTENSITY_COLOR_MAP_TYPE_MULTI_COLOR);
+        d_intensity_color_map_type.push_back(
+            gr::qtgui::INTENSITY_COLOR_MAP_TYPE_MULTI_COLOR);
         setIntensityColorMapType(
             i, d_intensity_color_map_type[i], QColor("white"), QColor("white"));
 
@@ -169,7 +157,7 @@ WaterfallDisplayPlot::WaterfallDisplayPlot(int nplots, QWidget* parent)
     setAlpha(0, 255);
 
     // LeftButton for the zooming
-    // MidButton for the panning
+    // MiddleButton for the panning
     // RightButton: zoom out by 1
     // Ctrl+RighButton: zoom out to full size
     d_zoomer = new WaterfallZoomer(canvas(), 0);
@@ -447,10 +435,10 @@ void WaterfallDisplayPlot::setIntensityColorMapType(const unsigned int which,
                                                     const QColor highColor)
 {
     if ((d_intensity_color_map_type[which] != newType) ||
-        ((newType == INTENSITY_COLOR_MAP_TYPE_USER_DEFINED) &&
+        ((newType == gr::qtgui::INTENSITY_COLOR_MAP_TYPE_USER_DEFINED) &&
          (lowColor.isValid() && highColor.isValid()))) {
         switch (newType) {
-        case INTENSITY_COLOR_MAP_TYPE_MULTI_COLOR: {
+        case gr::qtgui::INTENSITY_COLOR_MAP_TYPE_MULTI_COLOR: {
             d_intensity_color_map_type[which] = newType;
 #if QWT_VERSION < 0x060000
             ColorMap_MultiColor colorMap;
@@ -460,7 +448,7 @@ void WaterfallDisplayPlot::setIntensityColorMapType(const unsigned int which,
 #endif
             break;
         }
-        case INTENSITY_COLOR_MAP_TYPE_WHITE_HOT: {
+        case gr::qtgui::INTENSITY_COLOR_MAP_TYPE_WHITE_HOT: {
             d_intensity_color_map_type[which] = newType;
 #if QWT_VERSION < 0x060000
             ColorMap_WhiteHot colorMap;
@@ -470,7 +458,7 @@ void WaterfallDisplayPlot::setIntensityColorMapType(const unsigned int which,
 #endif
             break;
         }
-        case INTENSITY_COLOR_MAP_TYPE_BLACK_HOT: {
+        case gr::qtgui::INTENSITY_COLOR_MAP_TYPE_BLACK_HOT: {
             d_intensity_color_map_type[which] = newType;
 #if QWT_VERSION < 0x060000
             ColorMap_BlackHot colorMap;
@@ -480,7 +468,7 @@ void WaterfallDisplayPlot::setIntensityColorMapType(const unsigned int which,
 #endif
             break;
         }
-        case INTENSITY_COLOR_MAP_TYPE_INCANDESCENT: {
+        case gr::qtgui::INTENSITY_COLOR_MAP_TYPE_INCANDESCENT: {
             d_intensity_color_map_type[which] = newType;
 #if QWT_VERSION < 0x060000
             ColorMap_Incandescent colorMap;
@@ -490,7 +478,7 @@ void WaterfallDisplayPlot::setIntensityColorMapType(const unsigned int which,
 #endif
             break;
         }
-        case INTENSITY_COLOR_MAP_TYPE_SUNSET: {
+        case gr::qtgui::INTENSITY_COLOR_MAP_TYPE_SUNSET: {
             d_intensity_color_map_type[which] = newType;
 #if QWT_VERSION < 0x060000
             ColorMap_Sunset colorMap;
@@ -500,7 +488,7 @@ void WaterfallDisplayPlot::setIntensityColorMapType(const unsigned int which,
 #endif
             break;
         }
-        case INTENSITY_COLOR_MAP_TYPE_COOL: {
+        case gr::qtgui::INTENSITY_COLOR_MAP_TYPE_COOL: {
             d_intensity_color_map_type[which] = newType;
 #if QWT_VERSION < 0x060000
             ColorMap_Cool colorMap;
@@ -510,7 +498,7 @@ void WaterfallDisplayPlot::setIntensityColorMapType(const unsigned int which,
 #endif
             break;
         }
-        case INTENSITY_COLOR_MAP_TYPE_USER_DEFINED: {
+        case gr::qtgui::INTENSITY_COLOR_MAP_TYPE_USER_DEFINED: {
             d_user_defined_low_intensity_color = lowColor;
             d_user_defined_high_intensity_color = highColor;
             d_intensity_color_map_type[which] = newType;
@@ -594,25 +582,25 @@ void WaterfallDisplayPlot::_updateIntensityRangeDisplay()
 #else
         QwtInterval intv = d_spectrogram[i]->interval(Qt::ZAxis);
         switch (d_intensity_color_map_type[i]) {
-        case INTENSITY_COLOR_MAP_TYPE_MULTI_COLOR:
+        case gr::qtgui::INTENSITY_COLOR_MAP_TYPE_MULTI_COLOR:
             rightAxis->setColorMap(intv, new ColorMap_MultiColor());
             break;
-        case INTENSITY_COLOR_MAP_TYPE_WHITE_HOT:
+        case gr::qtgui::INTENSITY_COLOR_MAP_TYPE_WHITE_HOT:
             rightAxis->setColorMap(intv, new ColorMap_WhiteHot());
             break;
-        case INTENSITY_COLOR_MAP_TYPE_BLACK_HOT:
+        case gr::qtgui::INTENSITY_COLOR_MAP_TYPE_BLACK_HOT:
             rightAxis->setColorMap(intv, new ColorMap_BlackHot());
             break;
-        case INTENSITY_COLOR_MAP_TYPE_INCANDESCENT:
+        case gr::qtgui::INTENSITY_COLOR_MAP_TYPE_INCANDESCENT:
             rightAxis->setColorMap(intv, new ColorMap_Incandescent());
             break;
-        case INTENSITY_COLOR_MAP_TYPE_SUNSET:
+        case gr::qtgui::INTENSITY_COLOR_MAP_TYPE_SUNSET:
             rightAxis->setColorMap(intv, new ColorMap_Sunset());
             break;
-        case INTENSITY_COLOR_MAP_TYPE_COOL:
+        case gr::qtgui::INTENSITY_COLOR_MAP_TYPE_COOL:
             rightAxis->setColorMap(intv, new ColorMap_Cool());
             break;
-        case INTENSITY_COLOR_MAP_TYPE_USER_DEFINED:
+        case gr::qtgui::INTENSITY_COLOR_MAP_TYPE_USER_DEFINED:
             rightAxis->setColorMap(
                 intv,
                 new ColorMap_UserDefined(d_user_defined_low_intensity_color,

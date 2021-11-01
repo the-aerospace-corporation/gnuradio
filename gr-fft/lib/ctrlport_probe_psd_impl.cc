@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -33,7 +21,7 @@ namespace fft {
 ctrlport_probe_psd::sptr
 ctrlport_probe_psd::make(const std::string& id, const std::string& desc, int len)
 {
-    return gnuradio::get_initial_sptr(new ctrlport_probe_psd_impl(id, desc, len));
+    return gnuradio::make_block_sptr<ctrlport_probe_psd_impl>(id, desc, len);
 }
 
 ctrlport_probe_psd_impl::ctrlport_probe_psd_impl(const std::string& id,
@@ -45,7 +33,7 @@ ctrlport_probe_psd_impl::ctrlport_probe_psd_impl(const std::string& id,
       d_id(id),
       d_desc(desc),
       d_len(len),
-      d_fft(len, true, 1)
+      d_fft(len, 1)
 {
     set_length(len);
 }
@@ -95,8 +83,9 @@ std::vector<gr_complex> ctrlport_probe_psd_impl::get()
 void ctrlport_probe_psd_impl::set_length(int len)
 {
     if (len > 8191) {
-        std::cerr << "probe_psd: length " << len << " exceeds maximum buffer size of 8191"
-                  << std::endl;
+        std::ostringstream msg;
+        msg << "length " << len << " exceeds maximum buffer size of 8191";
+        GR_LOG_ERROR(d_logger, msg.str());
         len = 8191;
     }
 

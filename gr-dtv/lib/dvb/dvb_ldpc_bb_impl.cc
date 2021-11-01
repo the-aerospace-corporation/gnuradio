@@ -2,20 +2,8 @@
 /*
  * Copyright 2015,2016,2019 Free Software Foundation, Inc.
  *
- * This is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -33,8 +21,8 @@ dvb_ldpc_bb::sptr dvb_ldpc_bb::make(dvb_standard_t standard,
                                     dvb_code_rate_t rate,
                                     dvb_constellation_t constellation)
 {
-    return gnuradio::get_initial_sptr(
-        new dvb_ldpc_bb_impl(standard, framesize, rate, constellation));
+    return gnuradio::make_block_sptr<dvb_ldpc_bb_impl>(
+        standard, framesize, rate, constellation);
 }
 
 /*
@@ -279,7 +267,7 @@ dvb_ldpc_bb_impl::dvb_ldpc_bb_impl(dvb_standard_t standard,
             break;
         case C1_5_VLSNR_SF2:
             nbch = 2680;
-            q_val = 135;
+            q_val = 36;
             frame_size -= SHORT_PUNCTURING_SET1;
             frame_size_real -= SHORT_PUNCTURING_SET1;
             Xs = 560;
@@ -296,7 +284,7 @@ dvb_ldpc_bb_impl::dvb_ldpc_bb_impl(dvb_standard_t standard,
             break;
         case C1_5_VLSNR:
             nbch = 3240;
-            q_val = 135;
+            q_val = 36;
             frame_size -= SHORT_PUNCTURING_SET2;
             frame_size_real -= SHORT_PUNCTURING_SET2;
             P = 10;
@@ -312,7 +300,7 @@ dvb_ldpc_bb_impl::dvb_ldpc_bb_impl(dvb_standard_t standard,
             break;
         case C1_3_VLSNR:
             nbch = 5400;
-            q_val = 120;
+            q_val = 30;
             frame_size -= SHORT_PUNCTURING_SET2;
             frame_size_real -= SHORT_PUNCTURING_SET2;
             P = 8;
@@ -365,11 +353,7 @@ dvb_ldpc_bb_impl::dvb_ldpc_bb_impl(dvb_standard_t standard,
 /*
  * Our virtual destructor.
  */
-dvb_ldpc_bb_impl::~dvb_ldpc_bb_impl()
-{
-    delete[] ldpc_lut[0];
-    delete[] ldpc_lut;
-}
+dvb_ldpc_bb_impl::~dvb_ldpc_bb_impl() {}
 
 void dvb_ldpc_bb_impl::forecast(int noutput_items, gr_vector_int& ninput_items_required)
 {
@@ -607,8 +591,6 @@ int dvb_ldpc_bb_impl::general_work(int noutput_items,
             p = &puncturing_buffer[nbch];
             b = &out[i + nbch];
         }
-        // First zero all the parity bits
-        memset(p, 0, sizeof(unsigned char) * plen);
 
         // copy the information bits
         memcpy(&out[i], &in[consumed], sizeof(unsigned char) * nbch);

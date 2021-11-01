@@ -4,25 +4,10 @@
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 #
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
 
 from gnuradio import gr, digital, filter
 from gnuradio import blocks
@@ -38,8 +23,6 @@ try:
 except ImportError:
     print("Error: could not from matplotlib import pyplot (http://matplotlib.sourceforge.net/)")
     sys.exit(1)
-
-from numpy.fft import fftpack
 
 class example_timing(gr.top_block):
     def __init__(self, N, sps, rolloff, ntaps, bw, noise,
@@ -194,7 +177,7 @@ def main():
         s32.set_title("FFT of Differential Filters")
 
         for i,d in enumerate(diff_taps):
-            D = 20.0*numpy.log10(1e-20+abs(numpy.fft.fftshift(fftpack.fft(d, 10000))))
+            D = 20.0*numpy.log10(1e-20+abs(numpy.fft.fftshift(numpy.fft.fft(d, 10000))))
             s31.plot(t[i::nfilts].real, d, "-o")
             s32.plot(D)
         s32.set_ylim([-120, 10])
@@ -241,4 +224,3 @@ if __name__ == "__main__":
         main()
     except KeyboardInterrupt:
         pass
-

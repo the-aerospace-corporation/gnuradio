@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -26,14 +14,13 @@
 
 #include "nop_impl.h"
 #include <gnuradio/io_signature.h>
-#include <boost/bind.hpp>
 
 namespace gr {
 namespace blocks {
 
 nop::sptr nop::make(size_t sizeof_stream_item)
 {
-    return gnuradio::get_initial_sptr(new nop_impl(sizeof_stream_item));
+    return gnuradio::make_block_sptr<nop_impl>(sizeof_stream_item);
 }
 
 nop_impl::nop_impl(size_t sizeof_stream_item)
@@ -45,7 +32,7 @@ nop_impl::nop_impl(size_t sizeof_stream_item)
     // Arrange to have count_received_msgs called when messages are received.
     message_port_register_in(pmt::mp("port"));
     set_msg_handler(pmt::mp("port"),
-                    boost::bind(&nop_impl::count_received_msgs, this, _1));
+                    [this](pmt::pmt_t msg) { this->count_received_msgs(msg); });
 }
 
 nop_impl::~nop_impl() {}

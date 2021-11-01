@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -26,9 +14,11 @@
 
 
 #include <gnuradio/buffer.h>
+#include <gnuradio/buffer_double_mapped.h>
+#include <gnuradio/buffer_reader.h>
 #include <gnuradio/random.h>
-#include <stdlib.h>
 #include <boost/test/unit_test.hpp>
+#include <cstdlib>
 
 
 static void leak_check(void f())
@@ -52,7 +42,8 @@ static void t0_body()
     int nitems = 4000 / sizeof(int);
     int counter = 0;
 
-    gr::buffer_sptr buf(gr::make_buffer(nitems, sizeof(int), gr::block_sptr()));
+    gr::buffer_sptr buf(gr::buffer_double_mapped::make_buffer(
+        nitems, sizeof(int), nitems, 1, gr::block_sptr()));
 
     int last_sa;
     int sa;
@@ -86,7 +77,8 @@ static void t1_body()
     int write_counter = 0;
     int read_counter = 0;
 
-    gr::buffer_sptr buf(gr::make_buffer(nitems, sizeof(int), gr::block_sptr()));
+    gr::buffer_sptr buf(gr::buffer_double_mapped::make_buffer(
+        nitems, sizeof(int), nitems, 1, gr::block_sptr()));
     gr::buffer_reader_sptr r1(gr::buffer_add_reader(buf, 0, gr::block_sptr()));
 
     int sa;
@@ -157,7 +149,8 @@ static void t2_body()
 
     int nitems = (64 * (1L << 10)) / sizeof(int); // 64K worth of ints
 
-    gr::buffer_sptr buf(gr::make_buffer(nitems, sizeof(int), gr::block_sptr()));
+    gr::buffer_sptr buf(gr::buffer_double_mapped::make_buffer(
+        nitems, sizeof(int), nitems, 1, gr::block_sptr()));
     gr::buffer_reader_sptr r1(gr::buffer_add_reader(buf, 0, gr::block_sptr()));
 
     int read_counter = 0;
@@ -222,7 +215,8 @@ static void t3_body()
     int nitems = (64 * (1L << 10)) / sizeof(int);
 
     static const int N = 5;
-    gr::buffer_sptr buf(gr::make_buffer(nitems, sizeof(int), gr::block_sptr()));
+    gr::buffer_sptr buf(gr::buffer_double_mapped::make_buffer(
+        nitems, sizeof(int), nitems, 1, gr::block_sptr()));
     gr::buffer_reader_sptr reader[N];
     int read_counter[N];
     int write_counter = 0;

@@ -1,19 +1,8 @@
 # Copyright 2008, 2009, 2015, 2016 Free Software Foundation, Inc.
 # This file is part of GNU Radio
 #
-# GNU Radio Companion is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
+# SPDX-License-Identifier: GPL-2.0-or-later
 #
-# GNU Radio Companion is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
 import weakref
 
@@ -34,8 +23,6 @@ class Element(object):
         Validate this element and call validate on all children.
         Call this base method before adding error messages in the subclass.
         """
-        del self._error_messages[:]
-
         for child in self.children():
             child.validate()
 
@@ -88,6 +75,7 @@ class Element(object):
         Rewrite this element and call rewrite on all children.
         Call this base method before rewriting the element.
         """
+        del self._error_messages[:]
         for child in self.children():
             child.rewrite()
 
@@ -150,6 +138,7 @@ class Element(object):
     is_param = False
     is_variable = False
     is_import = False
+    is_snippet = False
 
     def get_raw(self, name):
         descriptor = getattr(self.__class__, name, None)

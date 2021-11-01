@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -35,7 +23,7 @@ namespace blocks {
 class null_qa_source : virtual public sync_block
 {
 public:
-    typedef boost::shared_ptr<null_qa_source> sptr;
+    typedef std::shared_ptr<null_qa_source> sptr;
     static sptr make(size_t sizeof_stream_item);
 };
 class null_source_qa_impl : public null_qa_source
@@ -47,11 +35,11 @@ public:
                      io_signature::make(1, 1, sizeof_stream_item))
     {
     }
-    ~null_source_qa_impl() {}
+    ~null_source_qa_impl() override {}
 
     int work(int noutput_items,
              gr_vector_const_void_star& input_items,
-             gr_vector_void_star& output_items)
+             gr_vector_void_star& output_items) override
     {
         void* optr;
         for (size_t n = 0; n < input_items.size(); n++) {
@@ -63,12 +51,12 @@ public:
 };
 null_qa_source::sptr null_qa_source::make(size_t sizeof_stream_item)
 {
-    return gnuradio::get_initial_sptr(new null_source_qa_impl(sizeof_stream_item));
+    return gnuradio::make_block_sptr<null_source_qa_impl>(sizeof_stream_item);
 }
 class null_qa_sink : virtual public sync_block
 {
 public:
-    typedef boost::shared_ptr<null_qa_sink> sptr;
+    typedef std::shared_ptr<null_qa_sink> sptr;
     static sptr make(size_t sizeof_stream_item);
 };
 class null_sink_qa_impl : public null_qa_sink
@@ -80,17 +68,17 @@ public:
                      io_signature::make(0, 0, 0))
     {
     }
-    ~null_sink_qa_impl() {}
+    ~null_sink_qa_impl() override {}
     int work(int noutput_items,
              gr_vector_const_void_star& input_items,
-             gr_vector_void_star& output_items)
+             gr_vector_void_star& output_items) override
     {
         return noutput_items;
     }
 };
 null_qa_sink::sptr null_qa_sink::make(size_t sizeof_stream_item)
 {
-    return gnuradio::get_initial_sptr(new null_sink_qa_impl(sizeof_stream_item));
+    return gnuradio::make_block_sptr<null_sink_qa_impl>(sizeof_stream_item);
 }
 } /* namespace blocks */
 } /* namespace gr */

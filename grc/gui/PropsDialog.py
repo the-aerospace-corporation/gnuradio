@@ -2,27 +2,14 @@
 Copyright 2007, 2008, 2009 Free Software Foundation, Inc.
 This file is part of GNU Radio
 
-GNU Radio Companion is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
+SPDX-License-Identifier: GPL-2.0-or-later
 
-GNU Radio Companion is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 """
 
-from __future__ import absolute_import
 from gi.repository import Gtk, Gdk, GObject, Pango
 
 from . import Actions, Utils, Constants
 from .Dialogs import SimpleTextDisplay
-import six
 
 
 class PropsDialog(Gtk.Dialog):
@@ -78,7 +65,11 @@ class PropsDialog(Gtk.Dialog):
         doc_view.get_buffer().create_tag('b', weight=Pango.Weight.BOLD)
         self._docs_box = Gtk.ScrolledWindow()
         self._docs_box.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
-        self._docs_box.add(self._docs_text_display)
+        self._docs_vbox = Gtk.VBox(homogeneous=False, spacing=0)
+        self._docs_box.add(self._docs_vbox)
+        self._docs_link = Gtk.Label(use_markup=True)
+        self._docs_vbox.pack_start(self._docs_link, False, False, 0)
+        self._docs_vbox.pack_end(self._docs_text_display, True, True, 0)
         notebook.append_page(self._docs_box, Gtk.Label(label="Documentation"))
 
         # Generated code for the block
@@ -217,11 +208,14 @@ class PropsDialog(Gtk.Dialog):
         pos = buf.get_end_iter()
 
         # Add link to wiki page for this block, at the top, as long as it's not an OOT block
-        if self._block.category[0] == "Core":
+        if self._block.category and self._block.category[0] == "Core":
             note = "Wiki Page for this Block: "
             prefix = self._config.wiki_block_docs_url_prefix
             suffix = self._block.label.replace(" ", "_")
-            buf.insert(pos, note + prefix + suffix + '\n\n')
+            href = f'<a href="{prefix+suffix}">Visit Wiki Page</a>'
+            self._docs_link.set_markup(href)
+        else:
+            self._docs_link.set_markup('Out of Tree Block')
 
         docstrings = self._block.documentation.copy()
         if not docstrings:
@@ -244,7 +238,7 @@ class PropsDialog(Gtk.Dialog):
             docstrings = {block_class: docstrings[block_class]}
 
         # show docstring(s) extracted from python sources
-        for cls_name, docstring in six.iteritems(docstrings):
+        for cls_name, docstring in docstrings.items():
             buf.insert_with_tags_by_name(pos, cls_name + '\n', 'b')
             buf.insert(pos, docstring + '\n\n')
         pos.backward_chars(2)

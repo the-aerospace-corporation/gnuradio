@@ -21,7 +21,7 @@ parameters:
     options: ['True', 'False']
     option_labels: ['Yes', 'No']
 -   id: vlen
-    label: Vec Length
+    label: Vector Length
     dtype: int
     default: '1'
     hide: ${ 'part' if vlen == 1 else 'none' }
@@ -40,7 +40,6 @@ cpp_templates:
     declarations: 'blocks::file_descriptor_source::sptr ${id};'
     make: 'this->${id} = blocks::file_descriptor_source::make(${type.size}*${vlen}, ${fd}, ${repeat});'
     translations:
-        gr.sizeof_: 'sizeof('
         'True': 'true'
         'False': 'false'
 

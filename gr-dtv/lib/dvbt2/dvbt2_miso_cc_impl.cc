@@ -2,20 +2,8 @@
 /*
  * Copyright 2015 Free Software Foundation, Inc.
  *
- * This is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -35,8 +23,8 @@ dvbt2_miso_cc::sptr dvbt2_miso_cc::make(dvbt2_extended_carrier_t carriermode,
                                         int numdatasyms,
                                         dvbt2_papr_t paprmode)
 {
-    return gnuradio::get_initial_sptr(new dvbt2_miso_cc_impl(
-        carriermode, fftsize, pilotpattern, guardinterval, numdatasyms, paprmode));
+    return gnuradio::make_block_sptr<dvbt2_miso_cc_impl>(
+        carriermode, fftsize, pilotpattern, guardinterval, numdatasyms, paprmode);
 }
 
 /*

@@ -2,20 +2,8 @@
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 
 ########################################################################
 # Install header files
@@ -29,13 +17,16 @@ install(FILES
     api.h
     argmax.h
     control_loop.h
+    correctiq.h
+    correctiq_auto.h
+    correctiq_man.h
+    correctiq_swapiq.h
     count_bits.h
     divide.h
     file_sink_base.h
     integrate.h
     lfsr_15_1_0.h
     lfsr_32k.h
-    log2_const.h
     max_blk.h
     min_blk.h
     moving_average.h
@@ -47,6 +38,7 @@ install(FILES
     pack_k_bits.h
     packed_to_unpacked.h
     peak_detector.h
+    phase_shift.h
     probe_signal.h
     probe_signal_v.h
     rotator.h
@@ -59,7 +51,6 @@ install(FILES
     vector_insert.h
     vector_sink.h
     vector_source.h
-    wavfile.h
     xor_blk.h
     add_const_bb.h
     add_const_ss.h
@@ -69,7 +60,6 @@ install(FILES
     annotator_1to1.h
     annotator_alltoall.h
     annotator_raw.h
-    bin_statistics_f.h
     burst_tagger.h
     char_to_float.h
     char_to_short.h
@@ -122,13 +112,7 @@ install(FILES
     or_blk.h
     pack_k_bits_bb.h
     patterned_interleaver.h
-    pdu.h
-    pdu_filter.h
-    pdu_set.h
-    pdu_remove.h
-    pdu_to_tagged_stream.h
     peak_detector2_fb.h
-    random_pdu.h
     plateau_detector_fb.h
     probe_rate.h
     regenerate_bb.h
@@ -140,7 +124,7 @@ install(FILES
     short_to_char.h
     short_to_float.h
     skiphead.h
-    socket_pdu.h
+    stream_demux.h
     stream_mux.h
     stream_to_streams.h
     stream_to_tagged_stream.h
@@ -155,27 +139,29 @@ install(FILES
     tagged_stream_align.h
     tagged_stream_mux.h
     tagged_stream_multiply_length.h
-    tagged_stream_to_pdu.h
     tags_strobe.h
-    tcp_server_sink.h
     test_tag_variable_rate_ff.h
     threshold_ff.h
     throttle.h
     transcendental.h
-    tuntap_pdu.h
     uchar_to_float.h
-    udp_sink.h
-    udp_source.h
     unpack_k_bits_bb.h
     vco_f.h
     vco_c.h
     vector_map.h
     vector_to_stream.h
     vector_to_streams.h
-    wavfile_sink.h
-    wavfile_source.h
     DESTINATION ${GR_INCLUDE_DIR}/gnuradio/blocks
 )
+
+if(SNDFILE_FOUND)
+    install(FILES
+        wavfile.h
+        wavfile_sink.h
+        wavfile_source.h
+        DESTINATION ${GR_INCLUDE_DIR}/gnuradio/blocks
+    )
+endif()
 
 if(ENABLE_GR_CTRLPORT)
 install(FILES

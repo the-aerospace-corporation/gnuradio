@@ -2,20 +2,8 @@
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 
 ########################################################################
 # Setup dependencies
@@ -23,6 +11,12 @@
 include(GrBoost)
 
 find_package(UHD "3.9.7")
+if ("${UHD_VERSION}" VERSION_GREATER_EQUAL "4")
+    set(UHD_FOUR_POINT_OH_RFNOC TRUE)
+else()
+  set(UHD_FOUR_POINT_OH_RFNOC FALSE)
+endif()
+
 
 ########################################################################
 # Register component
@@ -36,14 +30,18 @@ GR_REGISTER_COMPONENT("gr-uhd" ENABLE_GR_UHD
     ENABLE_GR_BLOCKS
     ENABLE_GR_ANALOG
 )
-message(STATUS "  UHD Version: ${UHD_VERSION}")
-
 SET(GR_PKG_UHD_EXAMPLES_DIR ${GR_PKG_DATA_DIR}/examples/uhd)
+
+GR_REGISTER_COMPONENT("gr-uhd UHD 4.0 RFNoC" ENABLE_UHD_RFNOC
+  ENABLE_GR_UHD
+  UHD_FOUR_POINT_OH_RFNOC
+  )
 
 ########################################################################
 # Begin conditional configuration
 ########################################################################
 if(ENABLE_GR_UHD)
+message(STATUS "  UHD Version: ${UHD_VERSION}")
 
 ########################################################################
 # Add subdirectories
@@ -51,12 +49,15 @@ if(ENABLE_GR_UHD)
 add_subdirectory(include/gnuradio/uhd)
 add_subdirectory(lib)
 add_subdirectory(docs)
-add_subdirectory(examples/c++)
+if(ENABLE_EXAMPLES)
+    add_subdirectory(examples/c++)
+endif(ENABLE_EXAMPLES)
 if(ENABLE_PYTHON)
-    add_subdirectory(swig)
     add_subdirectory(python/uhd)
     add_subdirectory(apps)
-    add_subdirectory(examples/grc)
+    if(ENABLE_EXAMPLES)
+        add_subdirectory(examples/grc)
+    endif(ENABLE_EXAMPLES)
 endif(ENABLE_PYTHON)
 if(ENABLE_GRC)
     add_subdirectory(grc)

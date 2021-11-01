@@ -1,7 +1,6 @@
 import collections
 import os
 
-import six
 import codecs
 
 from .cpp_top_block import CppTopBlockGenerator
@@ -81,7 +80,7 @@ class CppHierBlockGenerator(CppTopBlockGenerator):
             self._flow_graph.get_option('id').replace('_', ' ').title()
         )
         data['category'] = self._flow_graph.get_option('category')
-        data['flags'] = [ 'cpp' ]
+        data['flags'] = ['cpp']
 
         # Parameters
         data['parameters'] = []
@@ -92,7 +91,7 @@ class CppHierBlockGenerator(CppTopBlockGenerator):
             p['dtype'] = param_block.params['value'].dtype
             p['default'] = param_block.params['value'].get_value()
             p['hide'] = param_block.params['hide'].get_value()
-            data['param'].append(p)
+            data['parameters'].append(p)
 
         # Ports
         for direction in ('inputs', 'outputs'):
@@ -120,15 +119,18 @@ class CppHierBlockGenerator(CppTopBlockGenerator):
             t['make'] = '{cls}(\n    {kwargs},\n)'.format(
                 cls=block_id,
                 kwargs=',\n    '.join(
-                    '{key}=${key}'.format(key=param.name) for param in parameters
+                    '{key}=${{ {key} }}'.format(key=param.name) for param in parameters
                 ),
             )
         else:
             t['make'] = '{cls}()'.format(cls=block_id)
+        # Self-connect if there aren't any ports
+        if not data['inputs'] and not data['outputs']:
+            t['make'] += '\nthis->connect(this->${id});'
 
         # Callback data
         t['callbacks'] = [
-            'set_{key}(${key})'.format(key=param_block.name) for param_block in parameters
+            'set_{key}(${{ {key} }})'.format(key=param_block.name) for param_block in parameters
         ]
 
         t_cpp = data['cpp_templates'] = collections.OrderedDict()
@@ -141,7 +143,7 @@ class CppHierBlockGenerator(CppTopBlockGenerator):
             t_cpp['make'] = '{cls}(\n    {kwargs},\n)'.format(
                 cls=block_id,
                 kwargs=',\n    '.join(
-                    '{key}=${key}'.format(key=param.name) for param in parameters
+                    '{key}=${{ {key} }}'.format(key=param.name) for param in parameters
                 ),
             )
         else:
@@ -150,7 +152,7 @@ class CppHierBlockGenerator(CppTopBlockGenerator):
 
         # Callback data
         t_cpp['callbacks'] = [
-            'set_{key}(${key})'.format(key=param_block.name) for param_block in parameters
+            'set_{key}(${{ {key} }})'.format(key=param_block.name) for param_block in parameters
         ]
 
         # Documentation
@@ -174,7 +176,7 @@ class CppQtHierBlockGenerator(CppHierBlockGenerator):
         block_n = collections.OrderedDict()
 
         # insert flags after category
-        for key, value in six.iteritems(n['block']):
+        for key, value in n['block'].items():
             block_n[key] = value
             if key == 'category':
                 block_n['flags'] = 'need_qt_gui'

@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef INCLUDED_GR_MESSAGE_H
@@ -39,7 +27,7 @@ namespace gr {
 class GR_RUNTIME_API message
 {
 public:
-    typedef boost::shared_ptr<message> sptr;
+    typedef std::shared_ptr<message> sptr;
 
 private:
     sptr d_next;   // link field for msg queue
@@ -47,17 +35,16 @@ private:
     double d_arg1; // optional arg1
     double d_arg2; // optional arg2
 
-    unsigned char* d_buf_start; // start of allocated buffer
+    std::vector<unsigned char> d_buf;
     unsigned char* d_msg_start; // where the msg starts
     unsigned char* d_msg_end;   // one beyond end of msg
-    unsigned char* d_buf_end;   // one beyond end of allocated buffer
 
     message(long type, double arg1, double arg2, size_t length);
 
     friend class msg_queue;
 
-    unsigned char* buf_data() const { return d_buf_start; }
-    size_t buf_len() const { return d_buf_end - d_buf_start; }
+    unsigned char* buf_data() { return d_buf.data(); }
+    size_t buf_len() const { return d_buf.size(); }
 
 public:
     /*!

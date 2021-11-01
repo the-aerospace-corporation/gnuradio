@@ -4,26 +4,12 @@
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 #
 
-from __future__ import division
-from __future__ import unicode_literals
 from gnuradio import gr, filter, blocks
-from . import vocoder_swig
+from . import vocoder_python
 
 
 class cvsd_encode_fb(gr.hier_block2):
@@ -53,7 +39,7 @@ class cvsd_encode_fb(gr.hier_block2):
         taps = filter.firdes.low_pass(self.interp, self.interp, bw, 2*bw)
         interp = filter.interp_fir_filter_fff(self.interp, taps)
         f2s = blocks.float_to_short()
-        enc = vocoder_swig.cvsd_encode_sb()
+        enc = vocoder_python.cvsd_encode_sb()
 
         self.connect(self, src_scale, interp, f2s, enc, self)
 
@@ -80,7 +66,7 @@ class cvsd_decode_bf(gr.hier_block2):
         scale_factor = 32000.0
         self.decim = resample
 
-        dec = vocoder_swig.cvsd_decode_bs()
+        dec = vocoder_python.cvsd_decode_bs()
         s2f = blocks.short_to_float()
         taps = filter.firdes.low_pass(1, 1, bw, 2*bw)
         decim = filter.fir_filter_fff(self.decim, taps)

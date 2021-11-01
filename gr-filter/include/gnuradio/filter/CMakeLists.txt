@@ -1,21 +1,9 @@
-# Copyright (C) 2012,2014,2017 Free Software Foundation, Inc.
+# Copyright (C) 2012,2014,2017,2020 Free Software Foundation, Inc.
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 
 ########################################################################
 # Install header files
@@ -27,6 +15,7 @@ install(FILES
     fir_filter_blk.h
     fir_filter_with_buffer.h
     fft_filter.h
+    ival_decimator.h
     iir_filter.h
     interpolator_taps.h
     interp_fir_filter.h
@@ -46,8 +35,6 @@ install(FILES
     fft_filter_ccf.h
     fft_filter_fff.h
     freq_xlating_fir_filter.h
-    mmse_interpolator_cc.h
-    mmse_interpolator_ff.h
     mmse_resampler_cc.h
     mmse_resampler_ff.h
     hilbert_fc.h
@@ -64,7 +51,7 @@ install(FILES
     pfb_decimator_ccf.h
     pfb_interpolator_ccf.h
     pfb_synthesizer_ccf.h
-    rational_resampler_base.h
+    rational_resampler.h
     single_pole_iir_filter_cc.h
     single_pole_iir_filter_ff.h
     DESTINATION ${GR_INCLUDE_DIR}/gnuradio/filter

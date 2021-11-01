@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -26,8 +14,8 @@
 
 #include "protocol_formatter_async_impl.h"
 #include <gnuradio/io_signature.h>
-#include <stdio.h>
-#include <volk/volk.h>
+#include <volk/volk_alloc.hh>
+#include <cstdio>
 
 namespace gr {
 namespace digital {
@@ -35,7 +23,7 @@ namespace digital {
 protocol_formatter_async::sptr
 protocol_formatter_async::make(const header_format_base::sptr& format)
 {
-    return gnuradio::get_initial_sptr(new protocol_formatter_async_impl(format));
+    return gnuradio::make_block_sptr<protocol_formatter_async_impl>(format);
 }
 
 protocol_formatter_async_impl::protocol_formatter_async_impl(
@@ -54,8 +42,7 @@ protocol_formatter_async_impl::protocol_formatter_async_impl(
     message_port_register_out(d_hdr_port);
     message_port_register_out(d_pld_port);
 
-    set_msg_handler(d_in_port,
-                    boost::bind(&protocol_formatter_async_impl::append, this, _1));
+    set_msg_handler(d_in_port, [this](pmt::pmt_t msg) { this->append(msg); });
 }
 
 protocol_formatter_async_impl::~protocol_formatter_async_impl() {}
@@ -71,11 +58,9 @@ void protocol_formatter_async_impl::append(pmt::pmt_t msg)
     const uint8_t* bytes_in = pmt::u8vector_elements(input, pkt_len);
 
     // Pad the payload with 0's
-    uint8_t* payload =
-        (uint8_t*)volk_malloc(pkt_len * sizeof(uint8_t), volk_get_alignment());
-    memcpy(payload, bytes_in, pkt_len * sizeof(uint8_t));
-    output = pmt::init_u8vector(pkt_len, payload);
-    volk_free(payload);
+    volk::vector<uint8_t> payload(pkt_len);
+    memcpy(payload.data(), bytes_in, pkt_len * sizeof(uint8_t));
+    output = pmt::init_u8vector(pkt_len, payload.data());
 
     // Build the header from the input, metadata, and format
     d_format->format(pkt_len, bytes_in, header, meta);

@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifndef INCLUDED_GR_RUNTIME_FLAT_FLOWGRAPH_H
@@ -45,7 +33,7 @@ public:
     friend GR_RUNTIME_API flat_flowgraph_sptr make_flat_flowgraph();
 
     // Destruct an arbitrary gr::flat_flowgraph
-    virtual ~flat_flowgraph();
+    ~flat_flowgraph() override;
 
     // Wire list of gr::block together in new flat_flowgraph
     void setup_connections();
@@ -90,8 +78,7 @@ public:
 private:
     flat_flowgraph();
 
-    block_detail_sptr allocate_block_detail(basic_block_sptr block);
-    buffer_sptr allocate_buffer(basic_block_sptr block, int port);
+    void allocate_block_detail(basic_block_sptr block);
     void connect_block_inputs(basic_block_sptr block);
 
     /* When reusing a flowgraph's blocks, this call makes sure all of
@@ -102,9 +89,6 @@ private:
      * start and restarts.
      */
     void setup_buffer_alignment(block_sptr block);
-
-    gr::logger_ptr d_logger;
-    gr::logger_ptr d_debug_logger;
 };
 
 } /* namespace gr */

@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -26,7 +14,8 @@
 
 #include <gnuradio/block_detail.h>
 #include <gnuradio/buffer.h>
-#include <iostream>
+#include <gnuradio/buffer_reader.h>
+#include <gnuradio/logger.h>
 
 namespace gr {
 
@@ -62,6 +51,7 @@ block_detail::block_detail(unsigned int ninputs, unsigned int noutputs)
 {
     s_ncurrently_allocated++;
     d_pc_start_time = gr::high_res_timer_now();
+    gr::configure_default_loggers(d_logger, d_debug_logger, "block_detail");
 }
 
 block_detail::~block_detail()
@@ -124,6 +114,7 @@ void block_detail::consume_each(int how_many_items)
 void block_detail::produce(int which_output, int how_many_items)
 {
     if (how_many_items > 0) {
+        d_output[which_output]->post_work(how_many_items);
         d_output[which_output]->update_write_pointer(how_many_items);
         d_produce_or |= how_many_items;
     }
@@ -133,6 +124,7 @@ void block_detail::produce_each(int how_many_items)
 {
     if (how_many_items > 0) {
         for (int i = 0; i < noutputs(); i++) {
+            d_output[i]->post_work(how_many_items);
             d_output[i]->update_write_pointer(how_many_items);
         }
         d_produce_or |= how_many_items;
@@ -232,7 +224,7 @@ void block_detail::set_processor_affinity(const std::vector<int>& mask)
         try {
             gr::thread::thread_bind_to_processor(thread, mask);
         } catch (std::runtime_error& e) {
-            std::cerr << "set_processor_affinity: invalid mask." << std::endl;
+            GR_LOG_ERROR(d_logger, "set_processor_affinity: invalid mask.");
         }
     }
 }

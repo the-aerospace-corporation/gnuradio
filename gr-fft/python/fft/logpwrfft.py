@@ -1,32 +1,19 @@
-from __future__ import division
-from __future__ import unicode_literals
 #
 # Copyright 2008 Free Software Foundation, Inc.
 #
 # This file is part of GNU Radio
 #
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
 #
 
 from gnuradio import gr
 from gnuradio import blocks
 import sys, math
 
-from . import fft_swig as fft
-from .fft_swig import window
+from . import fft_python as fft
+from . import fft_vfc, fft_vcc
+from .fft_python import window
 
 try:
     from gnuradio import filter
@@ -39,7 +26,7 @@ class _logpwrfft_base(gr.hier_block2):
     Create a log10(abs(fft)) stream chain, with real or complex input.
     """
 
-    def __init__(self, sample_rate, fft_size, ref_scale, frame_rate, avg_alpha, average, win=None):
+    def __init__(self, sample_rate, fft_size, ref_scale, frame_rate, avg_alpha, average, win=None, shift=False):
         """
         Create an log10(abs(fft)) stream chain.
         Provide access to the setting the filter and sample rate.
@@ -52,6 +39,7 @@ class _logpwrfft_base(gr.hier_block2):
             avg_alpha: FFT averaging (over time) constant [0.0-1.0]
             average: Whether to average [True, False]
             win: the window taps generation function
+            shift: shift zero-frequency component to center of spectrum
         """
         gr.hier_block2.__init__(self, self._name,
                                 gr.io_signature(1, 1, self._item_size),          # Input signature
@@ -61,10 +49,9 @@ class _logpwrfft_base(gr.hier_block2):
                                                      sample_rate=sample_rate,
                                                      vec_rate=frame_rate,
                                                      vec_len=fft_size)
-
         if win is None: win = window.blackmanharris
         fft_window = win(fft_size)
-        fft = self._fft_block[0](fft_size, True, fft_window)
+        fft = self._fft_block[0](fft_size, True, fft_window, shift=shift)
         window_power = sum([x*x for x in fft_window])
 
         c2magsq = blocks.complex_to_mag_squared(fft_size)
@@ -166,7 +153,7 @@ class logpwrfft_f(_logpwrfft_base):
         """
         _name = "logpwrfft_f"
         _item_size = gr.sizeof_float
-        _fft_block = (fft.fft_vfc, )
+        _fft_block = (fft_vfc, )
 
 class logpwrfft_c(_logpwrfft_base):
         """
@@ -174,4 +161,4 @@ class logpwrfft_c(_logpwrfft_base):
         """
         _name = "logpwrfft_c"
         _item_size = gr.sizeof_gr_complex
-        _fft_block = (fft.fft_vcc, )
+        _fft_block = (fft_vcc, )

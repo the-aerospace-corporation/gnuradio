@@ -4,20 +4,8 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -29,7 +17,6 @@
 #include <volk/volk.h>
 #include <boost/format.hpp>
 #include <cstdio>
-#include <iostream>
 #include <stdexcept>
 
 namespace gr {
@@ -38,8 +25,8 @@ namespace digital {
 correlate_access_code_bb_ts::sptr correlate_access_code_bb_ts::make(
     const std::string& access_code, int threshold, const std::string& tag_name)
 {
-    return gnuradio::get_initial_sptr(
-        new correlate_access_code_bb_ts_impl(access_code, threshold, tag_name));
+    return gnuradio::make_block_sptr<correlate_access_code_bb_ts_impl>(
+        access_code, threshold, tag_name);
 }
 
 
@@ -102,6 +89,7 @@ unsigned long long correlate_access_code_bb_ts_impl::access_code() const
 inline void correlate_access_code_bb_ts_impl::enter_search()
 {
     d_state = STATE_SYNC_SEARCH;
+    d_data_reg_bits = 0;
 }
 
 inline void correlate_access_code_bb_ts_impl::enter_have_sync()
@@ -149,8 +137,12 @@ int correlate_access_code_bb_ts_impl::general_work(int noutput_items,
             while (count < noutput_items) {
                 // shift in new data
                 d_data_reg = (d_data_reg << 1) | ((in[count++]) & 0x1);
-
-                // compute hamming distance between desired access code and current data
+                if (d_data_reg_bits + 1 < d_len) {
+                    d_data_reg_bits++;
+                    continue;
+                }
+                // compute hamming distance between desired access code and current
+                // data
                 uint64_t wrong_bits = 0;
                 uint64_t nwrong = d_threshold + 1;
 

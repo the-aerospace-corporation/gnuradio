@@ -4,29 +4,12 @@
  *
  * This file is part of GNU Radio
  *
- * GNU Radio is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * GNU Radio is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GNU Radio; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
  */
 
 #include <gnuradio/filter/firdes.h>
-#include <gnuradio/gr_complex.h>
-#include <stdio.h>
-#include <string.h>
 #include <boost/test/unit_test.hpp>
-#include <iomanip>
-#include <iostream>
 
 namespace gr {
 namespace filter {
@@ -146,7 +129,7 @@ const static float t6_exp[] = { // bandpass
 
 BOOST_AUTO_TEST_CASE(t1)
 {
-    vector<float> taps = firdes::low_pass(1.0, 8000, 1750, 500, firdes::WIN_HAMMING);
+    vector<float> taps = firdes::low_pass(1.0, 8000, 1750, 500, fft::window::WIN_HAMMING);
 
     // std::cout << "ntaps: " << taps.size() << std::endl;
     // print_taps(std::cout, taps);
@@ -160,7 +143,8 @@ BOOST_AUTO_TEST_CASE(t1)
 
 BOOST_AUTO_TEST_CASE(t2)
 {
-    vector<float> taps = firdes::high_pass(1.0, 8000, 1750, 500, firdes::WIN_HAMMING);
+    vector<float> taps =
+        firdes::high_pass(1.0, 8000, 1750, 500, fft::window::WIN_HAMMING);
 
     // std::cout << "ntaps: " << taps.size() << std::endl;
     // print_taps(std::cout, taps);
@@ -180,7 +164,7 @@ BOOST_AUTO_TEST_CASE(t3)
                                            5.75e6 - (5.28e6 / 2),
                                            5.75e6 + (5.28e6 / 2),
                                            0.62e6,
-                                           firdes::WIN_HAMMING);
+                                           fft::window::WIN_HAMMING);
 
     // std::cout << "ntaps: " << taps.size() << std::endl;
     // print_taps(std::cout, taps);
@@ -196,7 +180,7 @@ BOOST_AUTO_TEST_CASE(t3)
 BOOST_AUTO_TEST_CASE(t4)
 {
     vector<float> taps =
-        firdes::low_pass_2(1.0, 8000, 1750, 500, 66, firdes::WIN_HAMMING);
+        firdes::low_pass_2(1.0, 8000, 1750, 500, 66, fft::window::WIN_HAMMING);
 
     // std::cout << "ntaps: " << taps.size() << std::endl;
     // print_taps(std::cout, taps);
@@ -211,7 +195,7 @@ BOOST_AUTO_TEST_CASE(t4)
 BOOST_AUTO_TEST_CASE(t5)
 {
     vector<float> taps =
-        firdes::high_pass_2(1.0, 8000, 1750, 500, 66, firdes::WIN_HAMMING);
+        firdes::high_pass_2(1.0, 8000, 1750, 500, 66, fft::window::WIN_HAMMING);
 
     // std::cout << "ntaps: " << taps.size() << std::endl;
     // print_taps(std::cout, taps);
@@ -232,7 +216,7 @@ BOOST_AUTO_TEST_CASE(t6)
                                              5.75e6 + (5.28e6 / 2),
                                              0.62e6,
                                              66,
-                                             firdes::WIN_HAMMING);
+                                             fft::window::WIN_HAMMING);
 
     // std::cout << "ntaps: " << taps.size() << std::endl;
     // print_taps(std::cout, taps);
