@@ -21,12 +21,6 @@ from ..core import Constants
 
 LOGGER = logging.getLogger(__name__)
 PYGCCXML_AVAILABLE = False
-# ugly hack to make pygccxml work with Python >= 3.8
-import time
-try:
-    time.clock
-except:
-    time.clock = time.perf_counter
 
 try:
     from pygccxml import parser, declarations, utils
@@ -34,6 +28,7 @@ try:
 except:
     from ...modtool.tools import ParserCCBlock
     from ...modtool.cli import ModToolException
+
 
 class GenericHeaderParser(BlockTool):
     """
@@ -47,12 +42,12 @@ class GenericHeaderParser(BlockTool):
     name = 'Block Parse Header'
     description = 'Create a parsed output from a block header file'
 
-    def __init__(self, file_path=None, blocktool_comments=False, define_symbols=None,  include_paths=None, **kwargs):
+    def __init__(self, file_path=None, blocktool_comments=False, define_symbols=None, include_paths=None, **kwargs):
         """ __init__ """
         BlockTool.__init__(self, **kwargs)
         self.parsed_data = {}
         self.addcomments = blocktool_comments
-        self.define_symbols = ('BOOST_ATOMIC_DETAIL_EXTRA_BACKEND_GENERIC',)
+        self.define_symbols = ('BOOST_ATOMIC_DETAIL_EXTRA_BACKEND_GENERIC', 'DISABLE_LOGGER_H')
         if(define_symbols):
             self.define_symbols += define_symbols
         self.include_paths = None
@@ -62,8 +57,6 @@ class GenericHeaderParser(BlockTool):
             raise BlockToolException('file', file_path, 'does not exist')
         file_path = os.path.abspath(file_path)
         self.target_file = file_path
-
-
 
         self.initialize()
         self.validate()
@@ -84,7 +77,7 @@ class GenericHeaderParser(BlockTool):
             if not os.path.basename(self.module).startswith(Constants.GR):
                 self.module = os.path.abspath(
                     os.path.join(self.module, os.pardir))
-        
+
         self.modname = os.path.basename(self.module)
         self.filename = os.path.basename(self.target_file)
         self.targetdir = os.path.dirname(self.target_file)
@@ -104,9 +97,10 @@ class GenericHeaderParser(BlockTool):
                 fname_h))[0]
             fname_cc = blockname + '_impl' + '.cc'
             contains_modulename = blockname.startswith(
-                self.modname+'_')
-            blockname = blockname.replace(self.modname+'_', '', 1)
-            fname_cc = os.path.join(fname_h.split('include')[0],'lib',fname_cc)
+                self.modname + '_')
+            blockname = blockname.replace(self.modname + '_', '', 1)
+            fname_cc = os.path.join(fname_h.split(
+                'include')[0], 'lib', fname_cc)
             return (blockname, fname_cc, contains_modulename)
         # Go, go, go
         LOGGER.info("Making GRC bindings for {}...".format(fname_h))
@@ -123,7 +117,7 @@ class GenericHeaderParser(BlockTool):
                 "Can't open some of the files necessary to parse {}.".format(fname_cc))
 
         if contains_modulename:
-            return (parser.read_params(), parser.read_io_signature(), self.modname+'_'+blockname)
+            return (parser.read_params(), parser.read_io_signature(), self.modname + '_' + blockname)
         else:
             return (parser.read_params(), parser.read_io_signature(), blockname)
 
@@ -171,7 +165,7 @@ class GenericHeaderParser(BlockTool):
                                                     allow_empty=True, recursive=False,
                                                     header_file=self.target_file)
             for fcn in functions:
-                if str(fcn.name) not in [class_decl.name, '~'+class_decl.name]:
+                if str(fcn.name) not in [class_decl.name, '~' + class_decl.name]:
                     member_functions.append(self.parse_function(fcn))
 
         class_dict['member_functions'] = member_functions
@@ -295,17 +289,17 @@ class GenericHeaderParser(BlockTool):
 
             mf_dict = {
                 "name": "make",
-                "return_type": "::".join(namespace_to_parse + [blockname,"sptr"]),
+                "return_type": "::".join(namespace_to_parse + [blockname, "sptr"]),
                 "has_static": "1"
             }
-            
+
             args = []
-            
+
             for p in params:
                 arg_dict = {
-                    "name":p['key'],
-                    "dtype":p['type'],
-                    "default":p['default']
+                    "name": p['key'],
+                    "dtype": p['type'],
+                    "default": p['default']
                 }
                 args.append(arg_dict)
 
@@ -326,7 +320,7 @@ class GenericHeaderParser(BlockTool):
                 compiler='gcc',
                 undefine_symbols=['__PIE__'],
                 define_symbols=self.define_symbols,
-                cflags='-std=c++11 -fPIC')
+                cflags='-std=c++17 -fPIC')
             decls = parser.parse(
                 [self.target_file], xml_generator_config)
 
@@ -341,7 +335,8 @@ class GenericHeaderParser(BlockTool):
                 raise BlockToolException('namespace cannot be none')
             self.parsed_data['target_namespace'] = namespace_to_parse
 
-            self.parsed_data['namespace'] = self.parse_namespace(main_namespace)
+            self.parsed_data['namespace'] = self.parse_namespace(
+                main_namespace)
 
             # except RuntimeError:
             #     raise BlockToolException(

@@ -52,7 +52,6 @@ add_library(gnuradio-runtime
   block.cc
   block_detail.cc
   block_executor.cc
-  block_gateway_impl.cc
   block_registry.cc
   buffer.cc
   buffer_double_mapped.cc
@@ -86,7 +85,6 @@ add_library(gnuradio-runtime
   sys_paths.cc
   tagged_stream_block.cc
   terminate_handler.cc
-  test.cc
   top_block.cc
   top_block_impl.cc
   tpb_detail.cc
@@ -99,6 +97,12 @@ add_library(gnuradio-runtime
   vmcircbuf_prefs.cc
   vmcircbuf_sysv_shm.cc
   )
+
+if (ENABLE_PYTHON)
+  target_sources(gnuradio-runtime PRIVATE
+    block_gateway_impl.cc
+  )
+endif()
 
 # Messages
 target_sources(gnuradio-runtime PRIVATE
@@ -131,18 +135,24 @@ target_link_libraries(gnuradio-runtime PUBLIC
   Boost::system
   Boost::regex
   Boost::thread
-  Log4Cpp::log4cpp
+  spdlog::spdlog
   MPLib::mplib
   # INTERFACE/PRIVATE split so users of the library can choose how to link to Python
   # (importantly, extension modules can avoid linking against Python and resolve
   #  their own Python symbols at runtime through the Python interpreter's linking)
-  INTERFACE
-    Python::Module
   PRIVATE
-    Python::Python
-    libunwind::libunwind
-    pybind11::pybind11
+    libunwind::libunwind 
   )
+
+if (ENABLE_PYTHON)
+target_link_libraries(gnuradio-runtime
+  INTERFACE
+  Python::Module
+  PRIVATE
+  Python::Python
+  pybind11::pybind11
+)
+endif()
 
 # Address linker issues with std::filesystem on Centos 8 and Debian
 target_link_libraries(gnuradio-runtime PUBLIC $<$<AND:$<CXX_COMPILER_ID:GNU>,$<VERSION_LESS:$<CXX_COMPILER_VERSION>,9.0>>:stdc++fs>)

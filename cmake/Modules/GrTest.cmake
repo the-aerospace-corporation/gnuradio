@@ -61,6 +61,10 @@ function(GR_ADD_TEST test_name)
     # Keep the original path conversion for pypath - the above commented line breaks CI tests
     file(TO_NATIVE_PATH "${GR_TEST_PYTHON_DIRS}" pypath) #ok to use on dir list?
 
+    # add test module directory to PYTHONPATH to allow CTest to find QA test modules.
+    # We add it to the beginning of the list to use locally-built modules before installed ones.
+    list(INSERT pypath 0 "${CMAKE_BINARY_DIR}/test_modules")
+
     set(environs "VOLK_GENERIC=1" "GR_DONT_LOAD_PREFS=1" "srcdir=${srcdir}"
         "GR_CONF_CONTROLPORT_ON=False")
     list(APPEND environs ${GR_TEST_ENVIRONS})
@@ -94,11 +98,13 @@ function(GR_ADD_TEST test_name)
         endif(CMAKE_CROSSCOMPILING)
         set(sh_file ${CMAKE_CURRENT_BINARY_DIR}/${test_name}_test.sh)
         file(WRITE ${sh_file} "#!${SHELL}\n")
-        #each line sets an environment variable
-        foreach(environ ${environs})
-            file(APPEND ${sh_file} "export ${environ}\n")
-        endforeach(environ)
-        #load the command to run with its arguments
+        if (NOT CMAKE_CROSSCOMPILING)
+		#each line sets an environment variable
+        	foreach(environ ${environs})
+	            file(APPEND ${sh_file} "export ${environ}\n")
+	        endforeach(environ)
+	        #load the command to run with its arguments
+        endif(NOT CMAKE_CROSSCOMPILING)
         foreach(arg ${ARGN})
             file(APPEND ${sh_file} "${arg} ")
         endforeach(arg)
@@ -107,7 +113,7 @@ function(GR_ADD_TEST test_name)
         #make the shell file executable
         execute_process(COMMAND chmod +x ${sh_file})
 
-        add_test(${test_name} ${SHELL} ${sh_file})
+        add_test(${test_name} ${SHELL} ${test_name}_test.sh)
     endif(UNIX)
 
     if(WIN32)
@@ -157,5 +163,7 @@ function(GR_ADD_CPP_TEST test_name test_source)
     set_target_properties(${test_name}
         PROPERTIES COMPILE_DEFINITIONS "BOOST_TEST_DYN_LINK;BOOST_TEST_MAIN"
     )
-    GR_ADD_TEST(${test_name} ${test_name})
+    if (NOT CMAKE_CROSSCOMPILING)
+        GR_ADD_TEST(${test_name} ${test_name})
+    endif(NOT CMAKE_CROSSCOMPILING)
 endfunction(GR_ADD_CPP_TEST)

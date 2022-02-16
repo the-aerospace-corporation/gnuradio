@@ -20,16 +20,30 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/ConfigChecks.cmake)
 GR_CHECK_LINUX_SCHED_AVAIL()
 
 ########################################################################
+# Find spdlog
+########################################################################
+find_package(spdlog CONFIG)
+
+########################################################################
 # Register component
 ########################################################################
 include(GrComponent)
+if (ENABLE_PYTHON)
 GR_REGISTER_COMPONENT("gnuradio-runtime" ENABLE_GNURADIO_RUNTIME
     Boost_FOUND
     PYTHONINTERP_FOUND
     MPLIB_FOUND
-    LOG4CPP_FOUND
+    spdlog_FOUND
     pybind11_FOUND
 )
+else()
+GR_REGISTER_COMPONENT("gnuradio-runtime" ENABLE_GNURADIO_RUNTIME
+    Boost_FOUND
+    PYTHONINTERP_FOUND
+    MPLIB_FOUND
+    spdlog_FOUND
+)
+endif()
 
 get_filename_component(GNURADIO_RUNTIME_PYTHONPATH
     ${CMAKE_SOURCE_DIR}/python ABSOLUTE
@@ -70,6 +84,7 @@ if(ENABLE_COMMON_PCH)
     PUBLIC
     $<$<COMPILE_LANGUAGE:CXX>:$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/gnuradio/top_block.h>>
     )
+  target_link_libraries(common-precompiled-headers PUBLIC spdlog::spdlog)
 endif()
 
 ########################################################################

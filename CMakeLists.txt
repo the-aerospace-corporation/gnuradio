@@ -43,24 +43,13 @@ include(GrComponent)
 
 # Set the version information here
 SET(VERSION_MAJOR 3)
-SET(VERSION_API   10)
+SET(VERSION_API   11)
 SET(VERSION_ABI   0)
 SET(VERSION_PATCH git)
 include(GrVersion) #setup version info
 
-# Minimum dependency versions for central dependencies:
-set(GR_BOOST_MIN_VERSION "1.65")      ## Version in Ubuntu 18.04LTS
-set(GR_CMAKE_MIN_VERSION "3.10.2")    ## Version in Ubuntu 18.04LTS
-set(GR_MAKO_MIN_VERSION "1.0.7")      ## debian buster, 18.04LTS
-set(GR_PYTHON_MIN_VERSION "3.6.5")    ## Version in Ubuntu 18.04LTS
-set(GR_NUMPY_MIN_VERSION "1.13.3")    ## Version in Ubuntu 18.04LTS
-set(GCC_MIN_VERSION "8.3.0")          ## debian buster
-set(CLANG_MIN_VERSION "11.0.0")       ## debian bullseye, Fedora 33
-set(APPLECLANG_MIN_VERSION "1100")    ## same as clang 11.0.0, in Xcode11
-set(MSVC_MIN_VERSION "1914")          ## VS2017 15.7, for full-ish C++17 support
-set(VOLK_MIN_VERSION "2.4.1")         ## first version with CPU features
-set(PYBIND11_MIN_VERSION "2.4")       # pybind11 sets versions like 2.4.dev4, which compares < 2.4.3
-set(GR_THRIFT_MIN_VERSION "0.13")
+#Set minimum version requirements
+include(GrMinReq)
 
 ########################################################################
 # Setup Boost for global use (within this build)
@@ -77,65 +66,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Set wiki block docs url prefix used in grc-docs.conf (block name gets appended to end of this string)
 set(GRC_DOCS_URL_PREFIX "https://wiki.gnuradio.org/index.php/")
 
-########################################################################
-# Compiler version setup
-########################################################################
-# Append -O2 optimization flag for Debug builds (Not on MSVC since conflicts with RTC1 flag)
-IF (NOT MSVC)
-    SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O2")
-    SET(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O2")
-ENDIF()
 
-# Check compiler version against our minimum
-IF(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    IF(DEFINED CMAKE_CXX_COMPILER_VERSION)
-        IF(${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS ${GCC_MIN_VERSION})
-            MESSAGE(WARNING "\nThe compiler selected to build GNU Radio (GCC version ${CMAKE_CXX_COMPILER_VERSION} : ${CMAKE_CXX_COMPILER}) is older than that officially supported (${GCC_MIN_VERSION} minimum). This build may or not work. We highly recommend using a more recent GCC version.")
-        ENDIF()
-    ELSE()
-        MESSAGE(WARNING "\nCannot determine the version of the compiler selected to build GNU Radio (GCC : ${CMAKE_CXX_COMPILER}). This build may or not work. We highly recommend using GCC version ${GCC_MIN_VERSION} or more recent.")
-    ENDIF()
-ELSEIF(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    EXECUTE_PROCESS(COMMAND
-        ${CMAKE_CXX_COMPILER} -v
-        RESULT_VARIABLE _res ERROR_VARIABLE _err
-        ERROR_STRIP_TRAILING_WHITESPACE)
-    IF(${_res} STREQUAL "0")
-        # output is in error stream
-        STRING(REGEX MATCH "^Apple.*" IS_APPLE ${_err})
-        IF("${IS_APPLE}" STREQUAL "")
-            SET(MIN_VERSION ${CLANG_MIN_VERSION})
-            SET(APPLE_STR "")
-            # retrieve the compiler's version from it
-            STRING(REGEX MATCH "clang version [0-9.]+" CLANG_OTHER_VERSION ${_err})
-            STRING(REGEX MATCH "[0-9.]+" CLANG_VERSION ${CLANG_OTHER_VERSION})
-        ELSE()
-            SET(MIN_VERSION ${APPLECLANG_MIN_VERSION})
-            SET(APPLE_STR "Apple ")
-            # retrieve the compiler's version from it
-            STRING(REGEX MATCH "(clang-[0-9.]+)" CLANG_APPLE_VERSION ${_err})
-            STRING(REGEX MATCH "[0-9.]+" CLANG_VERSION ${CLANG_APPLE_VERSION})
-        ENDIF()
-        IF(${CLANG_VERSION} VERSION_LESS "${MIN_VERSION}")
-            MESSAGE(WARNING "\nThe compiler selected to build GNU Radio (${APPLE_STR}Clang version ${CLANG_VERSION} : ${CMAKE_CXX_COMPILER}) is older than that officially supported (${MIN_VERSION} minimum). This build may or not work. We highly recommend using Apple Clang version ${APPLECLANG_MIN_VERSION} or more recent, or Clang version ${CLANG_MIN_VERSION} or more recent.")
-        ENDIF()
-    ELSE()
-        MESSAGE(WARNING "\nCannot determine the version of the compiler selected to build GNU Radio (${APPLE_STR}Clang : ${CMAKE_CXX_COMPILER}). This build may or not work. We highly recommend using Apple Clang version ${APPLECLANG_MIN_VERSION} or more recent, or Clang version ${CLANG_MIN_VERSION} or more recent.")
-    ENDIF()
-ELSE()
-    MESSAGE(status "Skipping compiler version check.")
-ENDIF()
-
-# Configure C++ standard if not externally specified (will actually be
-# set after CppUnit check below). Use the variable CMAKE_CXX_STANDARD
-# since it will actually be used for this purposes starting in CMake 3.1.
-
-set(CMAKE_C_EXTENSIONS OFF)
-set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_C_STANDARD 11)
-
-set(GR_CXX_VERSION_FEATURE cxx_std_${CMAKE_CXX_STANDARD})
 
 ########################################################################
 # Environment setup
@@ -163,30 +94,10 @@ file(WRITE ${EXPORT_FILE}) #blank the file (subdirs will append)
 include(CMakeOverloads)
 
 ########################################################################
-# Compiler specific setup
+# Compiler settings
 ########################################################################
-include(GrMiscUtils) #compiler flag check
 
-include(TestBigEndian)
-TEST_BIG_ENDIAN(GR_IS_BIG_ENDIAN)
-
-if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR
-   CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    if(NOT WIN32)
-        #http://gcc.gnu.org/wiki/Visibility
-        GR_ADD_CXX_COMPILER_FLAG_IF_AVAILABLE(-fvisibility=hidden HAVE_VISIBILITY_HIDDEN)
-    endif(NOT WIN32)
-    GR_ADD_CXX_COMPILER_FLAG_IF_AVAILABLE(-Wsign-compare HAVE_WARN_SIGN_COMPARE)
-    GR_ADD_CXX_COMPILER_FLAG_IF_AVAILABLE(-Wall HAVE_WARN_ALL)
-    GR_ADD_CXX_COMPILER_FLAG_IF_AVAILABLE(-Wno-uninitialized HAVE_WARN_NO_UNINITIALIZED)
-endif(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR
-      CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-
-if(MSVC)
-    include_directories(${CMAKE_SOURCE_DIR}/cmake/msvc) #missing headers
-    add_compile_options(/MP) #build with multiple processors
-    add_compile_options(/bigobj) #allow for larger object files
-endif(MSVC)
+include(GrCompilerSettings)
 
 # Record Compiler Info for record
 STRING(TOUPPER ${CMAKE_BUILD_TYPE} GRCBTU)
@@ -318,27 +229,53 @@ add_custom_target(uninstall
 # Enable python component
 ########################################################################
 include(GrPython)
+GR_PYTHON_CHECK_MODULE_RAW(
+    "packaging"
+    "import packaging"
+    PACKAGING_FOUND
+)
+if(NOT PACKAGING_FOUND)
+    message(STATUS "")
+    message(STATUS "***************************** WARNING!!! *******")
+    message(STATUS "The python package packaging is missing")
+    message(STATUS "So some checks will fail")
+    message(STATUS "Please install python3-packaging")
+    message(STATUS "or run pip3 install packaging")
+    message(STATUS "************************************************")
+endif()
 GR_PYTHON_CHECK_MODULE(
     "numpy"
     numpy
     "LooseVersion(numpy.__version__) >= LooseVersion('${GR_NUMPY_MIN_VERSION}')"
     NUMPY_FOUND)
 # Needed for automatic regeneration of some bindings
-GR_PYTHON_CHECK_MODULE_RAW(
+GR_PYTHON_CHECK_MODULE(
     "pygccxml"
-    "import pygccxml"
+    pygccxml
+    "LooseVersion(pygccxml.__version__) >= LooseVersion('${GR_PYGCCXML_MIN_VERSION}')"
     PYGCCXML_FOUND
     )
+if(NOT PYGCCXML_FOUND)
+    message(STATUS "")
+    message(STATUS "***************************** WARNING!!! *************************")
+    message(STATUS "pygccxml is highly recommended for using gr_modtool")
+    message(STATUS "and is either not present or below the minimum version " ${GR_PYGCCXML_MIN_VERSION})
+    message(STATUS "Only trivial bindings will be generated using gr_modtool bind ")
+    message(STATUS "******************************************************************")
+endif()
 
-
-find_package(pybind11 REQUIRED)
+find_package(pybind11)
+IF(pybind11_FOUND)
 IF(${pybind11_VERSION} VERSION_LESS ${PYBIND11_MIN_VERSION})
-    message(FATAL_ERROR "pybind11 version ${pybind11_VERSION} < ${PYBIND11_MIN_VERSION}")
+    message(WARNING "pybind11 version ${pybind11_VERSION} < ${PYBIND11_MIN_VERSION}")
+    set(pybind11_FOUND False)
+ENDIF()
 ENDIF()
 
 include(GrComponent)
 GR_REGISTER_COMPONENT("python-support" ENABLE_PYTHON
     PYTHONLIBS_FOUND
+    PACKAGING_FOUND
     pybind11_FOUND
     NUMPY_FOUND
 )
@@ -370,11 +307,6 @@ else()
     message(FATAL_ERROR "VOLK version ${Volk_VERSION} < ${VOLK_MIN_VERSION}")
   endif()
 endif()
-
-########################################################################
-# Configure Log4CPP
-########################################################################
-find_package(LOG4CPP REQUIRED)
 
 ########################################################################
 # Setup Native Capabilities Flag
@@ -443,7 +375,9 @@ GR_REGISTER_COMPONENT("post-install" ENABLE_POSTINSTALL)
 ########################################################################
 add_subdirectory(docs)
 add_subdirectory(gnuradio-runtime)
-add_subdirectory(grc)
+if (ENABLE_PYTHON)
+  add_subdirectory(grc)
+endif()
 add_subdirectory(gr-blocks)
 add_subdirectory(gr-fec)
 add_subdirectory(gr-fft)
@@ -458,7 +392,9 @@ add_subdirectory(gr-iio)
 add_subdirectory(gr-qtgui)
 add_subdirectory(gr-trellis)
 add_subdirectory(gr-uhd)
-add_subdirectory(gr-utils)
+if (ENABLE_PYTHON)
+  add_subdirectory(gr-utils)
+endif()
 add_subdirectory(gr-video-sdl)
 add_subdirectory(gr-vocoder)
 add_subdirectory(gr-wavelet)

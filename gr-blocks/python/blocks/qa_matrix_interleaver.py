@@ -10,7 +10,7 @@
 
 from gnuradio import gr, gr_unittest
 from gnuradio import blocks
-from matrix_interleaver import matrix_interleaver
+
 
 class qa_matrix_interleaver(gr_unittest.TestCase):
 
@@ -25,11 +25,11 @@ class qa_matrix_interleaver(gr_unittest.TestCase):
 
         # set up fg
         cols, rows = 4, 10
-        vec = sum((cols * [x,] for x in range(rows)), [])
+        vec = sum((cols * [x, ] for x in range(rows)), [])
         expected = cols * list(range(rows))
 
         src = blocks.vector_source_f(vec, False)
-        itlv = matrix_interleaver(gr.sizeof_float, rows=rows, cols=cols)
+        itlv = blocks.matrix_interleaver(gr.sizeof_float, rows=rows, cols=cols)
         snk = blocks.vector_sink_f()
 
         tb.connect(src, itlv, snk)
@@ -44,11 +44,12 @@ class qa_matrix_interleaver(gr_unittest.TestCase):
 
         # set up fg
         cols, rows = 4, 10
-        vec = sum((rows * [x,] for x in range(cols)), [])
+        vec = sum((rows * [x, ] for x in range(cols)), [])
         expected = rows * list(range(cols))
 
         src = blocks.vector_source_f(vec, False)
-        itlv = matrix_interleaver(gr.sizeof_float, rows=rows, cols=cols, deint=True)
+        itlv = blocks.matrix_interleaver(
+            gr.sizeof_float, rows=rows, cols=cols, deint=True)
         snk = blocks.vector_sink_f()
 
         tb.connect(src, itlv, snk)
@@ -57,6 +58,7 @@ class qa_matrix_interleaver(gr_unittest.TestCase):
 
         # check data
         self.assertFloatTuplesAlmostEqual(expected, result)
+
 
 if __name__ == '__main__':
     gr_unittest.run(qa_matrix_interleaver)

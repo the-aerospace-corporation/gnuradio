@@ -32,8 +32,16 @@ list(APPEND howto_python_files
     python_bindings.cc)
 
 GR_PYBIND_MAKE_OOT(howto
-   ../..
+   ../../..
    gr::howto
    "${howto_python_files}")
 
-install(TARGETS howto_python DESTINATION ${GR_PYTHON_DIR}/howto COMPONENT pythonapi)
+# copy in bindings .so file for use in QA test module
+add_custom_target(
+  copy_bindings_for_tests ALL
+  COMMAND
+    ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/*.so"
+    ${CMAKE_BINARY_DIR}/test_modules/gnuradio/howto/
+  DEPENDS howto_python)
+
+install(TARGETS howto_python DESTINATION ${GR_PYTHON_DIR}/gnuradio/howto COMPONENT pythonapi)

@@ -19,7 +19,6 @@
 #include <gnuradio/thread/thread.h>
 #include <gnuradio/transfer_type.h>
 
-#include <boost/weak_ptr.hpp>
 #include <functional>
 #include <iostream>
 #include <map>
@@ -70,7 +69,7 @@ public:
     gr::logger_ptr d_logger;
     gr::logger_ptr d_debug_logger;
 
-    virtual ~buffer();
+    ~buffer() override;
 
     /*!
      * \brief return the buffer's mapping type
@@ -262,12 +261,12 @@ public:
     /*!
      * \brief "on_lock" function from the custom_lock_if.
      */
-    void on_lock(gr::thread::scoped_lock& lock);
+    void on_lock(gr::thread::scoped_lock& lock) override;
 
     /*!
      * \brief "on_unlock" function from the custom_lock_if.
      */
-    void on_unlock();
+    void on_unlock() override;
 
     friend std::ostream& operator<<(std::ostream& os, const buffer& buf);
 

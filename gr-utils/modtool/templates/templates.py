@@ -389,7 +389,7 @@ class ${blockname}(${parenttype}):
         # ninputs is the number of input connections
         # setup size of input_items[i] for work call
         # the required number of input items is returned
-        #   in a list where each element represents the 
+        #   in a list where each element represents the
         #   number of required items for each input
         ninput_items_required = [noutput_items] * ninputs
         return ninput_items_required
@@ -501,15 +501,27 @@ from gnuradio import gr, gr_unittest
 # from gnuradio import blocks
 % if lang == 'cpp':
 try:
+% if version in ['310']:
+  from gnuradio.${modname} import ${blockname}
+% else:
     from ${modname} import ${blockname}
+% endif
 except ImportError:
     import os
     import sys
     dirname, filename = os.path.split(os.path.abspath(__file__))
     sys.path.append(os.path.join(dirname, "bindings"))
+% if version in ['310']:
+    from gnuradio.${modname} import ${blockname}
+% else:
     from ${modname} import ${blockname}
+% endif
+% else:
+% if version in ['310']:
+from gnuradio.${modname} import ${blockname}
 % else:
 from ${blockname} import ${blockname}
+% endif
 % endif
 
 class qa_${blockname}(gr_unittest.TestCase):
@@ -539,7 +551,11 @@ label: ${blockname}
 category: '[${modname}]'
 
 templates:
+% if version in ['310']:
+  imports: from gnuradio import ${modname}
+% else:
   imports: import ${modname}
+% endif
   make: ${modname}.${blockname}(${strip_arg_types_grc(arglist)})
 
 #  Make one 'parameters' list entry for every parameter you want settable from the GUI.
@@ -583,7 +599,7 @@ outputs:
 file_format: 1
 '''
 
-## Old stuff
+# Old stuff
 # C++ file of a GR block
 Templates['block_cpp36'] = '''/* -*- c++ -*- */
 ${str_to_fancyc_comment(license)}
